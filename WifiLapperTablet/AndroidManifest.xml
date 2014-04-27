@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      package="com.artsoft.wifilappertab"
-      android:versionCode="37"
-      android:versionName="1.37">
-    <supports-screens  android:smallScreens="true"/>
-	<supports-screens  android:normalScreens="true"/>
-	<supports-screens android:largeScreens="true"/>
-	<supports-screens android:anyDensity="true"/>
+    package="com.artsoft.wifilappertab"
+    android:versionCode="38"
+    android:versionName="1.38" >
+
+    <supports-screens android:smallScreens="true" />
+    <supports-screens android:normalScreens="true" />
+    <supports-screens android:largeScreens="true" />
+    <supports-screens android:anyDensity="true" />
     <supports-screens
         android:anyDensity="true"
         android:resizeable="true" />
@@ -27,9 +28,10 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
 
     <application
+        android:debuggable="true"
+        android:allowBackup="true"
         android:icon="@drawable/icon"
-        android:label="@string/app_name" 
-        android:debuggable="true" >
+        android:label="@string/app_name" >
         <activity
             android:name="com.artsoft.wifilapper.LandingScreen"
             android:configChanges="orientation|keyboard|keyboardHidden"
@@ -114,4 +116,4 @@
         </activity>
     </application>
 
-</manifest> 
+</manifest>
