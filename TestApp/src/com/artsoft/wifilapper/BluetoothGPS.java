@@ -280,10 +280,15 @@ public class BluetoothGPS
 									Location.distanceBetween(dLastLat, dLastLong, dLat, dLong, flDistance);
 									float dTimeGap = (lTime - lLastTime) / 1000.0f;
 									dSpeed = 0.3f*((flDistance[0] / dTimeGap) * 3.6f) + 0.7f * dLastSpeed;
-									if(dSpeed > 200 || dSpeed < 0)
+									if(dSpeed > 200 || dSpeed < 0 )
 									{
 										// for whatever reason our speed is messed up.  Don't even bother reporting this.  720km/h should be plenty fast for our users
 										break;
+									}
+									if(dTimeGap < 0 || flDistance[0] < 0) 
+									{
+										// Somehow, our calculated speed is negative.  Don't even bother reporting this.
+										break; // set breakpoint, to see if it triggers.
 									}
 								}
 								else

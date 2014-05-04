@@ -898,17 +898,17 @@ implements
 					yAccelCum = 0;
 					zAccelCum = 0;
 				} else if( iFilterType==FILTER_TYPE.HIGH_PASS.ordinal() || iFilterType==FILTER_TYPE.NONE.ordinal()
-							|| iTimeSinceAppStart-iLastAccelSubmission>70 ) {
-					// Time to store the average.  If Noise filter is on, samples are at least 70ms apart (<14Hz)
+							|| iTimeSinceAppStart-iLastAccelSubmission>500 ) {
+					// Time to store the average.  If Noise filter is on, samples are at least 500ms apart (<2Hz)
 					xAccelCum /= accelSamples; 
 					yAccelCum /= accelSamples; 
 					zAccelCum /= accelSamples;
 					
 					if( iFilterType==FILTER_TYPE.HIGH_PASS.ordinal() || iFilterType==FILTER_TYPE.BOTH.ordinal() ) {
 						// A very slow low-pass filter is the gravity vector
-						m_fGravityX = 0.995f*m_fGravityX + 0.005f*xAccelCum;
-						m_fGravityY = 0.995f*m_fGravityY + 0.005f*yAccelCum;
-						m_fGravityZ = 0.995f*m_fGravityZ + 0.005f*zAccelCum;
+						m_fGravityX = 0.95f*m_fGravityX + 0.05f*xAccelCum;
+						m_fGravityY = 0.95f*m_fGravityY + 0.05f*yAccelCum;
+						m_fGravityZ = 0.95f*m_fGravityZ + 0.05f*zAccelCum;
 					} else {
 						m_fGravityX = 0;
 						m_fGravityY = 0;
@@ -1648,7 +1648,7 @@ implements
 		int iTimeSinceAppStart = (int)((System.nanoTime()/1000000) - this.m_tmAppStartUptime);
 		
 		boolean fNeededNew = false;
-		DataChannel chan = m_mapPIDS.get(new Integer(pid));
+		DataChannel chan = m_mapPIDS.get(Integer.valueOf(pid));
 		if(chan == null || !chan.IsParent(m_myLaps))
 		{
 			fNeededNew = true;
@@ -1657,7 +1657,7 @@ implements
 		chan.AddData((float)value, iTimeSinceAppStart);
 		if(fNeededNew)
 		{
-			m_mapPIDS.put(new Integer(pid), chan);
+			m_mapPIDS.put(Integer.valueOf(pid), chan);
 		}
 	}
 	@Override
@@ -1668,7 +1668,7 @@ implements
 		int iTimeSinceAppStart = (int)((System.nanoTime()/1000000) - this.m_tmAppStartUptime);
 		
 		boolean fNeededNew = false;
-		DataChannel chan = this.m_mapPins.get(new Integer(pin));
+		DataChannel chan = this.m_mapPins.get(Integer.valueOf(pin) );
 		if(chan == null || !chan.IsParent(m_myLaps))
 		{
 			fNeededNew = true;
@@ -1679,7 +1679,7 @@ implements
 		chan.AddData((float)flValue, iTimeSinceAppStart);
 		if(fNeededNew)
 		{
-			m_mapPins.put(new Integer(pin), chan);
+			m_mapPins.put(Integer.valueOf(pin), chan);
 		}
 	}
 	

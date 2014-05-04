@@ -210,6 +210,7 @@ public class IOIOManager
 
 			PulseInput pulseIn[] = new PulseInput[48];
 			AnalogInput analIn[] = new AnalogInput[48];
+			
 			do
 			{
 
@@ -260,6 +261,7 @@ public class IOIOManager
 					// save previous values, to see if there's a significant change
 					float lastValue[] = new float[analIn.length];
 					float lastFreq[] = new float[analIn.length];
+					boolean bDeferringNotify[] = new boolean[analIn.length];
 					
 					int rgSpinsUntilQuery[] = new int[analIn.length];
 					int rgResetSpinsUntilQuery[] = new int[analIn.length];
@@ -277,7 +279,7 @@ public class IOIOManager
 						{
 							rgResetSpinsUntilQuery[x] = m_rgAnalPins[x].iPeriod / MS_PER_LOOP - 1;
 							lastValue[x] = 99999; // force the initial update
-						}
+							bDeferringNotify[x] = false;						}
 					}
 					
 					// the loop runs at 20hz.
@@ -288,6 +290,7 @@ public class IOIOManager
 					long startTime;
 					long sleepTime= 0;
 					float tolerance = 0.005f;  // differences less than this are not submitted
+					float flSubmitValue;
 					while(m_fContinue)
 					{
 						startTime = System.currentTimeMillis();
@@ -297,14 +300,22 @@ public class IOIOManager
 							{
 								if(rgSpinsUntilQuery[x] == 0)
 								{
-									float flValue = analIn[x].getVoltage();
+									float flValue = analIn[x].getVoltage();  // am I comparing pre-filtered to post-filtered values?
 									// Only store significant changes
 									if( Math.abs(flValue - lastValue[x]) > tolerance ) {
+										if( bDeferringNotify[x] ) {
+											// we just got a change after a static period. Re-submit old value, so Pitside draws it properly
+											flSubmitValue = PinParams.DoFilter(m_rgAnalPins[x].iFilterType, m_rgAnalPins[x].dParam1, m_rgAnalPins[x].dParam2, m_rgAnalPins[x].dParam3, lastValue[x]);											
+											m_listener.NotifyIOIOValue(x, m_rgAnalPins[x].iCustomType, flSubmitValue);
+											bDeferringNotify[x] = false;
+										}
 										lastValue[x] = flValue;
-										flValue = PinParams.DoFilter(m_rgAnalPins[x].iFilterType, m_rgAnalPins[x].dParam1, m_rgAnalPins[x].dParam2, m_rgAnalPins[x].dParam3, flValue);
-										m_listener.NotifyIOIOValue(x, m_rgAnalPins[x].iCustomType, flValue);
+										flSubmitValue = PinParams.DoFilter(m_rgAnalPins[x].iFilterType, m_rgAnalPins[x].dParam1, m_rgAnalPins[x].dParam2, m_rgAnalPins[x].dParam3, flValue);
+										m_listener.NotifyIOIOValue(x, m_rgAnalPins[x].iCustomType, flSubmitValue);
+										
 									} else {
 										// don't submit this value--too close to last one
+										bDeferringNotify[x] = true;
 									}
 									rgSpinsUntilQuery[x] = rgResetSpinsUntilQuery[x];
 								}
@@ -318,13 +329,8 @@ public class IOIOManager
 								if(rgSpinsUntilQuery[x] == 0)
 								{
 									float flValue = pulseIn[x].getFrequency();
-									if( Math.abs(flValue - lastFreq[x]) > tolerance ) {
-									lastFreq[x] = flValue;
-										flValue = PinParams.DoFilter(m_rgPulsePins[x].iFilterType, m_rgPulsePins[x].dParam1, m_rgPulsePins[x].dParam2, m_rgPulsePins[x].dParam3, flValue);
-										m_listener.NotifyIOIOValue(x, m_rgPulsePins[x].iCustomType, flValue);
-									} else {
-										// don't submit this value--too close to last one
-									}
+									flValue = PinParams.DoFilter(m_rgPulsePins[x].iFilterType, m_rgPulsePins[x].dParam1, m_rgPulsePins[x].dParam2, m_rgPulsePins[x].dParam3, flValue);
+									m_listener.NotifyIOIOValue(x, m_rgPulsePins[x].iCustomType, flValue);
 									rgSpinsUntilQuery[x] = rgResetSpinsUntilQuery[x];
 								}
 								else

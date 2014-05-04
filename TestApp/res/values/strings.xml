@@ -21,7 +21,7 @@
     </string-array>
     <string-array name="accel_filters">
         <item>None</item>
-        <item>Averaging, 14/sec max</item>
+        <item>Averaging, 2/sec max</item>
         <item>High Pass</item>
         <item>High Pass and Averaging</item>
     </string-array>
