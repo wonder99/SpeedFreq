@@ -80,7 +80,7 @@ public class Prefs
 	public static Prefs.UNIT_SYSTEM DEFAULT_UNITS_STRING = Prefs.UNIT_SYSTEM.MPH;
 	public static boolean DEFAULT_DBLOCATION_BOOL = true; // whether the DB is on internal storage
 	public static boolean DEFAULT_USEACCEL = true; 
-	public static int DEFAULT_ACCEL_FILTER = 0;
+	public static int DEFAULT_ACCEL_FILTER = 1;
 	public static boolean DEFAULT_ACCEL_CORRECTION = false;
 	public static float DEFAULT_ACCEL_CORRECTION_PITCH = 0f;
 	public static float DEFAULT_ACCEL_CORRECTION_ROLL = 0f;
