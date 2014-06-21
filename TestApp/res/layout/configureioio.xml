@@ -37,12 +37,11 @@
 
     >
 
-
     <LinearLayout
         android:id="@+id/linearLayout1"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
-
+        android:layout_height="wrap_content"
+        android:layout_marginRight="20dp" >
 
         <Button
             android:id="@+id/btnAdd"
@@ -102,24 +101,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" >
 
-
-
                 <TextView
                     android:id="@+id/textView2"
-                    android:layout_width="fill_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center|right"
-                    android:layout_weight="1"
                     android:text="Pin"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
-
-
 
                 <Spinner
                     android:id="@+id/spnPin"
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"/>
+                    android:layout_weight="1" />
 
             </TableRow>
             <TableRow
@@ -147,6 +141,7 @@
 		                android:layout_height="wrap_content"
 		                android:textAppearance="?android:attr/textAppearanceMedium" />
                 </LinearLayout>
+
                 <Button
                     android:id="@+id/btnCustom"
                     android:layout_width="fill_parent"
@@ -154,6 +149,7 @@
                     android:layout_gravity="right"
                     android:layout_weight="1"
                     android:text="Customize Pin Output" />
+
             </TableRow>
 
         </TableLayout>
