@@ -237,8 +237,8 @@ public class Utility
 	{
 		final int cxPermitted = rcScreen.right - rcScreen.left;
 		final int cyPermitted = rcScreen.bottom - rcScreen.top;
-		int iFontHigh = 200;
-		int iFontLow = 10;
+		int iFontHigh = 522; // this will take 10 loops, but will support tablets 
+		int iFontLow = 10;  
 		
 		Rect rcBounds = new Rect();
 		while(true)
