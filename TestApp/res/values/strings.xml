@@ -21,9 +21,9 @@
     </string-array>
     <string-array name="accel_filters">
         <item>None</item>
-        <item>Averaging, 2/sec max</item>
-        <item>High Pass</item>
-        <item>High Pass and Averaging</item>
+        <item>Light filter</item>
+        <item>Recommended filter</item>
+        <item>Heavy Filter</item>
     </string-array>
     
     <string-array name="ioiocustomnames">
