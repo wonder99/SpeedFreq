@@ -338,8 +338,8 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 			double dSeek = (double)seek.getProgress() / (double)seek.getMax();
 			
 			
-			// we need seek(0) = 10000, and seek(1.0) = 50.  This does the trick
-			double dPeriod = 10000*Math.pow(10, -2.30103*dSeek);
+			// we need seek(0) = 10000, and seek(1.0) = 100.  This does the trick
+			double dPeriod = 10000*Math.pow(10, -2*dSeek);
 			int iPin = Integer.parseInt(spnPin.getSelectedItem().toString());
 			
 			boolean fAlreadyPresent = false;
@@ -418,8 +418,8 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 		TextView txtRate = (TextView)findViewById(R.id.txtSampleRate);
 		double dSeek = (double)arg0.getProgress() / (double)arg0.getMax();
 		
-		// we need seek(0) = 10000, and seek(1.0) = 50.  This does the trick
-		double dPeriod = 10000*Math.pow(10, -2.30103*dSeek);
+		// we need seek(0) = 10000, and seek(1.0) = 100.  This does the trick
+		double dPeriod = 10000*Math.pow(10, -2*dSeek);
 		double dRate = 1000 / dPeriod;
 		txtRate.setText("Sample Rate (" + Utility.FormatFloat((float)dRate, 1) + "hz):");
 	}
