@@ -256,7 +256,7 @@ public class IOIOManager
 					// everything is loaded, so let's continue
 					m_pStateMan.SetState(IOIOManager.class, STATE.ON, "IOIO Loaded");
 					
-					final int MS_PER_LOOP = 50; // 20ms loop time
+					final int MS_PER_LOOP = 100; // 100ms loop time
 					
 					// save previous values, to see if there's a significant change
 					float lastValue[] = new float[analIn.length];
