@@ -137,7 +137,8 @@ implements
 	private float flRoll;
 	private float flSensorOffset[] = new float[3];
 	private int iFilterType;
-	private enum FILTER_TYPE {NONE,AVERAGING,HIGH_PASS,BOTH};
+	enum FILTER_TYPE {NONE,LIGHT,MEDIUM,HEAVY};
+	private FILTER_TYPE eFilterType = FILTER_TYPE.NONE;
 		
 	Point2D m_ptCurrent; // the most recent point to come in from the location manager
 	public float m_tmCurrent; // the time (in seconds) of the m_ptCurrent
@@ -228,6 +229,9 @@ implements
     	flSensorOffset[2]  = i.getFloatExtra(Prefs.IT_ACCEL_OFFSET_Y, Prefs.DEFAULT_ACCEL_OFFSET_Y);
     	flSensorOffset[0]  = i.getFloatExtra(Prefs.IT_ACCEL_OFFSET_Z, Prefs.DEFAULT_ACCEL_OFFSET_Z);
 		iFilterType = i.getIntExtra(Prefs.IT_ACCEL_FILTER,Prefs.DEFAULT_ACCEL_FILTER);
+		for( int f=0;f<FILTER_TYPE.values().length;f++)
+			if( f==iFilterType ) eFilterType = FILTER_TYPE.values()[f];
+		
 
     	
     	final boolean fUseAccel = i.getBooleanExtra(Prefs.IT_USEACCEL_BOOLEAN, Prefs.DEFAULT_USEACCEL);
@@ -846,7 +850,7 @@ implements
 				for( int i=0; i<3; i++ )
 					flOffset[i] = event.values[i] + flSensorOffset[i];
 				
-				// First, correct for the angle of the car mount, if requested
+				// Correct for the angle of the car mount, if requested
 				if( fUseAccelCorrection ) {
 					float flSinTheta, flCosTheta;
 					flSinTheta = (float) Math.sin(Math.toRadians(-flRoll));
@@ -867,65 +871,69 @@ implements
 				// Axis mapping: axis labels vs sensor event indicies:
 			  	// in this program, x is the left/right force, y is the accel/deaccel force.  z is gravity
 				//    right turns are -x, braking is +y
-				// Otherwise, accumulate values for an average
+				// Otherwise, apply a low-pass filter to the samples
+				final float coeff1;
+				
+				switch( eFilterType ) 
+				{
+				case HEAVY:
+					coeff1 = 0.025f; //.025  25% of final after 250ms
+					break;
+				case MEDIUM:
+					coeff1 = 0.06f; // .06   50% 
+					break;
+				case LIGHT:
+					coeff1 = 0.12f; // .12   75% 				
+					break;
+				case NONE:
+					coeff1 = 1.0f;
+					break;
+				default:
+					coeff1 = 0.1f;
+					break;
+				}
+				final float coeff2 = 1.0f-coeff1;
+				
 				if( bPortraitDisplay ) {
 					// remap the axes, depending on orientation
-					xAccelCum += -flCorrected[0];
-					yAccelCum += flCorrected[2];
-					zAccelCum += flCorrected[1];
+					xAccelCum = -coeff1*flCorrected[0] + coeff2*xAccelCum;
+					yAccelCum =  coeff1*flCorrected[2] + coeff2*yAccelCum;
+					zAccelCum =  coeff1*flCorrected[1] + coeff2*zAccelCum;
 				} else {
-					xAccelCum += flCorrected[1];
-					yAccelCum += flCorrected[2];
-					zAccelCum += flCorrected[0];
+					xAccelCum =  coeff1*flCorrected[1] + coeff2*xAccelCum;
+					yAccelCum =  coeff1*flCorrected[2] + coeff2*yAccelCum;
+					zAccelCum =  coeff1*flCorrected[0] + coeff2*zAccelCum;
 				}
-				accelSamples++;
-							
+
+				accelSamples++;						
 				// the action we take is dependent on the sample number
 				if( accelSamples == 0 )
 				{	// Initialize the gravity vector to the very first sample after race has started
-					if( bPortraitDisplay ) {
+					if( bPortraitDisplay ) 
+					{
 						// remap the axes, depending on orientation
 						m_fGravityX = -flCorrected[0];
-						m_fGravityY = flCorrected[2];
-						m_fGravityZ = flCorrected[1];
-					} else {
-						m_fGravityX = flCorrected[1];
-						m_fGravityY = flCorrected[2];
-						m_fGravityZ = flCorrected[0];
+						m_fGravityY =  flCorrected[2];
+						m_fGravityZ =  flCorrected[1];
+					} 
+					else 
+					{
+						m_fGravityX =  flCorrected[1];
+						m_fGravityY =  flCorrected[2];
+						m_fGravityZ =  flCorrected[0];
 					}
-					accelSamples = 0;
-					xAccelCum = 0;
-					yAccelCum = 0;
-					zAccelCum = 0;
-				} else if( iFilterType==FILTER_TYPE.HIGH_PASS.ordinal() || iFilterType==FILTER_TYPE.NONE.ordinal()
-							|| iTimeSinceAppStart-iLastAccelSubmission>500 ) {
-					// Time to store the average.  If Noise filter is on, samples are at least 500ms apart (<2Hz)
-					xAccelCum /= accelSamples; 
-					yAccelCum /= accelSamples; 
-					zAccelCum /= accelSamples;
-					
-					if( iFilterType==FILTER_TYPE.HIGH_PASS.ordinal() || iFilterType==FILTER_TYPE.BOTH.ordinal() ) {
-						// A very slow low-pass filter is the gravity vector
-						m_fGravityX = 0.95f*m_fGravityX + 0.05f*xAccelCum;
-						m_fGravityY = 0.95f*m_fGravityY + 0.05f*yAccelCum;
-						m_fGravityZ = 0.95f*m_fGravityZ + 0.05f*zAccelCum;
-					} else {
-						m_fGravityX = 0;
-						m_fGravityY = 0;
-						m_fGravityZ = 0;
-					}
-					// Subtract gravity, so the graphs show only car forces, in Gs
-					m_XAccel.AddData((xAccelCum-m_fGravityX)/SensorManager.GRAVITY_EARTH,iTimeSinceAppStart);
-					m_YAccel.AddData((yAccelCum-m_fGravityY)/SensorManager.GRAVITY_EARTH,iTimeSinceAppStart);
-					m_ZAccel.AddData((zAccelCum-m_fGravityZ)/SensorManager.GRAVITY_EARTH,iTimeSinceAppStart);
+					// Initialize the low-pass filter to the gravity vector
+					xAccelCum = m_fGravityX;
+					yAccelCum = m_fGravityY;
+					zAccelCum = m_fGravityZ;
+				} 
+				else if( iTimeSinceAppStart-iLastAccelSubmission>=250 ) 
+				{
+					m_XAccel.AddData(xAccelCum/SensorManager.GRAVITY_EARTH,iTimeSinceAppStart);
+					m_YAccel.AddData(yAccelCum/SensorManager.GRAVITY_EARTH,iTimeSinceAppStart);
+					m_ZAccel.AddData(zAccelCum/SensorManager.GRAVITY_EARTH,iTimeSinceAppStart);
 					iLastAccelSubmission = iTimeSinceAppStart;
-
-					// reset for next loop
-					accelSamples = 0;
-					xAccelCum = 0;
-					yAccelCum = 0;
-					zAccelCum = 0;
-				}		
+				}
 			}
 		}
 	}
@@ -1958,6 +1966,8 @@ class MapPaintView extends View
 	String strSpeedoStyle;
 	NumberFormat num;
 	Prefs.UNIT_SYSTEM eDisplayUnitSystem;
+	float fontSize[] = new float[3];
+	boolean fontInitialized = false;
 	
 	int cPaintCounts = 0;
 	public MapPaintView(Context context)
@@ -1990,6 +2000,7 @@ class MapPaintView extends View
 		paintBigText = new Paint();
 		paintBigText.setTextSize(150);
 		paintBigText.setARGB(255, 255, 255, 255);
+		fontInitialized = false;
 	}
 	private void DrawSpeedDistance(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
 	{
@@ -2076,6 +2087,62 @@ class MapPaintView extends View
 			Utility.DrawFontInBox(canvas, strToPaint, p, rcOnScreen);
 		}
 	}
+	private void DrawPlusMinusNew(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
+	{
+		if(lapBest == null)
+		{
+			DrawSpeedDistance(canvas,rcOnScreen,lap,lapBest);
+		}
+		else
+		{
+			Paint p = new Paint();
+			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
+			if( flThisTime < 3 )
+			{
+				String strLap = "Lap";
+				p.setARGB(255, 255, 255, 255);
+				Utility.DrawFontInBox(canvas, strLap, p, rcOnScreen);
+				return;
+			}			
+			final TimePoint2D ptCurrent = lap.GetLastPoint();
+			final double flPercentage = ptCurrent.dDistance / lapBest.GetDistance();
+			final double flBestTime = (double)(lapBest.GetTimeAtPosition(ptCurrent,flPercentage)/1000.0);
+			num.setMaximumFractionDigits(1);
+			num.setMinimumFractionDigits(1);
+			
+			// according to a phone call at 1:51pm on Sunday Jan 29, if you're ahead, it should be minus
+			// it took us "flThisTime" seconds to get to the current distance
+			// on the best lap, it took us "flLastTime"
+			float flToPrint = (float)(flThisTime - flBestTime);
+						
+			if(flToPrint < 0)
+			{
+				// the current lap is ahead...
+				paintBigText.setARGB(255, 70, 255, 50);
+				p.setARGB(255, 50, 255, 50);
+			}
+			else
+			{
+				paintBigText.setARGB(255, 255, 80, 80);
+				p.setARGB(255, 255, 80, 80);
+			}
+			canvas.drawRect(rcOnScreen, p);
+			p.setARGB(255, 0, 0, 0);
+
+			String strToPaint = num.format(Math.abs(flToPrint));
+
+			final int offset = (int)(rcOnScreen.width()*.05f); 
+			Rect rcInset = new Rect(rcOnScreen);
+			rcInset.inset(offset, offset);
+
+			switch( strToPaint.length() ) {
+			case 3: 
+			case 4: Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, true, false); break;
+			default:
+				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcInset, true, false);
+			}
+		}
+	}
 	private void DrawComparative(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
 	{
 		// this displays the driver's current speed, as well as their speed at that point for the best lap
@@ -2150,7 +2217,40 @@ class MapPaintView extends View
 			myFontSize = (float)0.9*Utility.GetNeededFontSize("0:00.0 ", p, rcLapSeconds);
 			
 		}
-		
+
+		if( !fontInitialized ) {
+			int offset = (int)(rcTimeDiff.width()*.05f); 
+			Rect rcInset = new Rect(rcTimeDiff);
+			rcInset.inset(offset, offset);
+			float minFont=9999;
+			for( float f = 0; f<10; f=f+1.1f) {
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcInset,false);
+				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
+			}
+			fontSize[0] = minFont;
+
+			minFont=9999;
+			num.setMinimumIntegerDigits(2);
+			for( float f = 0; f<100; f=f+11.1f) {
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcInset,false);
+				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
+			}
+			fontSize[1] = minFont;
+			num.setMinimumIntegerDigits(1);
+
+			// This one is for the speed display
+			offset = (int)(rcLapSeconds.width()*.05f); 
+			rcInset = new Rect(rcLapSeconds);
+			minFont=9999;
+			for( float f = 0; f<1000; f=f+111f) {
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcInset,false);
+				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
+			}
+			fontSize[2] = minFont*.9f;
+
+			fontInitialized = true; 
+		}
+
 		LapAccumulator lapLast = myApp.GetLastLap();
 
 		final double dLastLap;
@@ -2161,18 +2261,29 @@ class MapPaintView extends View
 		if(lapLast != null && lapBest != null)
 		{
 			dLastLap = lapLast.GetLapTime();
-			DrawPlusMinus(canvas, rcTimeDiff, lap, lapBest);
+			DrawPlusMinusNew(canvas, rcTimeDiff, lap, lapBest);
 			dBestLap = lapBest.GetLapTime();
 			strBest = buildLapTime(dBestLap);
-			
-			if( dLastLap > dBestLap )
-				p.setARGB(255,255,128,128); // last lap worse, make red
-			else
-				p.setARGB(255,128,255,128); // last lap better/equal, make green
+			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
+			if( flThisTime < 3 )
+			{
+				if( dLastLap > dBestLap )
+					p.setARGB(255,255,80,80); // last lap worse, make red
+				else
+					p.setARGB(255,50,255,50); // last lap better/equal, make green
 
-			strLast = buildLapTime(dLastLap);
-			Utility.DrawFontInBoxFinal(canvas, strLast, myFontSize, p, rcLapSeconds, true, false);
-			Utility.DrawFontInBox(canvas, "Last", p, rcLapTenths);
+				strLast = buildLapTime(dLastLap);
+				Utility.DrawFontInBoxFinal(canvas, strLast, myFontSize, p, rcLapSeconds, true, false);
+				Utility.DrawFontInBox(canvas, "Last", p, rcLapTenths);
+			} else {
+				final TimePoint2D ptCurrent = lap.GetLastPoint();
+				final float flSpeed = (float)ptCurrent.dVelocity;
+				num.setMaximumFractionDigits(0);
+				String strSpeed = Prefs.FormatMetersPerSecond(flSpeed,num,eDisplayUnitSystem,false);
+				p.setARGB(255,255,255,255); // reset to white
+				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcLapSeconds, false, false);
+				Utility.DrawFontInBox(canvas, "Spd", p, rcLapTenths);
+			}
 		}
 		else
 		{
