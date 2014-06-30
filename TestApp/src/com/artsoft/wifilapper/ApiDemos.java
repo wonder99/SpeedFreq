@@ -155,10 +155,12 @@ implements
 	private float yAccelCum=0;  // and reduce database sizs
 	private float zAccelCum=0;
 	
-	private int  sampleTime=0;	// saved timestamp for submitted entry
 	private int accelSamples=-1; // counts the # of samples comprising an entry
 	private int iLastAccelSubmission;
-	
+    private int   iLastIOIOSubmissionTime[]   = new int[48];
+	private float flLastIOIOSubmissionValue[] = new float[48];
+	private boolean bDeferring[] = new boolean[48];
+
 	private float m_fGravityX;  // very long-term trend in accel vector 
 	private float m_fGravityY;  // which is used as 'gravity' to high-pass
 	private float m_fGravityZ;  // filter the accel data
@@ -219,8 +221,14 @@ implements
     	String strBTGPS = i.getStringExtra(Prefs.IT_BTGPS_STRING);
     	String strOBD2 = i.getStringExtra(Prefs.IT_BTOBD2_STRING);
     	
+    	final boolean fUseIOIO = i.getBooleanExtra(Prefs.PREF_USEIOIO_BOOLEAN, Prefs.DEFAULT_USEIOIO_BOOLEAN);
     	accelSamples = -1;  // special initial value--to init the gravity vector
     	iLastAccelSubmission = 0;
+    	for( int init=1;init<=47;init++ ) {
+    		iLastIOIOSubmissionTime[init]   = -1;
+    		flLastIOIOSubmissionValue[init] = -1;
+    		bDeferring[init] = false;
+    	}
     	
     	fUseAccelCorrection =  i.getBooleanExtra(Prefs.IT_ACCEL_CORRECTION, Prefs.DEFAULT_ACCEL_CORRECTION);
     	flPitch = i.getFloatExtra(Prefs.IT_ACCEL_CORRECTION_PITCH, Prefs.DEFAULT_ACCEL_CORRECTION_PITCH);
@@ -294,9 +302,9 @@ implements
     	
     	m_lapParams = (LapAccumulator.LapAccumulatorParams)i.getParcelableExtra(Prefs.IT_LAPPARAMS);
     	
-    	StartupTracking(fRequireWifi, rgSelectedAnalPins, rgSelectedPulsePins, iButtonPin, rgSelectedPIDs, strIP, strSSID, strBTGPS, strOBD2, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, m_fTestMode, idLapLoadMode);
+    	StartupTracking(fRequireWifi, fUseIOIO, rgSelectedAnalPins, rgSelectedPulsePins, iButtonPin, rgSelectedPIDs, strIP, strSSID, strBTGPS, strOBD2, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, m_fTestMode, idLapLoadMode);
     }
-    public static Intent BuildStartIntent(boolean fRequireWifi, IOIOManager.PinParams rgAnalPins[], IOIOManager.PinParams rgPulsePins[], int iButtonPin, boolean fPointToPoint, int iStartMode, float flStartParam, int iStopMode, float flStopParam, List<Integer> lstSelectedPIDs, Context ctxApp, String strIP, String strSSID, LapAccumulator.LapAccumulatorParams lapParams, String strRaceName, String strPrivacy, boolean fAckSMS, boolean fUseAccel, boolean fUseAccelCorrection, int iFilterType, float flPitch, float flRoll, float[] flSensorOffset, boolean fTestMode, long idRace, long idModeSelected, String strBTGPS, String strBTOBD2, String strSpeedoStyle, String strUnitSystem)
+    public static Intent BuildStartIntent(boolean fRequireWifi, boolean fUseIOIO, IOIOManager.PinParams rgAnalPins[], IOIOManager.PinParams rgPulsePins[], int iButtonPin, boolean fPointToPoint, int iStartMode, float flStartParam, int iStopMode, float flStopParam, List<Integer> lstSelectedPIDs, Context ctxApp, String strIP, String strSSID, LapAccumulator.LapAccumulatorParams lapParams, String strRaceName, String strPrivacy, boolean fAckSMS, boolean fUseAccel, boolean fUseAccelCorrection, int iFilterType, float flPitch, float flRoll, float[] flSensorOffset, boolean fTestMode, long idRace, long idModeSelected, String strBTGPS, String strBTOBD2, String strSpeedoStyle, String strUnitSystem)
     {
     	Intent myIntent = new Intent(ctxApp, ApiDemos.class);
     	myIntent.putExtra(Prefs.IT_REQUIRE_WIFI, fRequireWifi);
@@ -311,6 +319,7 @@ implements
 		myIntent.putExtra(Prefs.IT_SPEEDOSTYLE_STRING, strSpeedoStyle);
 		myIntent.putExtra(Prefs.IT_UNITS_STRING, strUnitSystem);
 		myIntent.putExtra(Prefs.IT_USEACCEL_BOOLEAN, fUseAccel);
+		myIntent.putExtra(Prefs.PREF_USEIOIO_BOOLEAN, fUseIOIO);
 		myIntent.putExtra(Prefs.PREF_ACCEL_CORRECTION, fUseAccelCorrection);
 		myIntent.putExtra(Prefs.PREF_ACCEL_FILTER, iFilterType);
 		myIntent.putExtra(Prefs.PREF_ACCEL_CORRECTION_PITCH, flPitch);
@@ -508,7 +517,7 @@ implements
     	super.onConfigurationChanged(con);
     }
     // only called once the user has done all their settings stuff
-    private void StartupTracking(boolean fRequireWifi, IOIOManager.PinParams rgAnalPins[], IOIOManager.PinParams rgPulsePins[], int iButtonPin, int rgSelectedPIDs[], String strIP, String strSSID, String strBTGPS, String strBTOBD2, boolean fUseAccel, boolean fUseAccelCorrection, int iFiltertype, float flPitch, float flRoll, boolean fTestMode, int idLapLoadMode)
+    private void StartupTracking(boolean fRequireWifi, boolean fUseIOIO, IOIOManager.PinParams rgAnalPins[], IOIOManager.PinParams rgPulsePins[], int iButtonPin, int rgSelectedPIDs[], String strIP, String strSSID, String strBTGPS, String strBTOBD2, boolean fUseAccel, boolean fUseAccelCorrection, int iFiltertype, float flPitch, float flRoll, boolean fTestMode, int idLapLoadMode)
     {
     	ApiDemos.State eEndState = ApiDemos.State.WAITING_FOR_GPS;
 
@@ -535,7 +544,7 @@ implements
     		SetupSplitDeciders(); // we'll need the automatic split deciders since splits were not included
     	}
 	    
-	    if(rgAnalPins.length > 0 || rgPulsePins.length > 0)
+	    if(fUseIOIO && (rgAnalPins.length > 0 || rgPulsePins.length > 0) )
 	    {
 	    	m_ioio = new IOIOManager(this, this, rgAnalPins,rgPulsePins, iButtonPin);
 	    }
@@ -1669,11 +1678,11 @@ implements
 		}
 	}
 	@Override
-	public void NotifyIOIOValue(int pin, int iCustomType, float flValue) 
+	public void NotifyIOIOValue(int pin, int iCustomType, float flValue, boolean bSubmit) 
 	{
 		if(m_myLaps == null) return;
 		
-		int iTimeSinceAppStart = (int)((System.nanoTime()/1000000) - this.m_tmAppStartUptime);
+		int iTimeSinceAppStart = (int)(System.nanoTime()/1000000 - this.m_tmAppStartUptime);
 		
 		boolean fNeededNew = false;
 		DataChannel chan = this.m_mapPins.get(Integer.valueOf(pin) );
@@ -1684,7 +1693,19 @@ implements
 			final int iDCType = iCustomType == 0 ? (DataChannel.CHANNEL_IOIO_START + pin) : iCustomType;
 			chan = new DataChannel(iDCType,m_myLaps);
 		}
-		chan.AddData((float)flValue, iTimeSinceAppStart);
+		if( bSubmit ) {
+			if( bDeferring[pin] ) 
+				chan.AddData(flLastIOIOSubmissionValue[pin], iLastIOIOSubmissionTime[pin]);
+			chan.AddData((float)flValue, iTimeSinceAppStart);
+			//
+			bDeferring[pin] = false;
+		}
+		else
+			bDeferring[pin] = true;
+		
+		iLastIOIOSubmissionTime[pin] = iTimeSinceAppStart;
+		flLastIOIOSubmissionValue[pin] = flValue;
+		
 		if(fNeededNew)
 		{
 			m_mapPins.put(Integer.valueOf(pin), chan);
@@ -1966,7 +1987,7 @@ class MapPaintView extends View
 	String strSpeedoStyle;
 	NumberFormat num;
 	Prefs.UNIT_SYSTEM eDisplayUnitSystem;
-	float fontSize[] = new float[3];
+	float fontSize[] = new float[5];
 	boolean fontInitialized = false;
 	
 	int cPaintCounts = 0;
@@ -2097,11 +2118,13 @@ class MapPaintView extends View
 		{
 			Paint p = new Paint();
 			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
-			if( flThisTime < 3 )
+			if( flThisTime < 5 )
 			{
 				String strLap = "Lap";
 				p.setARGB(255, 255, 255, 255);
-				Utility.DrawFontInBox(canvas, strLap, p, rcOnScreen);
+				Rect rcInset = new Rect(rcOnScreen);
+				rcInset.inset((int)(rcInset.width()*.05),(int)(rcInset.width()*.05));
+				Utility.DrawFontInBox(canvas, strLap, p, rcInset);
 				return;
 			}			
 			final TimePoint2D ptCurrent = lap.GetLastPoint();
@@ -2181,11 +2204,10 @@ class MapPaintView extends View
 		// todo: move the paint declaration to the constructor, or reuse existing
 		Paint p = new Paint();
 		final Rect rcTimeDiff = new Rect();
-		final Rect rcLapSeconds = new Rect();
-		final Rect rcLapTenths = new Rect();
-		final Rect rcBestSeconds = new Rect();
-		final Rect rcBestTenths = new Rect();
-		final float myFontSize;
+		final Rect rcUpperValue = new Rect();
+		final Rect rcUpperLabel = new Rect();
+		final Rect rcLowerValue = new Rect();
+		final Rect rcLowerLabel = new Rect();
 		
 		if( rcOnScreen.width() < rcOnScreen.height() )
 		{
@@ -2195,11 +2217,10 @@ class MapPaintView extends View
 			final int rightSplit= rcOnScreen.left + rcOnScreen.width() * 4/5;
 
 			rcTimeDiff.set(rcOnScreen.left, rcOnScreen.top, rcOnScreen.right, midSplit);
-			rcLapSeconds.set(rcOnScreen.left, midSplit, rightSplit, lowSplit);
-			rcLapTenths.set(rightSplit, midSplit, rcOnScreen.right, lowSplit);
-			rcBestSeconds.set(rcOnScreen.left, lowSplit, rightSplit, rcOnScreen.bottom);
-			rcBestTenths.set(rightSplit, lowSplit, rcOnScreen.right, rcOnScreen.bottom);
-			myFontSize = (float)0.9*Utility.GetNeededFontSize("0:00.0 ", p, rcLapSeconds);
+			rcUpperValue.set(rcOnScreen.left, midSplit, rightSplit, lowSplit);
+			rcUpperLabel.set(rightSplit, midSplit, rcOnScreen.right, lowSplit);
+			rcLowerValue.set(rcOnScreen.left, lowSplit, rightSplit, rcOnScreen.bottom);
+			rcLowerLabel.set(rightSplit, lowSplit, rcOnScreen.right, rcOnScreen.bottom);
 			}
 		else
 		{
@@ -2210,43 +2231,59 @@ class MapPaintView extends View
 			final int labelSplit = rcOnScreen.height()/10;
 
 			rcTimeDiff.set(rcOnScreen.left, rcOnScreen.top, midXSplit, rcOnScreen.bottom);
-			rcLapTenths.set(midXSplit2, rcOnScreen.top, rcOnScreen.right, rcOnScreen.top+labelSplit);
-			rcLapSeconds.set(midXSplit2, rcOnScreen.top+labelSplit, rcOnScreen.right, midYSplit);
-			rcBestTenths.set(midXSplit2, midYSplit, rcOnScreen.right, midYSplit+labelSplit);
-			rcBestSeconds.set(midXSplit2, midYSplit+labelSplit, rcOnScreen.right, rcOnScreen.bottom);
-			myFontSize = (float)0.9*Utility.GetNeededFontSize("0:00.0 ", p, rcLapSeconds);
+			rcUpperLabel.set(midXSplit, rcOnScreen.top, rcOnScreen.right, rcOnScreen.top+labelSplit);
+			rcUpperValue.set(midXSplit, rcOnScreen.top+labelSplit, rcOnScreen.right, midYSplit);
+			rcLowerLabel.set(midXSplit, midYSplit, rcOnScreen.right, midYSplit+labelSplit);
+			rcLowerValue.set(midXSplit, midYSplit+labelSplit, rcOnScreen.right, rcOnScreen.bottom);
 			
 		}
-
+/*		
+		p.setARGB(255, 0, 0,155);
+		canvas.drawRect(rcTimeDiff, p);
+		p.setARGB(255, 255, 0, 0);
+		canvas.drawRect(rcUpperLabel, p);
+		p.setARGB(255, 155, 0, 0);
+		canvas.drawRect(rcUpperValue, p);
+		p.setARGB(255, 0,255, 0);
+		canvas.drawRect(rcLowerLabel, p);
+		p.setARGB(255, 0,155, 0);
+		canvas.drawRect(rcLowerValue, p);
+		
+*/
 		if( !fontInitialized ) {
-			int offset = (int)(rcTimeDiff.width()*.05f); 
-			Rect rcInset = new Rect(rcTimeDiff);
-			rcInset.inset(offset, offset);
+			// First, calculate the font size required for the delta time, whether <10 sec or >=10sec
 			float minFont=9999;
 			for( float f = 0; f<10; f=f+1.1f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcInset,false);
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcTimeDiff,false);
 				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
 			}
-			fontSize[0] = minFont;
+			fontSize[0] = minFont*.9f;
 
+			// now for >= 10sec
 			minFont=9999;
 			num.setMinimumIntegerDigits(2);
 			for( float f = 0; f<100; f=f+11.1f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcInset,false);
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcTimeDiff,false);
 				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
 			}
-			fontSize[1] = minFont;
+			fontSize[1] = minFont*.9f;
 			num.setMinimumIntegerDigits(1);
 
 			// This one is for the speed display
-			offset = (int)(rcLapSeconds.width()*.05f); 
-			rcInset = new Rect(rcLapSeconds);
 			minFont=9999;
 			for( float f = 0; f<1000; f=f+111f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcInset,false);
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcUpperValue,false);
 				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
 			}
 			fontSize[2] = minFont*.9f;
+
+			// This one is for the labels
+			Utility.DrawFontInBox(canvas, "Spdd", p, rcUpperLabel,false); // bogus, but covers drop chars and 4 chars
+			fontSize[3] = p.getTextSize();
+
+			// This one is for the time, minutes, sec, tenths
+			Utility.DrawFontInBox(canvas, "4:44.4", p, rcUpperValue,false);
+			fontSize[4] = p.getTextSize() * .9f;
 
 			fontInitialized = true; 
 		}
@@ -2265,7 +2302,7 @@ class MapPaintView extends View
 			dBestLap = lapBest.GetLapTime();
 			strBest = buildLapTime(dBestLap);
 			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
-			if( flThisTime < 3 )
+			if( flThisTime < 5 )
 			{
 				if( dLastLap > dBestLap )
 					p.setARGB(255,255,80,80); // last lap worse, make red
@@ -2273,16 +2310,16 @@ class MapPaintView extends View
 					p.setARGB(255,50,255,50); // last lap better/equal, make green
 
 				strLast = buildLapTime(dLastLap);
-				Utility.DrawFontInBoxFinal(canvas, strLast, myFontSize, p, rcLapSeconds, true, false);
-				Utility.DrawFontInBox(canvas, "Last", p, rcLapTenths);
+				Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[4], p, rcUpperValue, false, false);
+				Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcUpperLabel,false,false);
 			} else {
 				final TimePoint2D ptCurrent = lap.GetLastPoint();
 				final float flSpeed = (float)ptCurrent.dVelocity;
 				num.setMaximumFractionDigits(0);
 				String strSpeed = Prefs.FormatMetersPerSecond(flSpeed,num,eDisplayUnitSystem,false);
 				p.setARGB(255,255,255,255); // reset to white
-				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcLapSeconds, false, false);
-				Utility.DrawFontInBox(canvas, "Spd", p, rcLapTenths);
+				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcUpperValue, false, false);
+				Utility.DrawFontInBoxFinal(canvas, "Spd", fontSize[3], p, rcUpperLabel,false,false);
 			}
 		}
 		else
@@ -2292,13 +2329,13 @@ class MapPaintView extends View
 			strBest = "-:--.-";
 
 			p.setARGB(255,255,255,255); // reset to white
-			Utility.DrawFontInBoxFinal(canvas, strLapTime, myFontSize, p, rcLapSeconds, true,false);
-			Utility.DrawFontInBox(canvas, "Lap", p, rcLapTenths);
+			Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[4], p, rcUpperValue, false,false);
+			Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[3], p, rcUpperLabel, false,false);
 		}
 		
 		p.setARGB(255,255,255,255); // Best lap in white
-		Utility.DrawFontInBoxFinal(canvas, strBest, myFontSize, p, rcBestSeconds, true, false);
-		Utility.DrawFontInBox(canvas, "Best", p, rcBestTenths);
+		Utility.DrawFontInBoxFinal(canvas, strBest, fontSize[4], p, rcLowerValue, false, false);
+		Utility.DrawFontInBoxFinal(canvas, "Best", fontSize[3], p, rcLowerLabel, false, false);
 	
 	}
 	
