@@ -186,7 +186,7 @@ public class IOIOManager
 	}
 	public interface IOIOListener
 	{
-		public abstract void NotifyIOIOValue(int pin, int iCustomType, float flValue);
+		public abstract void NotifyIOIOValue(int pin, int iCustomType, float flValue, boolean bSubmit);
 		public abstract void NotifyIOIOButton();
 	}
 	
@@ -260,7 +260,7 @@ public class IOIOManager
 					
 					// save previous values, to see if there's a significant change
 					float lastValue[] = new float[analIn.length];
-					float lastFreq[] = new float[analIn.length];
+ 
 					boolean bDeferringNotify[] = new boolean[analIn.length];
 					
 					int rgSpinsUntilQuery[] = new int[analIn.length];
@@ -270,7 +270,6 @@ public class IOIOManager
 						if(m_rgPulsePins[x] != null)
 						{
 							rgResetSpinsUntilQuery[x] = m_rgPulsePins[x].iPeriod / MS_PER_LOOP - 1;
-							lastFreq[x] = 99999f; // force the initial update
 						}
 					}
 					for(int x = 0;x < m_rgAnalPins.length; x++)
@@ -282,14 +281,15 @@ public class IOIOManager
 							bDeferringNotify[x] = false;						}
 					}
 					
-					// the loop runs at 20hz.
+					// the loop runs at 10hz.
 					// if rgSpinsUntilQuery[x] == 0, then we query the pin and reset the count.  Else, we decrement the counter
 					// So a 0.1hz pin will always get reset to 199, 20hz gets 0
 					
 					boolean fLastButton = buttonPin != null ? buttonPin.read() : false;
 					long startTime;
 					long sleepTime= 0;
-					float tolerance = 0.005f;  // differences less than this are not submitted
+					float tolerance = 0.01f;  // for 8-bit accuracy, step size is 12.9mV.  Smaller than that is just noise.
+					                          // prevent database bloat by not submitting static values or noise.
 					float flSubmitValue;
 					while(m_fContinue)
 					{
@@ -300,23 +300,13 @@ public class IOIOManager
 							{
 								if(rgSpinsUntilQuery[x] == 0)
 								{
-									float flValue = analIn[x].getVoltage();  // am I comparing pre-filtered to post-filtered values?
-									// Only store significant changes
-									if( Math.abs(flValue - lastValue[x]) > tolerance ) {
-										if( bDeferringNotify[x] ) {
-											// we just got a change after a static period. Re-submit old value, so Pitside draws it properly
-											flSubmitValue = PinParams.DoFilter(m_rgAnalPins[x].iFilterType, m_rgAnalPins[x].dParam1, m_rgAnalPins[x].dParam2, m_rgAnalPins[x].dParam3, lastValue[x]);											
-											m_listener.NotifyIOIOValue(x, m_rgAnalPins[x].iCustomType, flSubmitValue);
-											bDeferringNotify[x] = false;
-										}
+									float flValue = analIn[x].getVoltage();
+									boolean bSubmit = (Math.abs(flValue - lastValue[x]) > tolerance);
+									if( bSubmit ) 
 										lastValue[x] = flValue;
-										flSubmitValue = PinParams.DoFilter(m_rgAnalPins[x].iFilterType, m_rgAnalPins[x].dParam1, m_rgAnalPins[x].dParam2, m_rgAnalPins[x].dParam3, flValue);
-										m_listener.NotifyIOIOValue(x, m_rgAnalPins[x].iCustomType, flSubmitValue);
-										
-									} else {
-										// don't submit this value--too close to last one
-										bDeferringNotify[x] = true;
-									}
+									
+									flSubmitValue = PinParams.DoFilter(m_rgAnalPins[x].iFilterType, m_rgAnalPins[x].dParam1, m_rgAnalPins[x].dParam2, m_rgAnalPins[x].dParam3, flValue);											
+									m_listener.NotifyIOIOValue(x, m_rgAnalPins[x].iCustomType, flSubmitValue,bSubmit);
 									rgSpinsUntilQuery[x] = rgResetSpinsUntilQuery[x];
 								}
 								else
@@ -330,7 +320,7 @@ public class IOIOManager
 								{
 									float flValue = pulseIn[x].getFrequency();
 									flValue = PinParams.DoFilter(m_rgPulsePins[x].iFilterType, m_rgPulsePins[x].dParam1, m_rgPulsePins[x].dParam2, m_rgPulsePins[x].dParam3, flValue);
-									m_listener.NotifyIOIOValue(x, m_rgPulsePins[x].iCustomType, flValue);
+									m_listener.NotifyIOIOValue(x, m_rgPulsePins[x].iCustomType, flValue, true);
 									rgSpinsUntilQuery[x] = rgResetSpinsUntilQuery[x];
 								}
 								else
@@ -541,8 +531,9 @@ class FakeIOIO implements IOIO
 		@Override
 		public float getVoltage() throws InterruptedException,ConnectionLostException 
 		{
-			double dTime = (System.currentTimeMillis()%10000) / 10000.0;
-			return (float)(Math.sin(dTime * pin) * 2 + 2.5);
+			double dTime = (System.currentTimeMillis()%10000) / 40000.0;
+			double dAmplitude = Math.sin(dTime/1.3 * pin);
+			return (float)(Math.sin(dTime * pin) * dAmplitude + 2.5);
 		}
 
 		@Override
