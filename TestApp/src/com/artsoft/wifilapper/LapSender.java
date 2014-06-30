@@ -406,7 +406,7 @@ public class LapSender
 				{
 					String strLocalSSID = GetSSID();
 					// Strip leading and trailing quotes, if present, but not if string is empty: ""
-					if( strCurrentSSID.charAt(0)=='"' && strCurrentSSID.length() > 2) {
+					if( strCurrentSSID.length() > 2 && strCurrentSSID.charAt(0)=='"' ) {
 						strCurrentSSID = strCurrentSSID.substring(1,strCurrentSSID.length()-1);
 					}
 				
