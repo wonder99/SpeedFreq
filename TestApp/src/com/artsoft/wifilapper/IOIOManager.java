@@ -288,7 +288,7 @@ public class IOIOManager
 					boolean fLastButton = buttonPin != null ? buttonPin.read() : false;
 					long startTime;
 					long sleepTime= 0;
-					float tolerance = 0.01f;  // for 8-bit accuracy, step size is 12.9mV.  Smaller than that is just noise.
+					float tolerance = 0.0064f;// for 8-bit accuracy, step size is 12.9mV.  Smaller than half that is just noise.
 					                          // prevent database bloat by not submitting static values or noise.
 					float flSubmitValue;
 					while(m_fContinue)
