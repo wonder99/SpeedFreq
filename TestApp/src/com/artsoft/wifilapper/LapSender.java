@@ -395,6 +395,7 @@ public class LapSender
 			if(!pWifi.isWifiEnabled())
 			{
 				pWifi.setWifiEnabled(true);
+				Thread.sleep(2000);
 			}
 			
 			// second: check if we're already connected to the desired network
@@ -501,8 +502,8 @@ public class LapSender
 				addr = InetAddress.getByName(strLocalIP);
 				s = new Socket();
 				sConnect = new InetSocketAddress(addr, iPort);
-				s.connect(sConnect, 5500);
-				s.setSoTimeout(6000);
+				s.connect(sConnect, 500);
+				s.setSoTimeout(3000);
 				
 				m_watchdog = new SocketWatchdog(this, s);
 			}
