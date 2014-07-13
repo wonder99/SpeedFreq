@@ -511,13 +511,8 @@ void CLapPainter::DrawGeneralGraph(const LAPSUPPLIEROPTIONS& sfLapOpts, bool fHi
 //////////////////////////////////////////
 		  //	Can add transformation function here for Y
 		  if (sfLapOpts.m_PlotPrefs[y].iTransformYesNo == true)
-		  {
-			  dY = PolynomialFilter(ptY.flValue, sfLapOpts.m_PlotPrefs[y].fTransAValue, sfLapOpts.m_PlotPrefs[y].fTransBValue, sfLapOpts.m_PlotPrefs[y].fTransCValue);
-		  }
-		  else
-		  {
-			  dY = ptY.flValue;
-		  }
+			  dY = PolynomialFilter(dY, sfLapOpts.m_PlotPrefs[y].fTransAValue, sfLapOpts.m_PlotPrefs[y].fTransBValue, sfLapOpts.m_PlotPrefs[y].fTransCValue);
+
 //////////////////////////////////////////
           glVertex2f(dX,dY);
 

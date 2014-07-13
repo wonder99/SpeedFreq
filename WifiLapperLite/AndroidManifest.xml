@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.artsoft.wifilapperlite"
-    android:versionCode="38"
-    android:versionName="1.38" >
+    android:versionCode="39"
+    android:versionName="1.39 Beta3: July 12, 2014" >
 
     <supports-screens android:smallScreens="true" />
     <supports-screens android:normalScreens="true" />
@@ -30,7 +30,6 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
 
     <application
-        android:debuggable="true"
         android:allowBackup="true"
         android:icon="@drawable/icon"
         android:label="@string/app_name_lite" >

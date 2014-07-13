@@ -59,7 +59,7 @@ public class LapSender
 
 	private long m_lRaceId;
 	
-	private static final int PRUNE_MINUTES = 420; // paul/special: how many minutes we allow things to languish before busting out the prunes
+	private static final int PRUNE_MINUTES = 30; // how many minutes we allow things to languish before busting out the prunes
 	
 	private boolean fContinue;
 	private SendThd m_thd;

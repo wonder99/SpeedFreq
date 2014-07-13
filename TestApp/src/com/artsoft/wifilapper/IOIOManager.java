@@ -283,12 +283,12 @@ public class IOIOManager
 					
 					// the loop runs at 10hz.
 					// if rgSpinsUntilQuery[x] == 0, then we query the pin and reset the count.  Else, we decrement the counter
-					// So a 0.1hz pin will always get reset to 199, 20hz gets 0
+					// So a 0.1hz pin will always get reset to 99, 10hz gets 0
 					
 					boolean fLastButton = buttonPin != null ? buttonPin.read() : false;
 					long startTime;
 					long sleepTime= 0;
-					float tolerance = 0.0064f;// for 8-bit accuracy, step size is 12.9mV.  Smaller than half that is just noise.
+					float tolerance = 0.0065f;// for 8-bit accuracy, step size is 12.9mV.  Smaller than half that is just noise.
 					                          // prevent database bloat by not submitting static values or noise.
 					float flSubmitValue;
 					while(m_fContinue)
