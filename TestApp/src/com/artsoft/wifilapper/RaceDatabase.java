@@ -16,6 +16,7 @@
 
 package com.artsoft.wifilapper;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
@@ -33,6 +34,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Environment;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -69,10 +71,33 @@ public class RaceDatabase extends BetterOpenHelper
 	}
 	public static boolean CreateExternal(Context ctx)
 	{
-		//RaceDatabase race = new RaceDatabase(ctx, DATABASE_NAME, null, m_iVersion);
-		String strPath = Environment.getExternalStorageDirectory().toString();
-		return CreateOnPath(ctx, strPath + "/wifilapper/" + DATABASE_NAME_INTERNAL);
+		// First, see if removable storage can be used
+		String strPath = null;
+	    String strStorage = System.getenv("SECONDARY_STORAGE");
+	    if (!TextUtils.isEmpty(strStorage)) {
+	        String[] paths = strStorage.split(":");
+	        for (String path : paths) {
+	            File file = new File(path);
+	            if (file.isDirectory() && file.canWrite() ) {
+	                strPath=file.toString();
+	                break;
+	            }
+	        }
+	    }
+	    
+	    // If not, default to sdcard0, which is often non-removable, but at least accessible by other apps
+	    if( strPath == null )
+	    	strPath = Environment.getExternalStorageDirectory().toString();
+	    
+	    // Create the directory if it doesn't exist
+	    strPath = strPath + "/wifilapper";
+	    File fileTest = new File(strPath);
+	    if ( !fileTest.isDirectory() )
+	    	fileTest.mkdir();
+	    
+		return CreateOnPath(ctx, strPath + "/" + DATABASE_NAME_INTERNAL);
 	}
+	
 	public static boolean CreateOnPath(Context ctx, String strPath)
 	{
 		RaceDatabase race = new RaceDatabase(ctx, strPath, null, m_iVersion);
