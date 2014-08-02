@@ -2118,7 +2118,7 @@ class MapPaintView extends View
 		{
 			Paint p = new Paint();
 			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
-			if( flThisTime < 5 )
+			if( flThisTime < 3 )
 			{
 				String strLap = "Lap";
 				p.setARGB(255, 255, 255, 255);
@@ -2301,26 +2301,15 @@ class MapPaintView extends View
 			DrawPlusMinusNew(canvas, rcTimeDiff, lap, lapBest);
 			dBestLap = lapBest.GetLapTime();
 			strBest = buildLapTime(dBestLap);
-			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
-			if( flThisTime < 5 )
-			{
-				if( dLastLap > dBestLap )
-					p.setARGB(255,255,80,80); // last lap worse, make red
-				else
-					p.setARGB(255,50,255,50); // last lap better/equal, make green
+			
+			if( dLastLap > dBestLap )
+				p.setARGB(255,255,80,80); // last lap worse, make red
+			else
+				p.setARGB(255,50,255,50); // last lap better/equal, make green
 
-				strLast = buildLapTime(dLastLap);
-				Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[4], p, rcUpperValue, false, false);
-				Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcUpperLabel,false,false);
-			} else {
-				final TimePoint2D ptCurrent = lap.GetLastPoint();
-				final float flSpeed = (float)ptCurrent.dVelocity;
-				num.setMaximumFractionDigits(0);
-				String strSpeed = Prefs.FormatMetersPerSecond(flSpeed,num,eDisplayUnitSystem,false);
-				p.setARGB(255,255,255,255); // reset to white
-				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcUpperValue, false, false);
-				Utility.DrawFontInBoxFinal(canvas, "Spd", fontSize[3], p, rcUpperLabel,false,false);
-			}
+			strLast = buildLapTime(dLastLap);
+			Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[4], p, rcUpperValue, false, false);
+			Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcUpperLabel, false, false);
 		}
 		else
 		{
