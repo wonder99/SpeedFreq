@@ -2372,11 +2372,14 @@ class MapPaintView extends View
 			if(lapLast != null)
 			{
 				final double dLastLap = lapLast.GetLapTime();
-				final double dBestLap = lapBest.GetLapTime();
 				String strLapText = Utility.FormatSeconds((float)dLastLap);
-				String strBestText = Utility.FormatSeconds((float)dBestLap);
 				Utility.DrawFontInBox(canvas, strLapText, paintBigText, rcLapTime);
 				Utility.DrawFontInBox(canvas, "Lap", paintBigText, rcLapLabel);
+			}
+			if(lapBest != null)
+			{
+				final double dBestLap = lapBest.GetLapTime();
+				String strBestText = Utility.FormatSeconds((float)dBestLap);
 				Utility.DrawFontInBox(canvas, strBestText, paintBigText, rcBestTime);
 				Utility.DrawFontInBox(canvas, "Best", paintBigText, rcBestLabel);
 			}
