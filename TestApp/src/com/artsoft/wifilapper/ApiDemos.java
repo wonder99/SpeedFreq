@@ -2120,6 +2120,7 @@ class MapPaintView extends View
 			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
 			if( flThisTime < 3 )
 			{
+				// Display the word Lap for 3 seconds as the line is crossed
 				String strLap = "Lap";
 				p.setARGB(255, 255, 255, 255);
 				Rect rcInset = new Rect(rcOnScreen);
@@ -2290,6 +2291,7 @@ class MapPaintView extends View
 			strBest = buildLapTime(dBestLap);
 
 			if( flThisTime < 15 ) {
+				// Display last lap time for the first 15 seconds of the next lap
 				dLastLap = lapLast.GetLapTime();
 				if( dLastLap > dBestLap )
 					p.setARGB(255,255,80,80); // last lap worse, make red
