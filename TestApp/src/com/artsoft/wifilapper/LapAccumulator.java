@@ -799,17 +799,17 @@ public class LapAccumulator
 			if(lnLast.Intersect(m_lapParams.lnStop,intersect, true, true))
 			{
 				Vector2D vDir = Vector2D.P1MinusP2(ptNewRaw, ptLast.pt);
-				if(vDir.DotProduct(m_lapParams.vStop) > 0)
+				if((dVelocity > 2) && (vDir.DotProduct(m_lapParams.vStop) > 0) )
 				{
 					m_iLapsToGo--;
 					if(m_iLapsToGo <= 0)
 					{
-						// we've crossed the finish line enough times, and we were going the correct direction
+						// we've crossed the finish line enough times, and we were going the correct direction, and fast enough
 						float dTimeInSeconds = ((float)iTime / 1000.0f);
 						float dIntersectTime = (intersect.GetThisFraction() * dLastInSeconds) + ((1 - intersect.GetThisFraction()) * dTimeInSeconds);
 						int iIntersectTime = (int)(dIntersectTime * 1000);
 						assert(iIntersectTime > m_iStartTime);
-						m_finishTime = new Integer(iIntersectTime);
+						m_finishTime = Integer.valueOf(iIntersectTime);
 						m_ptFinishPoint = intersect.GetPoint();
 					}
 				}
