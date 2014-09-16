@@ -53,7 +53,6 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.*;
 import android.view.View.OnClickListener;
-import android.view.View.OnLongClickListener;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -76,7 +75,6 @@ implements
 	LocationListener, 
 	Utility.MultiStateObject, 
 	OnClickListener, 
-	OnLongClickListener,
 	Handler.Callback, 
 	SensorEventListener,
 	MessageMan.MessageReceiver, 
@@ -175,9 +173,6 @@ implements
 	private Prefs.UNIT_SYSTEM m_eUnitSystem;
 	
 	private boolean bPortraitDisplay;	// holds the screen orientation, used for re-mapping accelerometer
-
-	private int m_lapTimerViewOption=0;
-	final int numLapTimerViewOptions=2;
 	
 	private long rgLastGPSGaps[] = new long[10];
 	private int iLastGPSGap = 0;
@@ -680,15 +675,6 @@ implements
     }
     
     // click stuff
-    public boolean onLongClick(View v) 
-    {
-    	if(m_eState == State.PLOTTING)
-		{
-    		m_lapTimerViewOption = (m_lapTimerViewOption + 1) % numLapTimerViewOptions;
-		}
-		return true;
-    	
-    }
     @Override
     public void onClick(View v)
     {
@@ -1192,7 +1178,6 @@ implements
     LapAccumulator GetLastLap() {return m_lastLap;}
     LapAccumulator GetDriverBestLap() {return m_driverBest;}
     LapAccumulator GetBestLap() {return m_best;}
-    int getLapTimerViewOption() { return m_lapTimerViewOption;}
     
 	public float GetTimeSinceLastSplit()
 	{
@@ -1308,7 +1293,6 @@ implements
     		view.SetData(this, m_strSpeedoStyle, m_eUnitSystem);
     		m_currentView = vView;
     		m_currentView.setOnClickListener(this);
-    		m_currentView.setOnLongClickListener(this);
     		setContentView(vView);
     		vView.requestLayout();
     		break;
@@ -2253,19 +2237,6 @@ class MapPaintView extends View
 			rcLowerValue.set(midXSplit, midYSplit+labelSplit, rcOnScreen.right, rcOnScreen.bottom);
 			
 		}
-/*		
-		p.setARGB(255, 0, 0,155);
-		canvas.drawRect(rcTimeDiff, p);
-		p.setARGB(255, 255, 0, 0);
-		canvas.drawRect(rcUpperLabel, p);
-		p.setARGB(255, 155, 0, 0);
-		canvas.drawRect(rcUpperValue, p);
-		p.setARGB(255, 0,255, 0);
-		canvas.drawRect(rcLowerLabel, p);
-		p.setARGB(255, 0,155, 0);
-		canvas.drawRect(rcLowerValue, p);
-		
-*/
 		if( !fontInitialized ) {
 			// First, calculate the font size required for the delta time, whether <10 sec or >=10sec
 			float minFont=9999;
@@ -2309,6 +2280,7 @@ class MapPaintView extends View
 		final double dLastLap;
 		final String strLast;
 		final double dBestLap;
+		final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
 		String strBest = "-:--.-";
 
 		if(lapLast != null && lapBest != null)
@@ -2316,9 +2288,8 @@ class MapPaintView extends View
 			DrawPlusMinusNew(canvas, rcTimeDiff, lap, lapBest);
 			dBestLap = lapBest.GetLapTime();
 			strBest = buildLapTime(dBestLap);
-			
-			switch( myApp.getLapTimerViewOption() ) {
-			case 0: 
+
+			if( flThisTime < 15 ) {
 				dLastLap = lapLast.GetLapTime();
 				if( dLastLap > dBestLap )
 					p.setARGB(255,255,80,80); // last lap worse, make red
@@ -2327,8 +2298,8 @@ class MapPaintView extends View
 				strLast = buildLapTime(dLastLap);
 				Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[4], p, rcUpperValue, false, false);
 				Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcUpperLabel, false, false);
-				break;
-			default:
+			}
+			else {
 				final TimePoint2D ptCurrent = lap.GetLastPoint();
 				final float flSpeed = (float)ptCurrent.dVelocity;
 				num.setMaximumFractionDigits(0);
@@ -2337,27 +2308,14 @@ class MapPaintView extends View
 				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcUpperValue, false, false);
 				Utility.DrawFontInBoxFinal(canvas, "Spd", fontSize[3], p, rcUpperLabel,false,false);
 			}
-
 		}
 		else // First lap, or best lap has been reset
 		{
 			p.setARGB(255,255,255,255); // reset to white
 
-			switch( myApp.getLapTimerViewOption() ) {
-			case 0: 
-				final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
-				final String strLapTime = buildLapTime(flThisTime);
-				Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[4], p, rcUpperValue, false,false);
-				Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[3], p, rcUpperLabel, false,false);
-				break;
-			default:
-				final TimePoint2D ptCurrent = lap.GetLastPoint();
-				final float flSpeed = (float)ptCurrent.dVelocity;
-				num.setMaximumFractionDigits(0);
-				String strSpeed = Prefs.FormatMetersPerSecond(flSpeed,num,eDisplayUnitSystem,false);
-				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcUpperValue, false, false);
-				Utility.DrawFontInBoxFinal(canvas, "Spd", fontSize[3], p, rcUpperLabel,false,false);
-			}
+			final String strLapTime = buildLapTime(flThisTime);
+			Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[4], p, rcUpperValue, false,false);
+			Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[3], p, rcUpperLabel, false,false);
 		}
 		
 		p.setARGB(255,255,255,255); // Best lap in white
