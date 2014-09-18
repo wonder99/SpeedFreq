@@ -179,6 +179,9 @@ public class ConfigureAccelerometerActivity extends Activity implements
 		
 		// disable sensors when leaving
 		enableSensors(false);
+		
+		// disable timer if leaving unexpectedly
+		if( timer != null ) timer.cancel();
 
 		SharedPreferences settings = this.getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
 		SharedPreferences.Editor edit = settings.edit();
@@ -335,7 +338,8 @@ public class ConfigureAccelerometerActivity extends Activity implements
 							streamId = soundPool.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f);
 						}
 						else
-							soundPool.stop(streamId);
+							if ( streamId != 0 ) 
+								soundPool.stop(streamId);
 				}
 			}
 		}
