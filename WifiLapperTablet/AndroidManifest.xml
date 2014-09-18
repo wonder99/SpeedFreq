@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.artsoft.wifilappertab"
     android:versionCode="39"
-    android:versionName="1.39 Beta 7: Sept 15, 2014" >
+    android:versionName="1.39 Beta 8: Sept 17, 2014" >
 
     <supports-screens android:smallScreens="true" />
     <supports-screens android:normalScreens="true" />

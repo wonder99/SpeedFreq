@@ -17,7 +17,6 @@
 package com.artsoft.wifilapper;
 
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,14 +26,12 @@ import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Matrix;
@@ -44,26 +41,21 @@ import android.graphics.Region.Op;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
 import android.location.*;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.*;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.graphics.*;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-
-import java.util.Vector;
 
 import com.artsoft.wifilapper.IOIOManager.IOIOListener;
 import com.artsoft.wifilapper.LapAccumulator.DataChannel;
@@ -132,14 +124,6 @@ implements
 	
 	private LapAccumulator.LapAccumulatorParams m_lapParams = null;
 
-	private boolean fUseAccelCorrection;
-	private float flPitch;
-	private float flRoll;
-	private float flSensorOffset[] = new float[3];
-	private int iFilterType;
-	enum FILTER_TYPE {NONE,LIGHT,MEDIUM,HEAVY};
-	private FILTER_TYPE eFilterType = FILTER_TYPE.NONE;
-		
 	Point2D m_ptCurrent; // the most recent point to come in from the location manager
 	public float m_tmCurrent; // the time (in seconds) of the m_ptCurrent
 	Point2D m_ptLast; // the point that came before that one
@@ -154,17 +138,18 @@ implements
 	private float xAccelCum=0;  // moving average of accel data to smooth
 	private float yAccelCum=0;  // and reduce database sizs
 	private float zAccelCum=0;
+	private boolean fUseAccelCorrection;
+	private float flPitch;
+	private float flRoll;
+	private float flSensorOffset[] = new float[3];
+	private int iFilterType;
+	enum FILTER_TYPE {NONE,LIGHT,MEDIUM,HEAVY};
+	private FILTER_TYPE eFilterType = FILTER_TYPE.NONE;		
 	
-	private int accelSamples=-1; // counts the # of samples comprising an entry
-	private int iLastAccelSubmission;
     private int   iLastIOIOSubmissionTime[]   = new int[48];
 	private float flLastIOIOSubmissionValue[] = new float[48];
 	private boolean bDeferring[] = new boolean[48];
 
-	private float m_fGravityX;  // very long-term trend in accel vector 
-	private float m_fGravityY;  // which is used as 'gravity' to high-pass
-	private float m_fGravityZ;  // filter the accel data
-		
 	// data about this race
 	private String m_strRaceName;
 	private boolean m_fTestMode;
@@ -222,8 +207,6 @@ implements
     	String strOBD2 = i.getStringExtra(Prefs.IT_BTOBD2_STRING);
     	
     	final boolean fUseIOIO = i.getBooleanExtra(Prefs.PREF_USEIOIO_BOOLEAN, Prefs.DEFAULT_USEIOIO_BOOLEAN);
-    	accelSamples = -1;  // special initial value--to init the gravity vector
-    	iLastAccelSubmission = 0;
     	for( int init=1;init<=47;init++ ) {
     		iLastIOIOSubmissionTime[init]   = -1;
     		flLastIOIOSubmissionValue[init] = -1;
@@ -837,6 +820,53 @@ implements
 		// don't care!
 	}
 
+	long profile[] = new long[500];
+	int iProfileIndex = 0;
+	int profileLoops=0;
+	
+	int   iSensorSampleIndex=0;
+	static int iFilterLength = 25; // must be odd
+	float flSample[][] = new float[3][iFilterLength]; 
+	static int iCurveLength = (iFilterLength+1)/2; 
+
+	// http://www.arc.id.au/FilterDesign.html
+	// 2Hz, 25pts, 50Hz, 22dB
+	static float flFilter2[] = { // length is iCurveLength
+			.06915713f,
+			.068381706f,
+			.066090011f,
+			.062379731f,
+			.057411656f,
+			.051396715f,
+			.044585602f,
+			.03725581f,
+			.029696936f,
+			.022196845f,
+			.015024387f,
+			.008419881f,
+			.002582154f
+	};
+
+	// 1Hz, 25pts, 50Hz, 28dB
+	static float flFilter1[] = { // length is iCurveLength
+			.055498669f,
+			.055119891f,
+			.053993268f,
+			.05215765f,
+			.049669922f,
+			.04660917f,
+			.04307113f,
+			.039165411f,
+			.035004398f,
+			.030710189f,
+			.02639933f,
+			.022184206f,
+			.018166102f
+	}; 
+			 
+	static int iSubmitPeriod = 8; // submit once per this many accel triggers 8 gives 8*20=160ms sample period
+	int iTriggerCount = iSubmitPeriod;
+	
 	@Override
 	public void onSensorChanged(SensorEvent event) 
 	{
@@ -844,109 +874,123 @@ implements
 		
 		long lTimeMs = event.timestamp / 1000000;
 		int iTimeSinceAppStart = (int)(lTimeMs - this.m_tmAppStartUptime);
+		
+//		// Profiling start
+//		profile[iProfileIndex] =  System.nanoTime();
+
 		if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
 		{
 			if(m_XAccel == null || !m_XAccel.IsParent(m_myLaps)) m_XAccel = new DataChannel(DataChannel.CHANNEL_ACCEL_X,m_myLaps);
 			if(m_YAccel == null || !m_YAccel.IsParent(m_myLaps)) m_YAccel = new DataChannel(DataChannel.CHANNEL_ACCEL_Y,m_myLaps);
 			if(m_ZAccel == null || !m_ZAccel.IsParent(m_myLaps)) m_ZAccel = new DataChannel(DataChannel.CHANNEL_ACCEL_Z,m_myLaps);
 			
-			if(m_XAccel != null && m_YAccel != null && m_ZAccel != null)
-			{
-				float[] flOffset = new float[3];	// acceleration data, shifted to center on "0"
-				float[] flCorrected = new float[3]; // acceleration data, after shifting and rotating
+			if(m_XAccel == null || m_YAccel == null || m_ZAccel == null)
+				return;
 
-				// Correct for offsets in the sensors
-				for( int i=0; i<3; i++ )
-					flOffset[i] = event.values[i] + flSensorOffset[i];
+			// Correct for offsets in the sensors
+			for( int i=0; i<3; i++ )
+				flSample[i][iSensorSampleIndex] = event.values[i] + flSensorOffset[i];
+
+			if( --iTriggerCount==0 ) { 
+				iTriggerCount= iSubmitPeriod;
+				// time to submit a filtered sample
+				
+				// find the middle sample
+				int iMidIndex;
+				iMidIndex = iSensorSampleIndex + iCurveLength - 1;
+				if( iMidIndex >= iFilterLength ) // wrap
+					iMidIndex -= iFilterLength;
+				
+				// Apply digital filter
+				float[] flAccum = new float[3];
+				for(int i=0;i<3;i++) {
+					flAccum[i] = flSample[i][iMidIndex] * flFilter1[0];  // use the middle filter coeff
+					int iLeft = iMidIndex;
+					int iRight = iMidIndex;
+					for(int j=1;j<iCurveLength;j++) {  // traverse half the curve, exploiting symmetry
+						iRight++;
+						if( iRight > iFilterLength-1 ) // wrap 
+							iRight = 0;
+						iLeft--;
+						if( iLeft < 0 ) // wrap
+							iLeft = iFilterLength-1;
+						flAccum[i] += (flSample[i][iLeft] + flSample[i][iRight])*flFilter1[j];
+					}		
+				}
 				
 				// Correct for the angle of the car mount, if requested
+				float[] flCorrected = new float[3]; // acceleration data, after shifting and rotating
 				if( fUseAccelCorrection ) {
+					// this math block is about 35 us on my LG 2X
 					float flSinTheta, flCosTheta;
 					flSinTheta = (float) Math.sin(Math.toRadians(-flRoll));
 					flCosTheta = (float) Math.cos(Math.toRadians(-flRoll));
 					
-					flCorrected[0] = flOffset[0] * flCosTheta - flOffset[2] * flSinTheta;
-					flCorrected[2] = flOffset[0] * flSinTheta + flOffset[2] * flCosTheta;
+					flCorrected[0] = flAccum[0] * flCosTheta - flAccum[2] * flSinTheta;
+					flCorrected[2] = flAccum[0] * flSinTheta + flAccum[2] * flCosTheta;
 					
 					flSinTheta = (float) Math.sin(Math.toRadians(-flPitch));
 					flCosTheta = (float) Math.cos(Math.toRadians(-flPitch));
 					
-					flCorrected[1] = flOffset[1] * flCosTheta - flCorrected[2] * flSinTheta;
-					flCorrected[2] = flOffset[1] * flSinTheta + flCorrected[2] * flCosTheta;
+					flCorrected[1] = flAccum[1] * flCosTheta - flCorrected[2] * flSinTheta;
+					flCorrected[2] = flAccum[1] * flSinTheta + flCorrected[2] * flCosTheta;
 				}
 				else
-					flCorrected = flOffset.clone();
+					flCorrected = flAccum.clone();
 
 				// Axis mapping: axis labels vs sensor event indicies:
 			  	// in this program, x is the left/right force, y is the accel/deaccel force.  z is gravity
 				//    right turns are -x, braking is +y
-				// Otherwise, apply a low-pass filter to the samples
-				final float coeff1;
-				
-				switch( eFilterType ) 
-				{
-				case HEAVY:
-					coeff1 = 0.025f; //.025  25% of final after 250ms
-					break;
-				case MEDIUM:
-					coeff1 = 0.06f; // .06   50% 
-					break;
-				case LIGHT:
-					coeff1 = 0.12f; // .12   75% 				
-					break;
-				case NONE:
-					coeff1 = 1.0f;
-					break;
-				default:
-					coeff1 = 0.1f;
-					break;
-				}
-				final float coeff2 = 1.0f-coeff1;
 				
 				if( bPortraitDisplay ) {
 					// remap the axes, depending on orientation
-					xAccelCum = -coeff1*flCorrected[0] + coeff2*xAccelCum;
-					yAccelCum =  coeff1*flCorrected[2] + coeff2*yAccelCum;
-					zAccelCum =  coeff1*flCorrected[1] + coeff2*zAccelCum;
+					xAccelCum = -flCorrected[0];
+					yAccelCum =  flCorrected[2];
+					zAccelCum =  flCorrected[1];
 				} else {
-					xAccelCum =  coeff1*flCorrected[1] + coeff2*xAccelCum;
-					yAccelCum =  coeff1*flCorrected[2] + coeff2*yAccelCum;
-					zAccelCum =  coeff1*flCorrected[0] + coeff2*zAccelCum;
+					xAccelCum =  flCorrected[1];
+					yAccelCum =  flCorrected[2];
+					zAccelCum =  flCorrected[0];
 				}
 
-				accelSamples++;						
-				// the action we take is dependent on the sample number
-				if( accelSamples == 0 )
-				{	// Initialize the gravity vector to the very first sample after race has started
-					if( bPortraitDisplay ) 
-					{
-						// remap the axes, depending on orientation
-						m_fGravityX = -flCorrected[0];
-						m_fGravityY =  flCorrected[2];
-						m_fGravityZ =  flCorrected[1];
-					} 
-					else 
-					{
-						m_fGravityX =  flCorrected[1];
-						m_fGravityY =  flCorrected[2];
-						m_fGravityZ =  flCorrected[0];
-					}
-					// Initialize the low-pass filter to the gravity vector
-					xAccelCum = m_fGravityX;
-					yAccelCum = m_fGravityY;
-					zAccelCum = m_fGravityZ;
-				} 
-				else if( iTimeSinceAppStart-iLastAccelSubmission>=250 ) 
-				{
-					m_XAccel.AddData(xAccelCum/SensorManager.GRAVITY_EARTH,iTimeSinceAppStart);
-					m_YAccel.AddData(yAccelCum/SensorManager.GRAVITY_EARTH,iTimeSinceAppStart);
-					m_ZAccel.AddData(zAccelCum/SensorManager.GRAVITY_EARTH,iTimeSinceAppStart);
-					iLastAccelSubmission = iTimeSinceAppStart;
-				}
+				// These adds take about 350us on average
+				int iAdjusted = iTimeSinceAppStart - 120; // fake the time to compensate some filter delay (6*20ms)
+				m_XAccel.AddData(xAccelCum/SensorManager.GRAVITY_EARTH,iAdjusted);
+				m_YAccel.AddData(yAccelCum/SensorManager.GRAVITY_EARTH,iAdjusted);
+				m_ZAccel.AddData(zAccelCum/SensorManager.GRAVITY_EARTH,iAdjusted);
+
 			}
-		}
+			
+			// increment the sample index, with wrap
+			if( ++iSensorSampleIndex == iFilterLength )
+				iSensorSampleIndex = 0;
+						
+
+//			// End profiling block
+//			profile[iProfileIndex] = System.nanoTime() - profile[iProfileIndex];
+//			if( ++iProfileIndex == 500 ) {
+//				iProfileIndex = 0;
+//				profileLoops++;
+//			}
+//			if( profileLoops==2 ){
+//				long min=99999999, max=0;
+//				double average=0;
+//				for( int i=0; i<500; i++ ) {
+//					if( min > profile[i] )
+//						min = profile[i];
+//					if( max < profile[i] )
+//						max = profile[i];
+//					average += profile[i];
+//				}
+//				average = average/500;
+//				profileLoops = 0;	
+//			}
+
+
+		} // end if accelerometer
 	}
-    // location stuff
+
+	// location stuff
     @Override
     public void onLocationChanged(Location location) 
     {
