@@ -22,18 +22,11 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.app.Activity;
-import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.Toast;
 
 public class ComputerFinder
 {
@@ -162,6 +155,7 @@ public class ComputerFinder
 		public void Shutdown()
 		{
 			m_fContinue = false;
+/*  Apparently not needed ,and can't perform network tasks in the onpause, which calls this
 			if(m_ds != null)
 			{
 				try 
@@ -180,6 +174,9 @@ public class ComputerFinder
 					DatagramPacket cyanide = new DatagramPacket(rgPellet,rgPellet.length,localhost,63937);
 					
 					dsKiller.send(cyanide);
+					// Paul's cleanup
+					dsKiller.close();
+					dsKiller = null;
 				} 
 				catch (UnknownHostException e) 
 				{
@@ -189,7 +186,12 @@ public class ComputerFinder
 				{
 					e.printStackTrace();
 				}
+				// Paul's cleanup
+				if( m_ds != null )
+					m_ds.close();	
+				m_ds = null;
 			}
+			*/
 		}
 		@Override
 		public void run()
