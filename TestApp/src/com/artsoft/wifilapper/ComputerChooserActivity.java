@@ -22,11 +22,9 @@ import java.util.TimerTask;
 
 import com.artsoft.wifilapper.ComputerFinder.FoundComputer;
 
-import android.app.Activity;
 import android.app.ListActivity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
@@ -59,7 +57,7 @@ public class ComputerChooserActivity extends ListActivity implements Callback
 	{
 		super.onResume();
 		m_finder.Init(m_handler, MSG_NEWCOMPUTER);
-		m_finder.StartFindComputers();
+		// Removed to allow operation above API 10: m_finder.StartFindComputers();
 
 		WifiManager pWifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
 		WifiInfo pInfo = pWifi.getConnectionInfo();
@@ -98,15 +96,17 @@ public class ComputerChooserActivity extends ListActivity implements Callback
 	public void onPause()
 	{
 		super.onPause();
-		m_finder.Shutdown();
-		m_timer.cancel();
+		if( m_finder != null )
+			m_finder.Shutdown();
+		if( m_timer != null )
+			m_timer.cancel();
 	}
 
 	private void RefreshList()
 	{
 		List<FoundComputer> lstComps = m_finder.GetComputerList();
     	
-    	ArrayAdapter<FoundComputer> adapter = new ArrayAdapter<FoundComputer>(this, R.layout.simplelistitem_defaultcolor,lstComps);
+		ArrayAdapter<FoundComputer> adapter = new ArrayAdapter<FoundComputer>(this, android.R.layout.simple_gallery_item,lstComps);
     	adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
     	setListAdapter(adapter);
 	}
@@ -121,13 +121,7 @@ public class ComputerChooserActivity extends ListActivity implements Callback
 		}
 		return false;
 	}
-	@Override
-	public void onConfigurationChanged(Configuration newConfig) 
-	{
-	  // ignore orientation/keyboard change
-	  super.onConfigurationChanged(newConfig);
-	}
-	
+
 	@Override
 	protected void onListItemClick(ListView l, View v, int position, long id)
 	{
