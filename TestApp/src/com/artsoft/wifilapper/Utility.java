@@ -17,11 +17,8 @@
 package com.artsoft.wifilapper;
 
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
-import com.artsoft.wifilapper.Utility.MultiStateObject.STATE;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -29,11 +26,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.database.Cursor;
 import android.graphics.Canvas;
-import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Paint.Align;
 import android.graphics.Rect;
-import android.graphics.Region.Op;
 import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
@@ -307,7 +301,7 @@ public class Utility
 			public String strDesc;
 		}
 		
-		public abstract void SetState(Class c, STATE eState, String strData);
-		public abstract StateData GetState(Class c);
+		public abstract void SetState(Class<?> c, STATE eState, String strData);
+		public abstract StateData GetState(Class<?> c);
 	}
 }

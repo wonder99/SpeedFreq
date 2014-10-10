@@ -21,7 +21,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.artsoft.wifilapper.Utility.MultiStateObject;
 import com.artsoft.wifilapper.Utility.MultiStateObject.StateData;
 
 import android.content.Context;
@@ -38,7 +37,7 @@ import android.view.View.OnClickListener;
 public class StatusBarView extends LinearLayout implements OnClickListener
 {
 	private Utility.MultiStateObject pStateMan;
-	private static final Class rgClasses[] = {LapSender.class, OBDThread.class, LocationManager.class, IOIOManager.class};
+	private static final Class<?> rgClasses[] = {LapSender.class, OBDThread.class, LocationManager.class, IOIOManager.class};
 	
 	
 	private static class ButtonData
@@ -58,6 +57,7 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 		public ImageButton btn;
 	}
 	
+	@SuppressWarnings("rawtypes")
 	private Map<Class,ButtonData> mapButtons;
 	
 	public StatusBarView(Context context)
@@ -85,7 +85,7 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 	{
 		for(int x = 0;x < rgClasses.length; x++)
 		{
-			Class c = rgClasses[x];
+			Class<?> c = rgClasses[x];
 			ButtonData btn = mapButtons.get(rgClasses[x]);
 			if(btn != null)
 			{
@@ -100,6 +100,7 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 			}
 		}
 	}
+	@SuppressWarnings("rawtypes")
 	private void DoPopulate()
 	{
 		mapButtons = new HashMap<Class,ButtonData>();
@@ -112,7 +113,7 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 		AddButton(IOIOManager.class, R.drawable.ioio_on, R.drawable.ioio_off, R.drawable.ioio_troublegood, R.drawable.ioio_troublebad);
 	}
 	
-	private void AddButton(Class c, int imgOn, int imgOff, int imgTroubleGood, int imgTroubleBad)
+	private void AddButton(Class<?> c, int imgOn, int imgOff, int imgTroubleGood, int imgTroubleBad)
 	{
 		ImageButton btn = new ImageButton(getContext());
 		btn.setImageDrawable(getResources().getDrawable(imgOff));
@@ -124,6 +125,7 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 		this.addView(btn);
 		this.requestLayout();
 	}
+	@SuppressWarnings("rawtypes")
 	@Override
 	public void onClick(View v) 
 	{
@@ -136,7 +138,7 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 			if(e.getValue().btn == v)
 			{
 				// found the clicked button!
-				Class c = e.getKey();
+				Class<?> c = e.getKey();
 				StateData sd = pStateMan.GetState(c);
 				if(sd.strDesc != null)
 				{
