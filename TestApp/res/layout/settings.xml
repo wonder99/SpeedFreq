@@ -12,10 +12,27 @@
 	<TextView android:text="SSID" android:id="@+id/TextView02" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
 </LinearLayout>
 
-<LinearLayout android:orientation="horizontal" android:id="@+id/LinearLayout02" android:layout_width="wrap_content" android:layout_height="wrap_content">
-	<EditText android:text="192.168.1.100" android:id="@+id/txtIP" android:layout_width="wrap_content" android:layout_height="wrap_content"></EditText>
-	<TextView android:text="IP Address" android:id="@+id/TextView01" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
+<LinearLayout
+    android:id="@+id/LinearLayout02"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal" >
+
+    <EditText
+        android:id="@+id/txtIP"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="192.168.1.100" >
+    </EditText>
+
+    <TextView
+        android:id="@+id/TextView61"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="IP Address" >
+    </TextView>
 </LinearLayout>
+
 <CheckBox android:text="Test Mode" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/chkTestMode"></CheckBox>
 <!-- <LinearLayout android:orientation="horizontal" android:id="@+id/LinearLayout02" android:layout_width="wrap_content" android:layout_height="wrap_content">
 <EditText android:text="@+id/EditText01" android:id="@+id/EditText01" android:layout_width="wrap_content" android:layout_height="wrap_content"></EditText>

@@ -1,72 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical" >
+<LinearLayout android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" xmlns:android="http://schemas.android.com/apk/res/android">
 
     <LinearLayout
         android:id="@+id/linearLayout2"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="10dp" >
 
         <CheckBox
             android:id="@+id/chkIOIO"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:text="Use IOIO Board" />
 
-
-
-        <FrameLayout
-            android:id="@+id/frameLayout1"
-            android:layout_width="match_parent"
+        <CheckBox
+            android:id="@+id/chkClicker"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_gravity="right" >
-
-
-            <CheckBox
-                android:id="@+id/chkClicker"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="right"
-                android:text="Use pin 17 digital input as clicker" />
-
-        </FrameLayout>
-
+            android:text="Use pin 17 digital input as clicker" />
     </LinearLayout>
 
-    >
-
     <LinearLayout
-        android:id="@+id/linearLayout1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginRight="20dp" >
+        android:layout_margin="10dp"
+        android:orientation="vertical" >
 
-        <Button
-            android:id="@+id/btnAdd"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="Add Pin" />
 
-        <RadioGroup
-            android:id="@+id/rgPinType"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" >
-			<RadioButton
-                android:id="@+id/rbAnalog"
-                android:layout_width="wrap_content"
+            <RadioGroup
+                android:id="@+id/rgPinType"
+                android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="Analog Pin" />
-            <RadioButton
-                android:id="@+id/rbPulse"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Pulse Pin" />
+                android:orientation="horizontal" >
 
-            
-        </RadioGroup>
+                <RadioButton
+                    android:id="@+id/rbAnalog"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1"
+                    android:checked="true"
+                    android:text="Analog Pin" />
+
+                <RadioButton
+                    android:id="@+id/rbPulse"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Pulse Pin" />
+            </RadioGroup>
 
 
         <TableLayout
@@ -75,23 +60,31 @@
             android:layout_height="wrap_content" >
 
             <TableRow
-                android:id="@+id/tableRow1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" >
-
+                android:id="@+id/TableRow01"
+                android:layout_width="fill_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" >
 
                 <TextView
                     android:id="@+id/txtSampleRate"
-                    android:layout_width="wrap_content"
+                    android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="right"
                     android:text="Sample Rate"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
+            </TableRow>
+
+            <TableRow
+                android:id="@+id/tableRow1"
+                android:layout_width="fill_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" >
 
                 <SeekBar
                     android:id="@+id/seekSampleRate"
-                    android:layout_width="match_parent"
+                    android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginRight="10dp"
                     android:layout_weight="1" />
 
             </TableRow>
@@ -99,7 +92,8 @@
             <TableRow
                 android:id="@+id/tableRow2"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" >
+                android:layout_height="0dp"
+                android:layout_weight="1" >
 
                 <TextView
                     android:id="@+id/textView2"
@@ -116,63 +110,64 @@
                     android:layout_weight="1" />
 
             </TableRow>
-            <TableRow
-                android:id="@+id/tableRow3"
-                android:layout_gravity="center|right"
-                android:layout_width="fill_parent"
-                android:layout_weight="1"
-                
-                android:layout_height="wrap_content" >
-			    <LinearLayout
-			        android:id="@+id/linearLayout3"
-			        android:layout_width="match_parent"
-			        android:layout_height="wrap_content"
-			        android:layout_gravity="center|right"
-			        android:orientation="vertical" >
-	                <TextView
-		                android:id="@+id/lblCurrentFilter"
-		                android:layout_width="wrap_content"
-		                android:layout_height="wrap_content"
-		                android:text="No filter used"
-		                android:textAppearance="?android:attr/textAppearanceMedium" />
-			        <TextView
-		                android:id="@+id/lblCurrentFilter2"
-		                android:layout_width="wrap_content"
-		                android:layout_height="wrap_content"
-		                android:textAppearance="?android:attr/textAppearanceMedium" />
+
+            
+                <LinearLayout
+                    android:id="@+id/linearLayout3"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" >
+
+                    <TextView
+                        android:id="@+id/lblCurrentFilter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:text="No filter used"
+                        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+                    <TextView
+                        android:id="@+id/lblCurrentFilter2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:attr/textAppearanceMedium" />
                 </LinearLayout>
+            
+            <TableRow
+                android:id="@+id/tableRow4"
+                android:layout_width="fill_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" >
 
                 <Button
                     android:id="@+id/btnCustom"
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="right"
                     android:layout_weight="1"
                     android:text="Customize Pin Output" />
 
+                <Button
+                    android:id="@+id/btnAdd"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Add Pin" />
             </TableRow>
-
         </TableLayout>
 
     </LinearLayout>
 
-
-
-
     <ScrollView
         android:id="@+id/scrollView1"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_weight="1" >
-
 
         <TableLayout
             android:id="@+id/pintable"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" >
-
+            android:layout_height="wrap_content" >
         </TableLayout>
-
     </ScrollView>
 
 </LinearLayout>

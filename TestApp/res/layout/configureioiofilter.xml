@@ -14,18 +14,13 @@
     <LinearLayout
         android:id="@+id/linearLayout1"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
+        android:layout_height="wrap_content" android:baselineAligned="false">
 
         <ScrollView
             android:id="@+id/scrollView1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" >
 
-            <LinearLayout
-                android:id="@+id/linearLayout2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" >
 
                 <RadioGroup
                     android:id="@+id/rgFilterType"
@@ -62,87 +57,72 @@
                         android:text="Tachometer" />
 		
                 </RadioGroup>
-            </LinearLayout>
         </ScrollView>
-
+        
         <LinearLayout
             android:id="@+id/linearLayout3"
-            android:layout_width="match_parent"
+            android:layout_width="0dip"
             android:layout_height="wrap_content"
-            android:layout_weight="1" >
+            android:layout_weight="1"
+            android:baselineAligned="false"
+            android:orientation="vertical" >
 
-            <ScrollView
-                android:id="@+id/linCustom"
+            <TextView
+                android:id="@+id/lbl"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="In pitside, treat output as..."
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+
+            <Spinner
+                android:id="@+id/spnCustom"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:orientation="vertical" >
+                android:layout_height="wrap_content" />
 
-            <LinearLayout
-                android:id="@+id/linCustom"
+            <TextView
+                android:id="@+id/lblParam1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Param1"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+
+            <EditText
+                android:id="@+id/txtParam1"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:orientation="vertical" >
-                <TextView
-                    android:id="@+id/lbl"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="In pitside, treat output as..."
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal|numberSigned" />
 
-                <Spinner
-                    android:id="@+id/spnCustom"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+            <TextView
+                android:id="@+id/lblParam2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Param2"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
 
-                <TextView
-                    android:id="@+id/lblParam1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Param1"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
+            <EditText
+                android:id="@+id/txtParam2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal|numberSigned" />
 
-                <EditText
-                    android:id="@+id/txtParam1"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberDecimal|numberSigned" />
+            <TextView
+                android:id="@+id/lblParam3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Param3"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
 
-                <TextView
-                    android:id="@+id/lblParam2"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Param2"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
+            <EditText
+                android:id="@+id/txtParam3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal|numberSigned" />
 
-                <EditText
-                    android:id="@+id/txtParam2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberDecimal|numberSigned" />
-
-                <TextView
-                    android:id="@+id/lblParam3"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Param3"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
-
-                <EditText
-                    android:id="@+id/txtParam3"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberDecimal|numberSigned" />
-                <Button
-                    android:id="@+id/btnApply"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Apply" />
-				</LinearLayout>
-            </ScrollView>
+            <Button
+                android:id="@+id/btnApply"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Apply" />
         </LinearLayout>
-
     </LinearLayout>
-
 </LinearLayout>

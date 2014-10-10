@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView android:layout_width="fill_parent" android:layout_height="wrap_content" xmlns:android="http://schemas.android.com/apk/res/android">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="match_parent" >
+
 <LinearLayout 
     android:orientation="vertical"
     android:layout_width="fill_parent"
@@ -13,88 +16,240 @@
     android:id="@+id/tableLayout1"
     android:layout_width="match_parent"
     android:layout_height="wrap_content" >
+
     <TableRow
         android:id="@+id/tableRow0"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
-	    	<TextView android:text="Car Number" android:layout_weight="1" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/lblCarNumber"></TextView>
+        android:layout_height="0dp"
+        android:layout_weight="1" >
 
-	    	<EditText
-	    	    android:id="@+id/edtCarNumber"
-	    	    android:layout_width="wrap_content"
-	    	    android:layout_height="wrap_content"
-	    	    android:inputType="numberSigned" >
+        <TextView
+            android:id="@+id/lblCarNumber"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Car Number" >
+        </TextView>
 
-	    	    <requestFocus />
-	    	</EditText>
+        <EditText
+            android:id="@+id/edtCarNumber"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="numberSigned" >
 
+            <requestFocus />
+        </EditText>
     </TableRow>
-	<TableRow
-        android:id="@+id/tableRow0"
+
+    <TableRow
+        android:id="@+id/tableRow10"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
-	    	<TextView android:text="Use Accelerometer" android:layout_weight="1" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/lblUseAccel"></TextView>
-	    	<Button android:text="Configure Accelerometer" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/btnConfigureAccel"></Button>
+        android:layout_height="0dp"
+        android:layout_weight="1" >
+
+        <TextView
+            android:id="@+id/lblUseAccel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Use Accelerometer" >
+        </TextView>
+
+        <Button
+            android:id="@+id/btnConfigureAccel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Configure Accelerometer" >
+        </Button>
     </TableRow>
+
     <TableRow
         android:id="@+id/tableRow1"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
-	    	<TextView android:text="Use External GPS" android:layout_weight="1" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/lblUseExternalGPS"></TextView>
-	    	<Button android:text="Configure GPS" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/btnConfigureGPS"></Button>
+        android:layout_height="0dp"
+        android:layout_weight="1" >
+
+        <TextView
+            android:id="@+id/lblUseExternalGPS"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Use External GPS" >
+        </TextView>
+
+        <Button
+            android:id="@+id/btnConfigureGPS"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Configure GPS" >
+
+        </Button>
     </TableRow>
 
     <TableRow
         android:id="@+id/tableRow2"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
-	    	<TextView android:text="Use OBD2 logging" android:layout_weight="1" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/lblUseExternalOBD2"></TextView>
-	    	<Button android:text="Configure OBD2" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/btnConfigureOBD2"></Button>
+        android:layout_height="0dp"
+        android:layout_weight="1" >
+
+        <TextView
+            android:id="@+id/lblUseExternalOBD2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Use OBD2 logging" >
+        </TextView>
+
+        <Button
+            android:id="@+id/btnConfigureOBD2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Configure OBD2" >
+
+        </Button>
     </TableRow>
 
     <TableRow
         android:id="@+id/tableRow3"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
-			<TextView android:text="Use IOIO breakout" android:layout_weight="1" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/lblUseIOIO"></TextView>
-	    	<Button android:text="Configure IOIO" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/btnConfigureIOIO"></Button>
+        android:layout_height="0dp"
+        android:layout_weight="1" >
+
+        <TextView
+            android:id="@+id/lblUseIOIO"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Use IOIO breakout" >
+        </TextView>
+
+        <Button
+            android:id="@+id/btnConfigureIOIO"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Configure IOIO" >
+
+        </Button>
     </TableRow>
+
     <TableRow
-        android:id="@+id/tableRow3"
+        android:id="@+id/tableRow13"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
-			<TextView android:text="Point-to-point" android:layout_weight="1" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/lblP2P"></TextView>
-	    	<Button android:text="Configure Point-to-point" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/btnConfigureP2P"></Button>
-    </TableRow>
-    <TableRow
-        android:id="@+id/tableRow4"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
-			<TextView android:text="Pit and driver communication" android:layout_weight="1" android:id="@+id/TextView02" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
-	    	<Button android:text="Configure Communications" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/btnConfigureComms"></Button>
+        android:layout_height="0dp"
+        android:layout_weight="1" >
+
+        <TextView
+            android:id="@+id/lblP2P"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Point-to-point" >
+        </TextView>
+
+        <Button
+            android:id="@+id/btnConfigureP2P"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Configure Point-to-point" >
+
+        </Button>
     </TableRow>
 
     <TableRow
         android:id="@+id/tableRow4"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
-			<TextView android:text="Speedometer style" android:layout_weight="1" android:id="@+id/TextView02" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
-			<Spinner android:id="@+id/spnDisplayMode" android:layout_width="wrap_content" android:layout_height="wrap_content"></Spinner>
+        android:layout_height="0dp"
+        android:layout_weight="1" >
+
+        <TextView
+            android:id="@+id/TextView02"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Pit and driver communication" >
+        </TextView>
+
+        <Button
+            android:id="@+id/btnConfigureComms"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Configure Communications" >
+        </Button>
     </TableRow>
+
     <TableRow
-        android:id="@+id/tableRow4"
+        android:id="@+id/tableRow14"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
-			<TextView android:text="Preferred Units" android:layout_weight="1" android:id="@+id/TextView02" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
-			<Spinner android:id="@+id/spnUnits" android:layout_width="wrap_content" android:layout_height="wrap_content"></Spinner>
+        android:layout_height="0dp"
+        android:layout_weight="1" >
+
+        <TextView
+            android:id="@+id/TextView12"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Speedometer style" >
+        </TextView>
+
+        <Spinner
+            android:id="@+id/spnDisplayMode"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" >
+        </Spinner>
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow24"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_gravity="center_vertical"
+        android:layout_weight="1" >
+
+        <TextView
+            android:id="@+id/TextView22"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Preferred Units" >
+        </TextView>
+
+        <Spinner
+            android:id="@+id/spnUnits"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" >
+        </Spinner>
     </TableRow>
 </TableLayout>
 
 <!-- SD card stuff -->
+
 <RadioGroup
     android:id="@+id/grpDBLocation"
     android:layout_width="wrap_content"
-    android:layout_height="wrap_content" >
+    android:layout_height="wrap_content"
+    android:layout_gravity="center_horizontal" >
 
     <RadioButton
         android:id="@+id/chkDBInternal"
