@@ -17,18 +17,13 @@
 package com.artsoft.wifilapper;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Vector;
+import java.util.Locale;
 
 import com.artsoft.wifilapper.LapAccumulator.DataChannel;
 import com.artsoft.wifilapper.Prefs.UNIT_SYSTEM;
@@ -36,12 +31,9 @@ import com.artsoft.wifilapper.RaceDatabase.LapData;
 import com.artsoft.wifilapper.RaceDatabase.RaceData;
 
 import android.app.Activity;
-import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Intent;
-import android.content.UriMatcher;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
@@ -49,7 +41,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
-import android.graphics.Picture;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
@@ -180,8 +171,8 @@ public class SummaryActivity extends Activity implements OnClickListener
 				image.put(Images.Media.ORIENTATION, 0);
 
 				File parent = outFile.getParentFile();
-				String path = parent.toString().toLowerCase();
-				String name = parent.getName().toLowerCase();
+				String path = parent.toString().toLowerCase(Locale.US);
+				String name = parent.getName().toLowerCase(Locale.US);
 				image.put(Images.ImageColumns.BUCKET_ID, path.hashCode());
 				image.put(Images.ImageColumns.BUCKET_DISPLAY_NAME, name);
 				image.put(Images.Media.SIZE, outFile.length());
@@ -419,8 +410,6 @@ public class SummaryActivity extends Activity implements OnClickListener
 			}
 		}
 		
-		List<LineSeg> lstSF = laps[0].GetSplitPoints(true);
-
 		final int cxLegendLine = 15;
 		final int cxLegendTotal = 100;
 		Rect rcGraph = new Rect(rc.left+cxLegendTotal,rc.top,rc.right-100,rc.bottom);
@@ -448,7 +437,7 @@ public class SummaryActivity extends Activity implements OnClickListener
 		}
 		
 	}
-	private static class LapDataLapTimeSorter implements Comparator
+	private static class LapDataLapTimeSorter implements Comparator<Object>
 	{
 		@Override
 		public int compare(Object arg0, Object arg1) 
@@ -461,18 +450,16 @@ public class SummaryActivity extends Activity implements OnClickListener
 		}
 		
 	}
-	private static class LapDataOrderSorter implements Comparator
+	private static class LapDataOrderSorter implements Comparator <LapData>
 	{
 		@Override
-		public int compare(Object arg0, Object arg1) 
-		{
-			LapData lap1 = (LapData)arg0;
-			LapData lap2 = (LapData)arg1;
+		public int compare(LapData lhs, LapData rhs) {
+			LapData lap1 = (LapData)lhs;
+			LapData lap2 = (LapData)rhs;
 			if(lap1.lStartTime < lap2.lStartTime)return -1;
 			if(lap1.lStartTime > lap2.lStartTime)return 1;
 			return 0;
 		}
-		
 	}
 	private static Paint[] GetPercentilePaints()
 	{
@@ -530,7 +517,6 @@ public class SummaryActivity extends Activity implements OnClickListener
 		Paint paintSplits = new Paint();
 		paintSplits.setARGB(255, 255, 0, 0);
 		paintSplits.setStrokeWidth(1);
-		List<LineSeg> lstSF = rgLaps[0].GetSplitPoints(true);
 		
 		for(int x = rgLaps.length-1;x >= 0; x--)
 		{
@@ -644,10 +630,6 @@ public class SummaryActivity extends Activity implements OnClickListener
 					Utility.DrawFontInBox(canvas, strValue, paintText, rcText, false);
 					flTextSize = Math.min(paintText.getTextSize(), flTextSize);
 					cyWritePos += cyLineHeight;
-				}
-				else
-				{
-					break; // this stint is done
 				}
 			}
 			// after each stint, we want a gap and a line so we don't have a wall of text
@@ -945,7 +927,8 @@ public class SummaryActivity extends Activity implements OnClickListener
 			
 			// figure out percentile data
 			LapData[] rgLaps = RaceDatabase.GetLapDataList(db, lRaceId);
-			Arrays.sort(rgLaps, new LapDataLapTimeSorter());
+			if( rgLaps != null)
+				Arrays.sort(rgLaps, new LapDataLapTimeSorter());
 			
 			Paint paintLine[] = GetPercentilePaints();
 			LapAccumulator lapPercentiles[] = GetPercentileLaps(db, rd.lapParams, 4, rgLaps);
