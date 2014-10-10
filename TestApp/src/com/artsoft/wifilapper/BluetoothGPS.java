@@ -19,7 +19,6 @@ package com.artsoft.wifilapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
@@ -34,7 +33,6 @@ import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
 
 public class BluetoothGPS 
 {

@@ -19,7 +19,6 @@ package com.artsoft.wifilapper;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.artsoft.wifilapper.OBDThread.OBDListener;
 import com.artsoft.wifilapper.OBDThread.PIDParameter;
 import com.artsoft.wifilapper.OBDThread.PIDSupportListener;
 
@@ -184,7 +183,7 @@ public class ConfigureOBD2Activity extends Activity implements OnCheckedChangeLi
 	            {
 	                cbEnabled.setChecked(myobject.fChecked);
 	                cbEnabled.setText(myobject.toString());
-	                cbEnabled.setTag(new Integer(position));
+	                cbEnabled.setTag(Integer.valueOf(position));
 	                cbEnabled.setOnCheckedChangeListener(this);
 	            }
 	        }
@@ -208,7 +207,7 @@ public class ConfigureOBD2Activity extends Activity implements OnCheckedChangeLi
 			for(int x = 0; x < lstData.size(); x++)
 			{
 				PIDParameter pid = lstData.get(x);
-				lstItems.add(new PIDParameterItem(pid.ixCode, pid.strDesc, this.lstSelectedPIDs.contains(new Integer(pid.ixCode))));
+				lstItems.add(new PIDParameterItem(pid.ixCode, pid.strDesc, this.lstSelectedPIDs.contains(Integer.valueOf(pid.ixCode))));
 			}
 		}
 		
@@ -235,7 +234,8 @@ public class ConfigureOBD2Activity extends Activity implements OnCheckedChangeLi
 				Toast.makeText(this, "OBD2 error: " + m_strOBD2Error, Toast.LENGTH_LONG).show();
 				m_strOBD2Error = null;
 			}
-			List<PIDParameter> lstPIDs = (List<PIDParameter>)msg.obj;
+			@SuppressWarnings("unchecked")
+			List<PIDParameter> lstPIDs = (List<PIDParameter>)msg.obj; 
 			if(lstPIDs != null)
 			{
 				ListView lstOBD2 = (ListView)findViewById(R.id.lstPIDs);

@@ -19,7 +19,6 @@ package com.artsoft.wifilapper;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabase.CursorFactory;
-import android.widget.Toast;
 
 public abstract class BetterOpenHelper 
 {
