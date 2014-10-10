@@ -24,6 +24,7 @@ import com.artsoft.wifilapper.IOIOManager.PinParams;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -40,7 +41,6 @@ import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.LinearLayout;
 import android.widget.Spinner;
 
 public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeListener, OnClickListener, OnSeekBarChangeListener
@@ -218,38 +218,53 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 	private View BuildPinView(String strName, IOIOManager.PinParams pin)
 	{
 		TableRow.LayoutParams layout = new TableRow.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, 1.0f);
+		Configuration config = getResources().getConfiguration();
 		
 		
 		TextView txtName = new TextView(this);
-		txtName.setText(strName);
+		
 		txtName.setLayoutParams(layout);
 		
 		TextView txtPin = new TextView(this);
-		txtPin.setText("Pin " + pin.iPin);
 		txtPin.setLayoutParams(layout);
 		
 		TextView txtRate = new TextView(this);
 		final float dHz = 1000.0f / (float)pin.iPeriod;
-		txtRate.setText("Rate: " + Utility.FormatFloat(dHz, 1) + "hz");
 		txtRate.setLayoutParams(layout);
 		
 		TextView txtFilter = new TextView(this);
-		txtFilter.setText(PinParams.BuildDesc(pin.iFilterType,pin.dParam1,pin.dParam2, pin.dParam3, true));
 		
 		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
 	            this, R.array.ioiocustomnames, android.R.layout.simple_spinner_item);
 		int arrayIndex = (pin.iCustomType==0) ? 0 : pin.iCustomType - LapAccumulator.DataChannel.CHANNEL_IOIOCUSTOM_START;
 
 		TextView txtCustomName = new TextView(this);
-		txtCustomName.setText(adapter.getItem(arrayIndex));
 		txtCustomName.setLayoutParams(layout);
 
 		Button btn = new Button(this);
-		btn.setText("Delete");
 		btn.setId(pin.iPin);
 		btn.setOnClickListener(this);
 		btn.setLayoutParams(layout);
-
+		
+		if( config.orientation == Configuration.ORIENTATION_PORTRAIT ) {
+			txtName.setText(strName.replace(" Pin",""));
+			txtPin.setText("#" + pin.iPin);
+			txtRate.setText(Utility.FormatFloat(dHz, 1) + "Hz");
+			txtFilter.setText(PinParams.BuildDesc(pin.iFilterType,pin.dParam1,pin.dParam2, pin.dParam3, true));
+			String myStr = (String) adapter.getItem(arrayIndex);
+			txtCustomName.setText(myStr.replace("Use ",""));
+			btn.setText("DEL");		
+		}
+		else
+		{
+			txtName.setText(strName);
+			txtPin.setText("Pin " + pin.iPin);
+			txtRate.setText("Rate: " + Utility.FormatFloat(dHz, 1) + "hz");
+			txtFilter.setText(PinParams.BuildDesc(pin.iFilterType,pin.dParam1,pin.dParam2, pin.dParam3, true));
+			txtCustomName.setText(adapter.getItem(arrayIndex));
+			btn.setText("Delete");			
+		}
+		
 		TableRow tr = new TableRow(this);
 		tr.setLayoutParams(new TableRow.LayoutParams(LayoutParams.FILL_PARENT,LayoutParams.WRAP_CONTENT));
 		tr.addView(txtName);
@@ -258,8 +273,10 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 		tr.addView(txtCustomName);
 		tr.addView(txtFilter);
 		tr.addView(btn);
+
 		return tr;
 	}
+
 	private void UpdateList()
 	{
 		// takes rgAnalPins and rgPulsePins, and puts them into list form
