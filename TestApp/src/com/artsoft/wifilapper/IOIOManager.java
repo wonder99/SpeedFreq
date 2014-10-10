@@ -16,17 +16,12 @@
 
 package com.artsoft.wifilapper;
 
-import java.io.Closeable;
-
-import android.content.SharedPreferences;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.artsoft.wifilapper.FakeIOIO.FakePulseInput;
 import com.artsoft.wifilapper.Utility.MultiStateObject.STATE;
 
 import ioio.lib.api.*;
-import ioio.lib.api.IOIO.VersionType;
 import ioio.lib.api.PulseInput.ClockRate;
 import ioio.lib.api.PulseInput.PulseMode;
 import ioio.lib.api.TwiMaster.Rate;
@@ -34,7 +29,6 @@ import ioio.lib.api.Uart.Parity;
 import ioio.lib.api.Uart.StopBits;
 import ioio.lib.api.exception.ConnectionLostException;
 import ioio.lib.api.exception.IncompatibilityException;
-import ioio.lib.api.exception.OutOfResourceException;
 
 public class IOIOManager 
 {
