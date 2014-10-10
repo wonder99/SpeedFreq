@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.io.StringBufferInputStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -37,10 +36,8 @@ import com.artsoft.wifilapper.Utility.MultiStateObject.STATE;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.os.Debug;
 import android.os.Environment;
 import android.util.Log;
-import android.widget.Toast;
 
 public class OBDThread extends Thread implements Runnable 
 {
@@ -194,7 +191,6 @@ public class OBDThread extends Thread implements Runnable
 						case 0x1b: // b2s4 short term fuel trim
 							if(tokens.hasMoreTokens())
 							{
-								final float a = (float)Integer.parseInt(tokens.nextToken(),16);
 								if(tokens.hasMoreTokens())
 								{
 									final float b = (float)Integer.parseInt(tokens.nextToken(),16);
@@ -267,11 +263,6 @@ public class OBDThread extends Thread implements Runnable
 		
 		if(strTokens == null || strTokens.length != 6) return;
 		
-		String strHex = "";
-		for(int x = 2; x < 6; x++)
-		{
-			strHex += strTokens[x];
-		}
 		final short A = Short.parseShort(strTokens[2],16);
 		final short B = Short.parseShort(strTokens[3],16);
 		final short C = Short.parseShort(strTokens[4],16);
