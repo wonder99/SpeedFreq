@@ -15,15 +15,10 @@
 //along with WifiLapper.  If not, see <http://www.gnu.org/licenses/>.
 
 package com.artsoft.wifilapper;
-import com.artsoft.wifilapper.BluetoothGPS;
-import com.artsoft.wifilapper.ComputerFinder.FoundComputer;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.Vector;
-
 import android.app.Activity;
 import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
@@ -37,20 +32,13 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Handler.Callback;
-import android.os.Message;
-import android.telephony.SmsMessage;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
 
 public abstract class LandingRaceBase extends Activity implements OnItemSelectedListener
@@ -189,9 +177,9 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
     			}
     		}
     		
-    		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.simplelistitem_blacktext, lstSSIDs);
-	        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-	        spn.setAdapter(adapter);
+    		ArrayAdapter<String> adapter = new ArrayAdapter<String> (this, android.R.layout.simple_spinner_item, lstSSIDs);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spn.setAdapter(adapter);
 	        if(ixDefault >= 0) 
         	{
 	        	spn.setSelection(ixDefault,true);
@@ -264,7 +252,7 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
 		    		}
 		    	}
 		    	
-		        ArrayAdapter<BTListItem> adapter = new ArrayAdapter<BTListItem>(ctx, R.layout.simplelistitem_blacktext, lstDevices);
+		        ArrayAdapter<BTListItem> adapter = new ArrayAdapter<BTListItem>(ctx, android.R.layout.test_list_item, lstDevices);
 		        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		        spn.setAdapter(adapter);
 		        if(ixDefault >= 0) spn.setSelection(ixDefault);
