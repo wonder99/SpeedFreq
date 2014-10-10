@@ -18,23 +18,18 @@ package com.artsoft.wifilapper;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.ListActivity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnDismissListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.view.ContextMenu;
-import android.view.ContextMenu.ContextMenuInfo;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -42,22 +37,15 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.RadioGroup;
-import android.widget.SimpleCursorAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.CompoundButton.OnCheckedChangeListener;
 
 public class LandingLoadRace extends LandingRaceBase implements OnDismissListener, OnClickListener, Handler.Callback
 {
@@ -300,7 +288,7 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 			ListRaceData lrd = (ListRaceData)list.getItemAtPosition(info.position);
 			
 			// they have requested that we rename the selected race
-			Dialog d = new RenameDialog(this, "Set the new race name", lrd, lrd.strRaceName, R.id.edtRename);
+			Dialog d = new RenameDialog<ListRaceData>(this, "Set the new race name", lrd, lrd.strRaceName, R.id.edtRename);
 			d.setOnDismissListener(this);
 			d.show();
 			
@@ -350,10 +338,10 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 		
 		final int iCarNumber = settings.getInt(Prefs.PREF_CARNUMBER, Prefs.DEFAULT_CARNUMBER);
 		RaceDatabase.RaceData r = RaceDatabase.GetRaceData(RaceDatabase.Get(),listData.GetId(), iCarNumber);
-		r.lapParams.iCarNumber = iCarNumber;
-		r.lapParams.iSecondaryCarNumber = (int)(Math.random() * 100000.0);
 		if(r != null)
 		{
+			r.lapParams.iCarNumber = iCarNumber;
+			r.lapParams.iSecondaryCarNumber = (int)(Math.random() * 100000.0);
 			EditText txtIP = (EditText)findViewById(R.id.txtIP);
 			Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
 			
@@ -407,6 +395,7 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 	{
 		if(arg0.getClass().equals(RenameDialog.class))
 		{
+			@SuppressWarnings("unchecked")
 			RenameDialog<ListRaceData> rd = (RenameDialog<ListRaceData>)arg0;
 			if(!rd.WasCancelled())
 			{
