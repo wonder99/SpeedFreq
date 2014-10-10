@@ -21,8 +21,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
-import java.util.Vector;
 
 import com.artsoft.wifilapper.LandingRaceBase.RenameDialog;
 
@@ -33,6 +31,8 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnDismissListener;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.os.Environment;
+import android.text.TextUtils;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
 import android.view.MenuInflater;
@@ -40,7 +40,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnKeyListener;
-import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -115,7 +114,7 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 			if(fDir.exists())
 			{
 				File children[] = fDir.listFiles();
-				ArrayAdapter<DBPathEntry> adapter = new ArrayAdapter<DBPathEntry>(this, R.layout.simplelistitem_defaultcolor);
+				ArrayAdapter<DBPathEntry> adapter = new ArrayAdapter<DBPathEntry>(this, android.R.layout.simple_gallery_item);
 				for(int x = 0;x < children.length; x++)
 				{
 					String strName = children[x].getName();
@@ -145,7 +144,32 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 	}
 	private String MakeParentPath()
 	{
-		return "/sdcard/wifilapper/";
+		//example return "/sdcard/wifilapper/";
+		// First, see if removable storage can be used
+		String strPath = null;
+	    String strStorage = System.getenv("SECONDARY_STORAGE");
+	    if (!TextUtils.isEmpty(strStorage)) {
+	        String[] paths = strStorage.split(":");
+	        for (String path : paths) {
+	            File file = new File(path);
+	            if (file.isDirectory() && file.canWrite() ) {
+	                strPath=file.toString();
+	                break;
+	            }
+	        }
+	    }
+	    
+	    // If not, default to sdcard0, which is often non-removable, but at least accessible by other apps
+	    if( strPath == null )
+	    	strPath = Environment.getExternalStorageDirectory().toString();
+	    
+	    // Create the directory if it doesn't exist
+	    strPath = strPath + "/wifilapper";
+	    File fileTest = new File(strPath);
+	    if ( !fileTest.isDirectory() )
+	    	fileTest.mkdir();
+	    
+		return strPath + "/";
 	}
 	private String MakeFilePath(String strFilename)
 	{
@@ -225,7 +249,7 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 					db.endTransaction();
 				}
 			}
-			
+			FirstTimeSetup();
 		}
 	}
 
@@ -365,6 +389,7 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 	{
 		if(arg0.getClass().equals(RenameDialog.class))
 		{
+			@SuppressWarnings("unchecked")
 			RenameDialog<DBPathEntry> rd = (RenameDialog<DBPathEntry>)arg0;
 			if(rd.GetResultText().length() > 0)
 			{
