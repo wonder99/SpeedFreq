@@ -4,17 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.SharedPreferences;
-import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -77,7 +72,7 @@ public class ConfigurePointToPoint extends Activity implements OnItemSelectedLis
 		lstStartModes.add(new StartMode("Screen: Start when user taps", Prefs.P2P_STARTMODE_SCREEN));
 		lstStartModes.add(new StartMode("Speed: Start when speed exceeds...", Prefs.P2P_STARTMODE_SPEED));
 
-		ArrayAdapter<StartMode> adapter = new ArrayAdapter<StartMode>(this, R.layout.simplelistitem_blacktext, lstStartModes);
+		ArrayAdapter<StartMode> adapter = new ArrayAdapter<StartMode>(this, android.R.layout.simple_gallery_item, lstStartModes);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spn.setAdapter(adapter);
         
@@ -102,7 +97,7 @@ public class ConfigurePointToPoint extends Activity implements OnItemSelectedLis
 		lstStopModes.add(new StartMode("Speed: Stop when speed goes below...", Prefs.P2P_STOPMODE_SPEED));
 		lstStopModes.add(new StartMode("Distance: Stop when the car has driven...", Prefs.P2P_STOPMODE_DISTANCE));
 
-		ArrayAdapter<StartMode> adapter = new ArrayAdapter<StartMode>(this, R.layout.simplelistitem_blacktext, lstStopModes);
+		ArrayAdapter<StartMode> adapter = new ArrayAdapter<StartMode>(this, android.R.layout.simple_gallery_item, lstStopModes);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spn.setAdapter(adapter);
         
