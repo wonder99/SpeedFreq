@@ -23,7 +23,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -126,7 +125,6 @@ public class ConfigureAccelerometerActivity extends Activity implements
 
 		rgCorrectionType = (RadioGroup) findViewById(R.id.rgCorrectionType);
 		rgCorrectionType.setOnCheckedChangeListener(this);
-		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 		bMaskRadio1 = false;
 		
 		chkEnableCorrection = (CheckBox) findViewById(R.id.chkEnableCorrection);
