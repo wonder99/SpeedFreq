@@ -21,9 +21,9 @@
     </string-array>
     <string-array name="accel_filters">
         <item>None</item>
-        <item>Light filter</item>
-        <item>Recommended filter</item>
-        <item>Heavy Filter</item>
+        <item>Kaiser Filter, 17pt</item>
+        <item>Moving Average, 8pt</item>
+        <item>Moving Average, 17pt</item>
     </string-array>
     
     <string-array name="ioiocustomnames">
@@ -53,5 +53,8 @@
     </string-array>
     <string name="strConfigInstructions">To compensate for the angle of the car mount, hold the phone in the same orientation and click \"automatic\".  Then slowly rotate it 90 degrees forwards around an axis parallel to the car\'s axles.  As you approach 90 degrees, a tone will alert you that you\'re getting close, and should slow the rotation.  When 90 deg is reached, a higher pitch confirmation tone will sound.  In this position, gravity is acting on the phone in the same direction as pure braking would.  If you haven\'t reached 90 degrees in 10 seconds, low tone will sound, and you can start over.</string>
     <string name="strReadyToCal">Lay the phone perfectly flat and level, then click below to calibrate</string>
+    <string name="strReadyToCalLand">Lay the phone perfectly flat and level, then click at right to calibrate</string>
     <string name="strResetCal">Sensor is calibrated.  Click below to reset.</string>
+    <string name="icon">Icon</string>
+    <string name="finish_count">Finish Count</string>
 </resources>
