@@ -17,22 +17,21 @@
 package com.artsoft.wifilapper;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.util.Date;
-
+import java.util.Calendar;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TabHost;
-import android.widget.TextView;
 import android.widget.Toast;
 
 public class LandingScreen extends android.app.TabActivity 
@@ -43,7 +42,14 @@ public class LandingScreen extends android.app.TabActivity
 	{
 		super.onCreate(savedInstanceState);
 		
-		//Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler("/sdcard/WifiLapperCrashes/"));
+		if( BuildConfig.DEBUG ) {
+			// Set up crash file directory
+			String crashPath = Environment.getExternalStorageDirectory().getPath()+"/WifiLapperCrashes/";
+			if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
+				Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler(crashPath));
+			};
+		}
+
 		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
 		boolean fInternalDB = settings.getBoolean(Prefs.PREF_DBLOCATION_BOOL, Prefs.DEFAULT_DBLOCATION_BOOL);
 		
@@ -74,7 +80,6 @@ public class LandingScreen extends android.app.TabActivity
 			}
 		}
 		
-    	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
     	
     	getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     	
@@ -86,26 +91,34 @@ public class LandingScreen extends android.app.TabActivity
 		m_pTabHost = (TabHost)findViewById(android.R.id.tabhost);
 
 		Button txt = new Button(this);
-		txt.setText("New Race");
+		txt.setTextColor(Color.BLACK);
+		txt.setTextSize(14);
 		txt.setBackgroundResource(R.drawable.tabheader_blue);
+		txt.setText("New Race");
 	    intent = new Intent().setClass(this, LandingNewRace.class);
 		m_pTabHost.addTab(m_pTabHost.newTabSpec("new").setIndicator(txt).setContent(intent));
 
 		txt = new Button(this);
-		txt.setText("Load Race");
+		txt.setTextColor(Color.BLACK);
+		txt.setTextSize(14);
 		txt.setBackgroundResource(R.drawable.tabheader_blue);
+		txt.setText("Load Race");
 	    intent = new Intent().setClass(this, LandingLoadRace.class);
 		m_pTabHost.addTab(m_pTabHost.newTabSpec("load").setIndicator(txt).setContent(intent));
 
 		txt = new Button(this);
-		txt.setText("DB Backups");
+		txt.setTextColor(Color.BLACK);
+		txt.setTextSize(14);
 		txt.setBackgroundResource(R.drawable.tabheader_blue);
+		txt.setText("DB Backups");
 	    intent = new Intent().setClass(this, LandingDBManage.class);
 		m_pTabHost.addTab(m_pTabHost.newTabSpec("export").setIndicator(txt).setContent(intent));
 
 		txt = new Button(this);
-		txt.setText("Options");
+		txt.setTextColor(Color.BLACK);
+		txt.setTextSize(14);
 		txt.setBackgroundResource(R.drawable.tabheader_blue);
+		txt.setText("Options");
 	    intent = new Intent().setClass(this, LandingOptions.class);
 		m_pTabHost.addTab(m_pTabHost.newTabSpec("options").setIndicator(txt).setContent(intent));
 		
@@ -127,21 +140,28 @@ public class LandingScreen extends android.app.TabActivity
 	{
 		private String localPath;
 		private UncaughtExceptionHandler m_oldHandler;
+		
 		public CustomExceptionHandler(String localPath) 
 		{
 	        this.localPath = localPath;
+        	File fileTest = new File(localPath);
+		    if ( !fileTest.isDirectory() )
+		    	fileTest.mkdir();
+
 	        this.m_oldHandler = Thread.getDefaultUncaughtExceptionHandler();
 		}
+		
 		@Override
 		public void uncaughtException(Thread t, Throwable e) 
 		{
-	        Date d = new Date();
+	        Calendar cal = Calendar.getInstance();
 	        final Writer result = new StringWriter();
 	        final PrintWriter printWriter = new PrintWriter(result);
 	        e.printStackTrace(printWriter);
 	        String stacktrace = result.toString();
 	        printWriter.close();
-	        String filename = d.getYear() + "." + d.getMonth() + "." + d.getDate() + "." + d.getHours() + ".stacktrace";
+	        String filename = cal.get(Calendar.YEAR) + "." + String.valueOf(cal.get(Calendar.MONTH)+1) + "." + cal.get(Calendar.DAY_OF_MONTH) + 
+	        		"." + cal.get(Calendar.HOUR_OF_DAY) + "." + cal.get(Calendar.MINUTE) + ".stacktrace";
 
 	        if (localPath != null) {
 	            writeToFile(stacktrace, filename);
