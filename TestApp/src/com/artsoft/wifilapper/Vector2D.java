@@ -48,6 +48,11 @@ public class Vector2D
 	{
 		return new Vector2D(x - vOther.x,y - vOther.y);
 	}
+	
+	public String toString()
+	{
+		return new String("v("+ String.valueOf(x) + "," + String.valueOf(y)+")");
+	}
 	public void Set(float x, float y)
 	{
 		this.x = x;
