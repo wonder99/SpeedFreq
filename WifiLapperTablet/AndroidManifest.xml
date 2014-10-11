@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.artsoft.wifilappertab"
     android:versionCode="39"
-    android:versionName="1.39 Beta 8: Sept 17, 2014" >
+    android:versionName="1.39 Beta 10: Oct 10, 2014" xmlns:tools="http://schemas.android.com/tools">
 
     <supports-screens android:smallScreens="true" />
     <supports-screens android:normalScreens="true" />
@@ -14,8 +14,10 @@
 
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="8" />
+        android:targetSdkVersion="8"
+        tools:ignore="OldTargetApi" />
 
+    
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -33,10 +35,10 @@
         android:label="@string/app_name" >
         <activity
             android:name="com.artsoft.wifilapper.LandingScreen"
-            android:configChanges="orientation|keyboard|keyboardHidden"
+            android:configChanges="keyboard|keyboardHidden"
             android:label="@string/app_name_tablet"
             android:launchMode="singleTask"
-            android:screenOrientation="landscape" >
+            android:screenOrientation="sensor" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -46,69 +48,77 @@
         <activity
             android:name="com.artsoft.wifilapper.ConfigureGPSActivity"
             android:label="@string/app_name"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.ConfigurePointToPoint"
             android:label="@string/app_name"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.ConfigureIOIOFilter"
             android:label="@string/app_name"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.ConfigureOBD2Activity"
             android:label="@string/app_name"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.ConfigureIOIOActivity"
             android:label="@string/app_name"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.ConfigureAccelerometerActivity"
             android:label="@string/app_name"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.ComputerChooserActivity"
-            android:configChanges="orientation|keyboard|keyboardHidden"
+            android:configChanges="keyboard|keyboardHidden"
             android:label="@string/app_name"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.LandingNewRace"
             android:label="@string/app_name"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.LandingLoadRace"
             android:label="@string/app_name"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.LandingSetSplits"
             android:label="@string/app_name"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.LandingDBManage"
             android:label="@string/app_name"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.LandingOptions"
             android:label="@string/app_name"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.SummaryActivity"
             android:label="@string/app_name"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.ApiDemos"
-            android:configChanges="orientation|keyboard|keyboardHidden"
+            android:configChanges="keyboard|keyboardHidden"
             android:label="@string/app_name"
             android:launchMode="singleTask"
+            android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" >
+
             <meta-data
                 android:name="appmode"
                 android:value="tablet" />
