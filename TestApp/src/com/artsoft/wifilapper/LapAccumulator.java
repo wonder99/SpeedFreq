@@ -16,20 +16,12 @@
 
 package com.artsoft.wifilapper;
 
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Vector;
-import java.util.zip.Deflater;
-import java.util.zip.DeflaterOutputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
-
-import com.artsoft.wifilapper.IOIOManager.PinParams;
 
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -38,7 +30,6 @@ import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteStatement;
 import android.graphics.*;
 import android.location.Location;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcel;
@@ -189,21 +180,28 @@ public class LapAccumulator
 	{
 		return m_lapParams.iFinishCount - m_iLapsToGo;
 	}
-	public LapAccumulator CreateCopy()
+	public LapAccumulator CreateCopy(boolean bCopyPositions, boolean bCopyChannels )
 	{
 		DoDeferredLoad(null, 0, true);
 		
 		TimePoint2D pt = m_lstPositions.get(0);
 		LapAccumulator lap = new LapAccumulator(m_lapParams, pt.pt, m_iUnixStartTime, m_iLapId, m_iStartTime, pt.dVelocity);
 
-		for(int x = 0;x < m_lstPositions.size(); x++)
-		{
-			pt = m_lstPositions.get(x);
-			lap.AddPosition(pt.pt, pt.iTime, pt.dVelocity);
+		if( bCopyPositions) {
+			for(int x = 0;x < m_lstPositions.size(); x++)
+			{
+				pt = m_lstPositions.get(x);
+				lap.AddPosition(pt.pt, pt.iTime, pt.dVelocity);
+			}
 		}
-		for(int x = 0;x < m_lstChannels.size(); x++)
-		{
-			lap.AddDataChannel(m_lstChannels.get(x));
+		else
+			lap.m_finishTime = this.m_finishTime;
+
+		if( bCopyChannels ) {
+			for(int x = 0;x < m_lstChannels.size(); x++)
+			{
+				lap.AddDataChannel(m_lstChannels.get(x));
+			}
 		}
 		
 		return lap;
@@ -329,8 +327,12 @@ public class LapAccumulator
 	{
 		if(!m_fDeferredLoad) return; // if we've already loaded or aren't a deferred-load lap, then don't load
 		if(m_fPruned) return; // we're a pruned lap, and shouldn't be loading from the network.
+
+		if( BuildConfig.DEBUG && (m_iLapId == -1)) 
+		{
+			throw new AssertionError("Failed in DoDeferredLoad");
+		};
 		
-		assert(m_iLapId != -1);
 		if(m_iLapId != -1)
 		{
 			SQLiteDatabase db = RaceDatabase.Get();
@@ -466,91 +468,11 @@ public class LapAccumulator
 	{
 		if(m_finishTime == null && m_ptFinishPoint == null)
 		{
-			m_finishTime = new Integer(m_lstPositions.get(m_lstPositions.size()-1).iTime);
+			m_finishTime = Integer.valueOf(m_lstPositions.get(m_lstPositions.size()-1).iTime);
 			m_ptFinishPoint = m_lstPositions.get(m_lstPositions.size()-1).pt;
 		}
 	}
-	private synchronized void BuildByteArray_v1()
-	{
-		if(m_pPrecachedToNetwork != null) return; // work has already been done!
-		if(IsPruned()) return; // we're a pruned lap, and don't need to precache network stuff!
-		DoDeferredLoad(null, 0, true);
-		
-		ByteArrayOutputStream bytes = new ByteArrayOutputStream(100000);
-		DataOutputStream out = new DataOutputStream(bytes);
-		try
-		{
-			out.writeByte('j');
-			out.writeByte('n');
-			out.writeByte('d');
-			out.writeByte('a');
-			out.writeByte('d');
-			out.writeByte('e');
-			out.writeByte('r');
-			out.writeByte('e');
-
-			out.writeInt((int)m_iLapId);
-			out.writeInt(this.m_lstPositions.size());
-			out.writeFloat((float)GetLapTime());
-			out.writeInt(m_iUnixStartTime);
-			
-
-			out.writeFloat(m_lapParams.lnStart.GetP1().x);
-			out.writeFloat(m_lapParams.lnStart.GetP1().y);
-			out.writeFloat(m_lapParams.lnStart.GetP2().x);
-			out.writeFloat(m_lapParams.lnStart.GetP2().y);
-
-			out.writeFloat(m_lapParams.lnStop.GetP1().x);
-			out.writeFloat(m_lapParams.lnStop.GetP1().y);
-			out.writeFloat(m_lapParams.lnStop.GetP2().x);
-			out.writeFloat(m_lapParams.lnStop.GetP2().y);
-
-			out.writeFloat(0);
-			out.writeFloat(0);
-			out.writeFloat(0);
-			out.writeFloat(0);
-
-			out.writeFloat(m_lapParams.vStart.GetX());
-			out.writeFloat(m_lapParams.vStart.GetY());
-			
-			out.writeFloat(m_lapParams.vStop.GetX());
-			out.writeFloat(m_lapParams.vStop.GetY());
-			
-			out.writeFloat(0);
-			out.writeFloat(0);
-			
-			for(int x = 0;x < m_lstPositions.size(); x++)
-			{
-				TimePoint2D t = m_lstPositions.get(x);
-				if(!t.SendToOutput(out))
-				{
-					m_pPrecachedToNetwork = null;
-					return;
-				}
-			}
-			
-			out.writeByte('d');
-			out.writeByte('o');
-			out.writeByte('n');
-			out.writeByte('e');
-			out.writeByte('l');
-			out.writeByte('a');
-			out.writeByte('p');
-			out.writeByte('_');
-			out.flush();
-
-			for(int x = 0; x < this.m_lstChannels.size(); x++)
-			{
-				m_lstChannels.get(x).SendToOutput(out);
-			}
-			m_pPrecachedToNetwork = bytes.toByteArray();
-		}
-		catch(Exception e)
-		{
-			// outputstream failed, probably lost network
-			m_pPrecachedToNetwork = null;
-		}
-	}
+	
 	private synchronized void BuildByteArray_v2()
 	{
 		if(m_pPrecachedToNetwork != null) return; // work has already been done!
@@ -669,8 +591,11 @@ public class LapAccumulator
 	}
 	public void MarkSentInDB(SQLiteDatabase db)
 	{
-		assert(!m_fDeferredLoad); // how would we send this lap without having all its points?
-		assert(m_iLapId != -1);
+		if( BuildConfig.DEBUG && (m_fDeferredLoad || m_iLapId == -1 ) )
+		{
+			throw new AssertionError("Failed in MarkSendInDb");
+		}
+		
 		if(m_iLapId != -1)
 		{
 			db.execSQL("update laps set transmitted=1 where _id = " + this.m_iLapId);
@@ -682,7 +607,11 @@ public class LapAccumulator
 	}
 	public boolean SendToDB(SQLiteDatabase db, long lRaceId, boolean fTransmitted) throws SQLiteException
 	{
-		assert(lRaceId != -1);
+		if( BuildConfig.DEBUG && (lRaceId == -1 ) ) 
+		{
+			throw new AssertionError("Failed in SendToDB");
+		}
+
 		if(m_iLapId != -1 || m_fDeferredLoad)
 		{
 			// this lap is already in the database!
@@ -748,13 +677,17 @@ public class LapAccumulator
 	{
 		if(m_lstPositions.size() == 0)
 		{
-			assert(m_fDeferredLoad);
+			if( BuildConfig.DEBUG && !m_fDeferredLoad )
+			{
+				throw new AssertionError("Failed in AddPosition");
+			}
+
 			Init(m_lapParams, ptNewRaw, m_iUnixStartTime, m_iLapId, iTime, dVelocity);
 			return; // we're done here.
 		}
 		TimePoint2D ptLast = m_lstPositions.get(m_lstPositions.size() - 1);
 		TimePoint2D ptNew = new TimePoint2D(ptNewRaw,iTime, dVelocity, m_dCumulativeDistance, GetFinishCount());
-		
+
 		assert(ptNew != null && ptLast.pt != null);
 		LineSeg lnLast = new LineSeg(ptNewRaw, ptLast.pt);
 		if(lnLast.GetLength() <= 0) return; // don't add it if it isn't new
@@ -766,9 +699,9 @@ public class LapAccumulator
 		}
 		
 		m_dCumulativeDistance += lnLast.GetLength(); // add how far we've travelled here
-		
+	
 		m_lstPositions.add(ptNew);
-		
+
 		if(!m_fBoundsValid)
 		{
 			m_rcSDBounds = new FloatRect((float)ptNew.dDistance,(float)ptNew.dVelocity,(float)ptNew.dDistance,(float)ptNew.dVelocity);
@@ -799,16 +732,19 @@ public class LapAccumulator
 			if(lnLast.Intersect(m_lapParams.lnStop,intersect, true, true))
 			{
 				Vector2D vDir = Vector2D.P1MinusP2(ptNewRaw, ptLast.pt);
-				if((dVelocity > 2) && (vDir.DotProduct(m_lapParams.vStop) > 0) )
+				if((dVelocity > 10/3.6) && (iTime - m_iStartTime)>DISARM_TIME && (vDir.DotProduct(m_lapParams.vStop) > 0) )
 				{
 					m_iLapsToGo--;
 					if(m_iLapsToGo <= 0)
 					{
-						// we've crossed the finish line enough times, and we were going the correct direction, and fast enough
+						// we've crossed the finish line enough times, and we were going the correct direction, and not double-counting
 						float dTimeInSeconds = ((float)iTime / 1000.0f);
 						float dIntersectTime = (intersect.GetThisFraction() * dLastInSeconds) + ((1 - intersect.GetThisFraction()) * dTimeInSeconds);
 						int iIntersectTime = (int)(dIntersectTime * 1000);
-						assert(iIntersectTime > m_iStartTime);
+						if( BuildConfig.DEBUG && !(iIntersectTime > m_iStartTime) )
+						{
+							throw new AssertionError("iIntersectTime <= m_iStartTime");
+						}
 						m_finishTime = Integer.valueOf(iIntersectTime);
 						m_ptFinishPoint = intersect.GetPoint();
 					}
@@ -859,30 +795,6 @@ public class LapAccumulator
 			// m_lstCrossTimes are in absolute time
 			return (iCurrentTime - m_finishTime.intValue()) / 1000.0f;
 		}
-	}
-	private int FindPointIndexClosestToTime(final int iCrossTime)
-	{
-		TimePoint2D ptBest = null;
-		int ixBest = -1;
-		final int cSize = m_lstPositions.size();
-		for(int ixCheck = 0; ixCheck < cSize; ixCheck++)
-		{
-			TimePoint2D pt = m_lstPositions.get(ixCheck);
-			if(pt.iTime > iCrossTime)
-			{
-				// our search is done
-				break;
-			}
-			else
-			{
-				if(ptBest == null || pt.iTime > ptBest.iTime)
-				{
-					ptBest = pt;
-					ixBest = ixCheck;
-				}
-			}
-		}
-		return ixBest;
 	}
 	public FloatRect GetBounds(final boolean fSpeedDistance)
 	{
@@ -1094,86 +1006,197 @@ public class LapAccumulator
 	{
 		int ixBestIndex = -1;
 		final int cSize = m_lstPositions.size();
+
+		double dClosest = 1e30;
+		TimePoint2D ptNext = m_lstPositions.get(1%cSize);
+		TimePoint2D ptThis = m_lstPositions.get(0);
+		for(int x = 0; x < cSize-1; x++)
 		{
-			double dClosest = 1e30;
-			TimePoint2D ptNext = m_lstPositions.get(1%cSize);
-			TimePoint2D ptThis = m_lstPositions.get(0);
-			for(int x = 0; x < cSize-1; x++)
+			final int ixNext = ((x+1)%cSize);
+
+			ptThis = ptNext;
+			ptNext = m_lstPositions.get(ixNext);
+			if(ptThis.iLapCount != p.iLapCount) 
+				continue; // we only want to match with points on the same lap...
+
+			final float dx1 = ptThis.pt.x - p.pt.x;
+			final float dx2 = ptNext.pt.x - p.pt.x;
+			final float dy1 = ptThis.pt.y - p.pt.y;
+			final float dy2 = ptNext.pt.y - p.pt.y;
+			final float d1 = dx1*dx1 + dy1*dy1;
+			final float d2 = dx2*dx2 + dy2*dy2;
+			final float dAvg = (d1+d2)/2.0f;
+			final float dPct = (float)x / (float)cSize;
+			final float dPctDiff = (float)Math.abs(dPct - dPercentage);
+			if((ixBestIndex == -1 || dAvg < dClosest) && dPctDiff < 0.5)
 			{
-				final int ixNext = ((x+1)%cSize);
-			
-				ptThis = ptNext;
-				ptNext = m_lstPositions.get(ixNext);
-				if(ptThis.iLapCount != p.iLapCount) continue; // we only want to match with points on the same lap...
-				
-				final float dx1 = ptThis.pt.x - p.pt.x;
-				final float dx2 = ptNext.pt.x - p.pt.x;
-				final float dy1 = ptThis.pt.y - p.pt.y;
-				final float dy2 = ptNext.pt.y - p.pt.y;
-				final float d1 = dx1*dx1 + dy1*dy1;
-				final float d2 = dx2*dx2 + dy2*dy2;
-				final float dAvg = (d1+d2)/2.0f;
-				final float dPct = (float)x / (float)cSize;
-				final float dPctDiff = (float)Math.abs(dPct - dPercentage);
-			    if((ixBestIndex == -1 || dAvg < dClosest) && dPctDiff < 0.5)
-			    {
-			      dClosest = dAvg;
-			      ixBestIndex = x;
-			    }
+				dClosest = dAvg;
+				ixBestIndex = x;
 			}
 		}
-		
+
 		if(ixBestIndex >= 0)
 		{
 			TimePoint2D pt1 = m_lstPositions.get(ixBestIndex);
 			TimePoint2D pt2 = null;
 			int ixNext = ixBestIndex+1;
-			
+
 			// it turns that when moving slowly, the 10hz GPS will actually return the exact same point twice in a row, so we need to check for that.
 			do
 			{
 				pt2 = m_lstPositions.get(ixNext % cSize);
 				ixNext++;
 			} while(pt1.EqualsPoint(pt2) && (ixNext % cSize) != ixBestIndex);
-				
-			
+
+
 			if(pt1.EqualsPoint(pt2))
 			{
 				return new TimePoint2D(pt1.GetPT(), pt1.iTime, pt1.dVelocity, pt1.dDistance, pt1.iLapCount);
 			}
 			else
 			{
-		        // hooray, we found the closest two points.
-		        Vector2D vD = Vector2D.P1MinusP2(pt2.pt,pt1.pt);
-		        LineSeg lnD = new LineSeg(pt1.pt, vD); // gets a vector going from pt1 to pt2
-		        
-		        LineSeg lnPerp = new LineSeg(p.pt,vD.RotateAboutOrigin(Math.PI/2)); // gets a vector running perpindicular to pt1->pt2 through the queried point
-		        if(lnPerp.GetLength() <= 0) return pt1;
-		        
-		        LineSeg.IntersectData pIntersect = new LineSeg.IntersectData();
-		        
-		        boolean fIntersect = lnD.Intersect(lnPerp, pIntersect, false, false);
-		        
-		        if(fIntersect)
-		        {
-		          // hooray, they intersect
-		          final double dPercent = pIntersect.GetThisFraction();
-		          if(dPercent == Float.NaN || pIntersect.GetOtherFraction() == Float.NaN)
-		          {
-		        	  return pt1;
-		          }
-		          else
-		          {
-			          double dThisTime = (pt1.iTime * (1-dPercent)) + (pt2.iTime * dPercent);
-			          double dThisVelocity = (pt1.dVelocity * (1-dPercent)) + (pt2.dVelocity * dPercent);
-			          double dThisDistance = (pt1.dDistance * (1-dPercent)) + (pt2.dDistance * dPercent);
-			          TimePoint2D ptRet = new TimePoint2D(pIntersect.GetPoint(), (int)dThisTime, dThisVelocity, dThisDistance, p.iLapCount);
-			          return ptRet;
-		          }
-		        }
+				// hooray, we found the closest two points.
+				Vector2D vD = Vector2D.P1MinusP2(pt2.pt,pt1.pt);
+				LineSeg lnD = new LineSeg(pt1.pt, vD); // gets a vector going from pt1 to pt2
+
+				LineSeg lnPerp = new LineSeg(p.pt,vD.RotateAboutOrigin(Math.PI/2)); // gets a vector running perpindicular to pt1->pt2 through the queried point
+				if(lnPerp.GetLength() <= 0) return pt1;
+
+				LineSeg.IntersectData pIntersect = new LineSeg.IntersectData();
+
+				boolean fIntersect = lnD.Intersect(lnPerp, pIntersect, false, false);
+
+				if(fIntersect)
+				{
+					// hooray, they intersect
+					final double dPercent = pIntersect.GetThisFraction();
+					if(dPercent == Float.NaN || pIntersect.GetOtherFraction() == Float.NaN)
+					{
+						Log.w("wifilapper point debug","dPercent bad value "+ String.valueOf(dPercent) );
+						return pt1;
+					}
+					else if( dPercent < 0 )
+						return pt1;
+					else if( dPercent > 1 )
+						return pt2;
+					else
+					{
+						double dThisTime = (pt1.iTime * (1-dPercent)) + (pt2.iTime * dPercent);
+						double dThisVelocity = (pt1.dVelocity * (1-dPercent)) + (pt2.dVelocity * dPercent);
+						double dThisDistance = (pt1.dDistance * (1-dPercent)) + (pt2.dDistance * dPercent);
+						TimePoint2D ptRet = new TimePoint2D(pIntersect.GetPoint(), (int)dThisTime, dThisVelocity, dThisDistance, p.iLapCount);
+						return ptRet;
+					}
+				}
+				else {
+					Log.w("wifilapper point debug","fIntersect was false!");
+					return pt1;
+				}
 			}
 		}
+		Log.w("wifilapper point debug","Returning Null from interploation" +String.valueOf(ixBestIndex));
 		return null;
+	}
+
+	final int iInterpolateSearchRange = 5; 	// # points on either side of the last best index
+	private int iSearchPoint;
+	public void ResetSearchPoint()
+	{
+		iSearchPoint=0;
+	}
+	public int GetSearchPoint()
+	{
+		return iSearchPoint;
+	}
+
+	public TimePoint2D myGetInterpolatedPointAtPosition(final TimePoint2D p)
+	{
+		int ixBestIndex = -1;
+		final int cSize = m_lstPositions.size();
+		if( BuildConfig.DEBUG && cSize < 3 )
+			throw new AssertionError("Called interpolate routine with < 3 points");
+		
+		double dClosest = 1e30;
+		float dx1;
+		float dx2;
+		float dy1;
+		float dy2;
+		float d1;
+		float d2 = 9999; // just to eliminate a warning
+		float dAvg;
+
+		int iStartIndex = Math.max(0, iSearchPoint-iInterpolateSearchRange);
+		int iEndIndex = Math.min(iSearchPoint+iInterpolateSearchRange,cSize-1);
+		
+		TimePoint2D ptNext = m_lstPositions.get(iStartIndex);
+		TimePoint2D ptThis;
+		
+		for(int x = iStartIndex; x < iEndIndex; x++)
+		{
+			ptThis = ptNext;
+			ptNext = m_lstPositions.get(x+1);
+
+			if( x==iStartIndex ) {
+				dx1 = ptThis.pt.x - p.pt.x;
+				dy1 = ptThis.pt.y - p.pt.y;
+				d1 = dx1*dx1 + dy1*dy1;
+			} else {
+				d1 = d2;
+			}
+
+			dx2 = ptNext.pt.x - p.pt.x;
+			dy2 = ptNext.pt.y - p.pt.y;
+			d2 = dx2*dx2 + dy2*dy2;
+			dAvg = d1+d2;
+			if((ixBestIndex == -1 || dAvg < dClosest) )
+			{
+				dClosest = dAvg;
+				ixBestIndex = x;
+			}
+		}
+		
+		TimePoint2D pt1 = m_lstPositions.get(ixBestIndex);
+		TimePoint2D pt2 = null;
+
+		// it turns that when moving slowly, the 10hz GPS will actually return the exact same point twice in a row, so we need to check for that.
+		// Skip overlapping points.
+		int ixNext = ixBestIndex;
+		do
+		{
+			ixNext++;
+			pt2 = m_lstPositions.get(ixNext);
+		} while(pt1.EqualsPoint(pt2) && ixNext < cSize-1);
+
+
+		if(pt1.EqualsPoint(pt2))
+		{
+			// last number of points were the same.  Return the last point on the best lap
+			iSearchPoint = ixNext;
+			return pt2;//new TimePoint2D(pt2.pt,pt2.iTime,pt2.dVelocity,pt2.dDistance,ixBestIndex); 
+		}
+//		else if( p.equals(pt1) )
+			//
+	//		return new TimePoint2D(pt1.pt,pt1.iTime,pt1.dVelocity,pt1.dDistance,ixBestIndex); 
+		else
+		{
+			Vector2D vPath = Vector2D.P1MinusP2(pt2.pt,pt1.pt);
+			Vector2D vToSample = Vector2D.P1MinusP2(p.pt, pt1.pt);
+			double dDotProduct = vPath.DotProduct(vToSample);
+			double dLengthSq = vPath.DotProduct(vPath);
+			if( BuildConfig.DEBUG && dLengthSq==0 ) 
+				throw new AssertionError("Somehow, the length is zero:" + vPath.toString() + vToSample.toString() );
+			double dFraction = dDotProduct / dLengthSq; // this can be <0 or >1
+
+			double dThisTime = (pt1.iTime * (1-dFraction)) + (pt2.iTime * dFraction);
+			dThisTime -= m_lstPositions.get(0).iTime;
+			if( dThisTime < 0 )	
+				dThisTime = 0;
+			double dThisVelocity = (pt1.dVelocity * (1-dFraction)) + (pt2.dVelocity * dFraction);
+			iSearchPoint = ixNext;
+			// Only velocity and time are needed.  Return the second point, so it can be used on the next call
+			TimePoint2D ptRet = new TimePoint2D(pt2.GetPT(), (int)Math.round(dThisTime), dThisVelocity, pt2.dDistance, pt2.iLapCount);
+			return ptRet;
+		}
 	}
 	public double GetSpeedAtPosition(final TimePoint2D p)
 	{
@@ -1307,6 +1330,7 @@ public class LapAccumulator
 			}
 			
 		}
+		@SuppressWarnings({ "rawtypes", "unchecked" })
 		private List CopyList(List lst)
 		{
 			List output = new ArrayList();
@@ -1317,6 +1341,7 @@ public class LapAccumulator
 			}
 			return output;
 		}
+		@SuppressWarnings("unchecked")
 		public boolean SendToOutput(DataOutputStream out)
 		{
 			if(fCleared) return false;
@@ -1332,6 +1357,8 @@ public class LapAccumulator
 				iLapId = pParent.m_iLapId;
 				iLocalType = iType;
 			}
+			if( lstLocalData == null || lstLocalTimes == null )
+				return false;
 			
 			try
 			{
@@ -1410,7 +1437,11 @@ class TimePoint2D
 {
 	public TimePoint2D(Point2D pt, int iTime, double dVelocity, double dDistance, int iLapCount)
 	{
-		assert(pt != null);
+		if( BuildConfig.DEBUG && pt==null )
+		{
+			throw new AssertionError("TimePoint2D constructor failed");
+		}
+		
 		this.pt = pt;
 		this.iTime = iTime;
 		this.dVelocity = dVelocity;
