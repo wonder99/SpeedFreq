@@ -18,7 +18,6 @@ package com.artsoft.wifilapper;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,39 +26,33 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Vector;
 
-import com.artsoft.wifilapper.RaceDatabase.RaceData;
 import com.artsoft.wifilapper.Utility.MultiStateObject.STATE;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
-import android.location.LocationManager;
 import android.net.DhcpInfo;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.widget.Toast;
 
 public class LapSender 
 {
-	// this is the outgiong queue of laps that haven't been sent yet
+	// this is the outgoing queue of laps that haven't been sent yet
 	private Vector<LapAccumulator> lstLapsToSend; 
 
 	private long m_lRaceId;
 	
-	private static final int PRUNE_MINUTES = 30; // how many minutes we allow things to languish before busting out the prunes
+	private static final int PRUNE_MINUTES = 60; // how many minutes we allow things to languish before busting out the prunes
+	private static final int SOCKET_TIMEOUT = 3000; // was 10000
+	private static final int ONE_SECOND = 1000; 
 	
 	private boolean fContinue;
 	private SendThd m_thd;
@@ -104,7 +97,9 @@ public class LapSender
 	}
 	public void SendLap(LapAccumulator lap)
 	{
-		assert(m_lRaceId != -1);
+		if( BuildConfig.DEBUG && m_lRaceId == -1) {
+			throw new AssertionError("In SendLap, RaceId= -1");
+		};
 		synchronized(this)
 		{
 			if(lstLapsToSend != null)
@@ -122,17 +117,29 @@ public class LapSender
 			{
 				for(int x = 0;x < lstLapsToSend.size(); x++)
 				{
+					LapAccumulator lap = lstLapsToSend.get(x);
 					try
 					{
 						if(!m_fDBDead)
 						{
-							lstLapsToSend.get(x).SendToDB(RaceDatabase.Get(), m_lRaceId, false);
+							lap.SendToDB(RaceDatabase.Get(), m_lRaceId, false);
 						}
 					}
 					catch(SQLiteException e)
 					{
 						m_fDBDead = true;
 					}
+
+					// Prune out any old laps
+					long lSeconds = lap.GetAgeInSeconds();
+
+					if( (lSeconds > PRUNE_MINUTES * 60) && !lap.IsPruned())
+					{
+						Log.e("prune","in savelaps: killing lap " + String.valueOf(lSeconds) + " old.");
+						lap.Prune();
+					}
+
+					
 					if(!lstLapsToSend.get(x).IsPruned())
 					{
 						// if something is pruned, we're never going to send it until a reboot.  The data is there, but we're not sending it...
@@ -170,6 +177,7 @@ public class LapSender
 					long lSeconds = lap.GetAgeInSeconds();
 					if(lSeconds > PRUNE_MINUTES * 60 && lap.IsInDB() && lap.IsDoneLap() && !lap.IsPruned())
 					{
+						Log.e("prune","killing lap " + String.valueOf(lSeconds) + " old.");
 						lap.Prune();
 					}
 				}
@@ -191,7 +199,7 @@ public class LapSender
 
 					Socket s = new Socket();
 					s.connect(sConnect, 500);
-					s.setSoTimeout(3000);
+					s.setSoTimeout(ONE_SECOND);
 					
 					String strDBPath = db.getPath();
 					InputStream in = new FileInputStream(strDBPath);
@@ -208,6 +216,7 @@ public class LapSender
 					out.write(new String("racingdbcomplete").getBytes());
 					out.flush();
 					out.close();
+					in.close();
 					s.close();
 					
 					
@@ -328,7 +337,6 @@ public class LapSender
 				strSSID = strNewSSID;
 			}
 		}
-		private int cSuccessfulBeats = 0;
 		private boolean HeartBeat(InputStream in, OutputStream out)
 		{
 			DataInputStream dataIn = null;
@@ -347,7 +355,7 @@ public class LapSender
 				long tmStart = System.currentTimeMillis();
 				while(true)
 				{
-					if(System.currentTimeMillis() - tmStart > 3000)
+					if(System.currentTimeMillis() - tmStart > ONE_SECOND)
 					{
 						return false;
 					}
@@ -365,7 +373,6 @@ public class LapSender
 				b4 = dataIn.readByte();
 				if(b1 == 'H' && b2 == 'T' && b3 == 'B' && b4 == 'T')
 				{
-					cSuccessfulBeats++;
 					pStateMan.SetState(LapSender.class, Utility.MultiStateObject.STATE.ON, "Connected");
 					listener.SetConnectionLevel(LapSenderListener.CONNLEVEL.FULLYCONNECTED);
 					return true;
@@ -503,7 +510,7 @@ public class LapSender
 				s = new Socket();
 				sConnect = new InetSocketAddress(addr, iPort);
 				s.connect(sConnect, 500);
-				s.setSoTimeout(3000);
+				s.setSoTimeout(ONE_SECOND);
 				
 				m_watchdog = new SocketWatchdog(this, s);
 			}
@@ -665,7 +672,7 @@ public class LapSender
 		@Override
 		public int GetTimeout() 
 		{
-			return 10000;
+			return SOCKET_TIMEOUT;
 		}
 		@Override
 		public void Kill(Socket s) 

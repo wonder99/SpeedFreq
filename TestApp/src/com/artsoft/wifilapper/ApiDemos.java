@@ -16,9 +16,13 @@
 
 package com.artsoft.wifilapper;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import android.app.Activity;
@@ -36,16 +40,19 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Paint.Style;
 import android.graphics.Region.Op;
-
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
 import android.location.*;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.*;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -61,6 +68,7 @@ import com.artsoft.wifilapper.IOIOManager.IOIOListener;
 import com.artsoft.wifilapper.LapAccumulator.DataChannel;
 import com.artsoft.wifilapper.LapSender.LapSenderListener;
 
+
 public class ApiDemos 
 extends Activity 
 implements 
@@ -72,6 +80,13 @@ implements
 	MessageMan.MessageReceiver, 
 	OBDThread.OBDListener, IOIOListener, LapSenderListener
 {
+	Thread m_scanThd;
+	Thread m_wifiToggleThd;
+	
+	static WifiManager mainWifiObj;
+	WifiManager.WifiLock myLocker;
+//	WifiScanReceiver wifiReciever;
+	
 	public enum RESUME_MODE {NEW_RACE, REUSE_SPLITS, RESUME_RACE};
 	
 	enum State {LOADING, WAITING_FOR_GPS, WAITINGFORSTART, WAITINGFORSTOP, MOVING_TO_STARTLINE, PLOTTING, DEMOSCREEN};
@@ -86,6 +101,8 @@ implements
 	
 	private SplitDecider m_startDecider;
 	private SplitDecider m_stopDecider;
+
+	private static int iMaxPointsPerLap = 10*60*30;  // 10Hz  * 60s/min * 30 min
 	
 	private boolean m_fUseP2P;
 	private int m_iP2PStartMode;
@@ -119,7 +136,6 @@ implements
 	
 	private long m_tmLastLap = 0; // the system time that we saved the last lap at
 	private LapAccumulator m_lastLap = null;
-	private LapAccumulator m_driverBest = null;
 	private LapAccumulator m_best = null;
 	
 	private LapAccumulator.LapAccumulatorParams m_lapParams = null;
@@ -143,7 +159,7 @@ implements
 	private float flRoll;
 	private float flSensorOffset[] = new float[3];
 	private int iFilterType;
-	enum FILTER_TYPE {NONE,LIGHT,MEDIUM,HEAVY};
+	enum FILTER_TYPE {NONE,KAISER,MOVING_SHORT,MOVING_LONG};
 	private FILTER_TYPE eFilterType = FILTER_TYPE.NONE;		
 	
     private int   iLastIOIOSubmissionTime[]   = new int[48];
@@ -193,7 +209,15 @@ implements
     	{
     		m_me = this;
     	}
-    	
+
+    	mainWifiObj = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+		mainWifiObj.startScan();
+		mainWifiObj.createWifiLock("wfl");
+		m_wifiToggleThd = new myWifiKiller();
+		//m_wifiToggleThd.start();
+		m_scanThd = new myThread();
+		//m_scanThd.start();
+
     	m_tmAppStartTime = 0;
 		
     	getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -213,6 +237,11 @@ implements
     		bDeferring[init] = false;
     	}
     	
+    	//ArrayList<Point2D> testArray = new ArrayList<Point2D>(1000000); 
+    	//TimePoint2D: 100000 was 400KB, 1e6 was about 4MB
+    	//Point2D was the same size. 16 bytes bigger than 4 bytes per element
+    	//testArray.add(new Point2D(0,0));
+    	    	
     	fUseAccelCorrection =  i.getBooleanExtra(Prefs.IT_ACCEL_CORRECTION, Prefs.DEFAULT_ACCEL_CORRECTION);
     	flPitch = i.getFloatExtra(Prefs.IT_ACCEL_CORRECTION_PITCH, Prefs.DEFAULT_ACCEL_CORRECTION_PITCH);
     	flRoll  = i.getFloatExtra(Prefs.IT_ACCEL_CORRECTION_ROLL, Prefs.DEFAULT_ACCEL_CORRECTION_ROLL);
@@ -243,11 +272,12 @@ implements
     	if(m_strPrivacyPrefix == null) m_strPrivacyPrefix = Prefs.DEFAULT_PRIVACYPREFIX;
     	
     	if(m_strSpeedoStyle == null) m_strSpeedoStyle = LandingOptions.rgstrSpeedos[0];
-    	if(m_strSpeedoStyle.equals(LandingOptions.SPEEDO_LAPTIMER) ) 
+    	/*if(m_strSpeedoStyle.equals(LandingOptions.SPEEDO_LAPTIMER) ) 
     		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
     	else
-    		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-    	
+    		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);*/
+		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
+
     	String strUnitSystem = i.getStringExtra(Prefs.IT_UNITS_STRING);
     	int rgSelectedPIDs[] = i.getIntArrayExtra(Prefs.IT_SELECTEDPIDS_ARRAY);
     	
@@ -262,8 +292,6 @@ implements
 		
     	m_eUnitSystem = Prefs.UNIT_SYSTEM.valueOf(strUnitSystem);
     	
-    	bPortraitDisplay = false; // default value, landscape
-    	
     	int idLapLoadMode = (int)i.getLongExtra(Prefs.IT_LAPLOADMODE_LONG,RESUME_MODE.REUSE_SPLITS.ordinal());
     	
     	if(idLapLoadMode == RESUME_MODE.REUSE_SPLITS.ordinal())
@@ -272,11 +300,23 @@ implements
     		m_lRaceId = -1;
     	}
     	
+		// Lock the screen orientation, so it doesn't change during a race
+		if(getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+		    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+		    bPortraitDisplay = true;
+		} else {
+			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+			bPortraitDisplay = false;
+		}
+
     	try
     	{
 	    	ActivityInfo info = getPackageManager().getActivityInfo(getComponentName(), PackageManager.GET_META_DATA);
-	    	String strAppMode = info.metaData.getString("appmode");
-	    	m_fSupportSMS = !strAppMode.equals("tablet");
+	    	Bundle bundle = info.metaData;
+	    	String apikey = bundle.getString("appmode");
+//	    	String strAppMode = info.metaData.getString("appmode");
+//	    	info.metaData.
+	    	m_fSupportSMS = !apikey.equals("tablet");
     	}
     	catch(Exception e)
     	{
@@ -287,6 +327,60 @@ implements
     	
     	StartupTracking(fRequireWifi, fUseIOIO, rgSelectedAnalPins, rgSelectedPulsePins, iButtonPin, rgSelectedPIDs, strIP, strSSID, strBTGPS, strOBD2, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, m_fTestMode, idLapLoadMode);
     }
+    /*	
+	class WifiScanReceiver extends BroadcastReceiver {
+		@SuppressLint("UseValueOf")
+		public void onReceive(Context c, Intent intent) {
+			List<ScanResult> wifiScanList = mainWifiObj.getScanResults();
+			wifis = new String[wifiScanList.size()];
+			for(int i = 0; i < wifiScanList.size(); i++){
+				wifis[i] = ((wifiScanList.get(i)).toString());
+			}
+
+			list.setAdapter(new ArrayAdapter<String>(getApplicationContext(),
+					android.R.layout.simple_list_item_1,wifis));
+		}
+	}
+*/
+
+	private static class myThread extends Thread implements Runnable {
+		public void run() {
+			Thread.currentThread().setName("Scan Thread");
+			boolean bResult;
+			while( true ) {
+				bResult = mainWifiObj.reconnect();
+				mainWifiObj.startScan();
+				
+				try {
+					Thread.sleep(500);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	private static class myWifiKiller extends Thread implements Runnable {
+		public void run() {
+			Thread.currentThread().setName("Killer Thread");
+			
+			while( true ) {
+				//mainWifiObj.reconnect();
+				//mainWifiObj.startScan();
+				try {
+					Thread.sleep(90000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				mainWifiObj.disconnect();
+				try {
+					Thread.sleep(90000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
     public static Intent BuildStartIntent(boolean fRequireWifi, boolean fUseIOIO, IOIOManager.PinParams rgAnalPins[], IOIOManager.PinParams rgPulsePins[], int iButtonPin, boolean fPointToPoint, int iStartMode, float flStartParam, int iStopMode, float flStopParam, List<Integer> lstSelectedPIDs, Context ctxApp, String strIP, String strSSID, LapAccumulator.LapAccumulatorParams lapParams, String strRaceName, String strPrivacy, boolean fAckSMS, boolean fUseAccel, boolean fUseAccelCorrection, int iFilterType, float flPitch, float flRoll, float[] flSensorOffset, boolean fTestMode, long idRace, long idModeSelected, String strBTGPS, String strBTOBD2, String strSpeedoStyle, String strUnitSystem)
     {
     	Intent myIntent = new Intent(ctxApp, ApiDemos.class);
@@ -355,6 +449,9 @@ implements
     	
 		toLaunch.setAction("android.intent.action.MAIN");
 		
+		
+		writeToFile( lTimeStamps.toString(),"connect_times.txt");
+		
 		toLaunch.addCategory("android.intent.category.LAUNCHER");           
 		
 		
@@ -367,7 +464,21 @@ implements
 		
 		m_restartIntent = intentBack;
     }
-    public void onResume()
+    private void writeToFile(String toWrite, String filename) {
+        try {
+			String savePath = Environment.getExternalStorageDirectory().getPath()+"/WifiLapperCrashes/";
+
+            BufferedWriter bos = new BufferedWriter(new FileWriter(
+                    savePath + "/" + filename));
+            bos.write(toWrite);
+            bos.flush();
+            bos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+	public void onResume()
     {
     	super.onResume();
     }
@@ -389,7 +500,7 @@ implements
     	final String strWifiSSID = "setssid";
     	
     	// someone has texted me.  How quaint
-    	String strLowercase = strSMS.toLowerCase();
+    	String strLowercase = strSMS.toLowerCase(Locale.US);
     	if(m_strPrivacyPrefix.length() <= 0 || strLowercase.startsWith(m_strPrivacyPrefix))
     	{
     		m_strMessage = strSMS.substring(4);
@@ -470,6 +581,11 @@ implements
 			m_ioio.Shutdown();
 		}
 		
+		if( m_myLaps != null )
+		{
+			m_myLaps.Prune();
+			m_myLaps = null;
+		}
 		LocationManager locMan = (LocationManager)getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
 		if(locMan != null)
 		{
@@ -504,6 +620,8 @@ implements
     {
     	ApiDemos.State eEndState = ApiDemos.State.WAITING_FOR_GPS;
 
+    	m_scanThd = new Thread();
+    	
     	m_mapPIDS = new HashMap<Integer,DataChannel>();
     	m_mapPins = new HashMap<Integer,DataChannel>();
 
@@ -661,12 +779,6 @@ implements
     @Override
     public void onClick(View v)
     {
-    	if(m_eState == State.PLOTTING)
-		{
-    		// Reset the best lap time if someone clicked the screen while stopped (speed less than 7.2kph)
-    		if( m_dLastSpeed < 2 ) m_best=null;
-		}
-	    	
     	if(m_eState == State.WAITINGFORSTART)
     	{
     		if(IsReadyForLineSet())
@@ -700,9 +812,13 @@ implements
     			}
     		}
     	}
-    	// if they tap the screen, clear the current message
+
+    	// if they tap the screen without a message to acknowledge, clear the best lap.
+    	// Otherwise, just the message is ack'd
+    	if( !AcknowledgeMessage() && m_eState == State.PLOTTING ) {
+    		m_best = null;
+    	}
     	
-    	AcknowledgeMessage();
     }
     public String[] GetDeciderWaitingStrings()
     {
@@ -760,11 +876,13 @@ implements
     	}
     }
     
-    private void AcknowledgeMessage()
+    private boolean AcknowledgeMessage()
     {
+    	boolean bRetCode=false;
     	if(m_fSupportSMS && m_fAcknowledgeBySMS && m_strMessage != null && m_strMessagePhone != null)
     	{
     		final int maxLen = 20;
+    		bRetCode = true;
     		String strEllipsis = m_strMessage.length() > maxLen ? "..." : "";
     		try
     		{
@@ -775,8 +893,13 @@ implements
         		Toast.makeText(this, "Exception: " + e.toString(), Toast.LENGTH_SHORT).show();
     		}
     	}
+    	// Even if no SMS, calling this routine will clear the message, returning true
+    	if(m_strMessage != null)
+    		bRetCode = true;
+        	
     	this.m_strMessagePhone = null;
     	this.m_strMessage = null;
+    	return bRetCode;
     }
     public boolean IsReadyForLineSet()
     {
@@ -797,20 +920,18 @@ implements
     	{
     		if(fSaveAsLastLap)
     		{
-    			m_lastLap = lap.CreateCopy();
-		    	if(m_driverBest == null || lap.GetLapTime() < m_driverBest.GetLapTime())
-		    	{
-		    		m_driverBest = lap.CreateCopy();
-		    	}
-		    	if(m_best == null || lap.GetLapTime() < m_best.GetLapTime())
-		    	{
-		    		m_best = lap.CreateCopy();
-		    	}
-	    	}
-	    	if(fTransmit)
-	    	{
-	    		m_lapSender.SendLap(lap);
-	    	}
+    			m_lastLap = lap.CreateCopy(false,false);
+
+    			if(m_best == null || lap.GetLapTime() < m_best.GetLapTime())
+    			{
+    				m_best = lap.CreateCopy(true,false);
+    			}
+    			m_best.ResetSearchPoint(); // start searching from the beginning of the best lap
+    		}
+    		if(fTransmit)
+    		{
+    			m_lapSender.SendLap(lap);
+    		}
     	}
     }
 
@@ -822,170 +943,216 @@ implements
 
 	long profile[] = new long[500];
 	int iProfileIndex = 0;
-	int profileLoops=0;
-	
-	int   iSensorSampleIndex=0;
-	static int iFilterLength = 25; // must be odd
-	float flSample[][] = new float[3][iFilterLength]; 
-	static int iCurveLength = (iFilterLength+1)/2; 
+	int profileLoops = 0;
 
 	// http://www.arc.id.au/FilterDesign.html
-	// 2Hz, 25pts, 50Hz, 22dB
-	static float flFilter2[] = { // length is iCurveLength
-			.06915713f,
-			.068381706f,
-			.066090011f,
-			.062379731f,
-			.057411656f,
-			.051396715f,
-			.044585602f,
-			.03725581f,
-			.029696936f,
-			.022196845f,
-			.015024387f,
-			.008419881f,
-			.002582154f
-	};
+	static float flFilter[] = { // Kaiser window, 3Hz, 17 points, 21dB
+	0.00422721f / SensorManager.GRAVITY_EARTH,
+			0.018569377f / SensorManager.GRAVITY_EARTH,
+			0.034649219f / SensorManager.GRAVITY_EARTH,
+			0.051321565f / SensorManager.GRAVITY_EARTH,
+			0.067320032f / SensorManager.GRAVITY_EARTH,
+			0.081378238f / SensorManager.GRAVITY_EARTH,
+			0.092350166f / SensorManager.GRAVITY_EARTH,
+			0.099325443f / SensorManager.GRAVITY_EARTH,
+			0.1017175f / SensorManager.GRAVITY_EARTH,
+			0.099325443f / SensorManager.GRAVITY_EARTH,
+			0.092350166f / SensorManager.GRAVITY_EARTH,
+			0.081378238f / SensorManager.GRAVITY_EARTH,
+			0.067320032f / SensorManager.GRAVITY_EARTH,
+			0.051321565f / SensorManager.GRAVITY_EARTH,
+			0.034649219f / SensorManager.GRAVITY_EARTH,
+			0.018569377f / SensorManager.GRAVITY_EARTH,
+			0.00422721f / SensorManager.GRAVITY_EARTH };
+	static int iFilterLength = flFilter.length; // must be odd
+	static int iCurveLength = (iFilterLength + 1) / 2;
 
-	// 1Hz, 25pts, 50Hz, 28dB
-	static float flFilter1[] = { // length is iCurveLength
-			.055498669f,
-			.055119891f,
-			.053993268f,
-			.05215765f,
-			.049669922f,
-			.04660917f,
-			.04307113f,
-			.039165411f,
-			.035004398f,
-			.030710189f,
-			.02639933f,
-			.022184206f,
-			.018166102f
-	}; 
-			 
-	static int iSubmitPeriod = 8; // submit once per this many accel triggers 8 gives 8*20=160ms sample period
+	float flSample[][] = new float[3][iFilterLength]; // Matrix of samples (axis
+														// x history)
+	int iSensorSampleIndex = 0;
+
+	/*
+	 * // 2Hz, 25pts, 50Hz, 22dB
+	 * 
+	 * static float flFilter2[] = { // length is iCurveLength .06915713f,
+	 * .068381706f, .066090011f, .062379731f, .057411656f, .051396715f,
+	 * .044585602f, .03725581f, .029696936f, .022196845f, .015024387f,
+	 * .008419881f, .002582154f }; // 1Hz, 25pts, 50Hz, 28dB static float
+	 * flFilter1[] = { // length is iCurveLength .055498669f, .055119891f,
+	 * .053993268f, .05215765f, .049669922f, .04660917f, .04307113f,
+	 * .039165411f, .035004398f, .030710189f, .02639933f, .022184206f,
+	 * .018166102f };
+	 */
+
+	static int iSubmitPeriod = 8; // submit once per this many accel triggers 8
+									// gives 8*20=160ms sample period
 	int iTriggerCount = iSubmitPeriod;
-	
-	@Override
-	public void onSensorChanged(SensorEvent event) 
-	{
-		if(m_myLaps == null) return;
-		
-		long lTimeMs = event.timestamp / 1000000;
-		int iTimeSinceAppStart = (int)(lTimeMs - this.m_tmAppStartUptime);
-		
-//		// Profiling start
-//		profile[iProfileIndex] =  System.nanoTime();
 
-		if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
-		{
-			if(m_XAccel == null || !m_XAccel.IsParent(m_myLaps)) m_XAccel = new DataChannel(DataChannel.CHANNEL_ACCEL_X,m_myLaps);
-			if(m_YAccel == null || !m_YAccel.IsParent(m_myLaps)) m_YAccel = new DataChannel(DataChannel.CHANNEL_ACCEL_Y,m_myLaps);
-			if(m_ZAccel == null || !m_ZAccel.IsParent(m_myLaps)) m_ZAccel = new DataChannel(DataChannel.CHANNEL_ACCEL_Z,m_myLaps);
-			
-			if(m_XAccel == null || m_YAccel == null || m_ZAccel == null)
+	@Override
+	public void onSensorChanged(SensorEvent event) {
+		if (m_myLaps == null || m_eState != State.PLOTTING )
+			return;
+
+		long lTimeMs = event.timestamp / 1000000;
+		int iTimeSinceAppStart = (int) (lTimeMs - this.m_tmAppStartUptime);
+		int iAdjusted = 0; // fake the time to compensate some filter delay
+
+		// // Profiling start
+		// profile[iProfileIndex] = System.nanoTime();
+
+		if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+			if (m_XAccel == null || !m_XAccel.IsParent(m_myLaps))
+				m_XAccel = new DataChannel(DataChannel.CHANNEL_ACCEL_X,
+						m_myLaps);
+			if (m_YAccel == null || !m_YAccel.IsParent(m_myLaps))
+				m_YAccel = new DataChannel(DataChannel.CHANNEL_ACCEL_Y,
+						m_myLaps);
+			if (m_ZAccel == null || !m_ZAccel.IsParent(m_myLaps))
+				m_ZAccel = new DataChannel(DataChannel.CHANNEL_ACCEL_Z,
+						m_myLaps);
+
+			if (m_XAccel == null || m_YAccel == null || m_ZAccel == null)
 				return;
 
 			// Correct for offsets in the sensors
 			for( int i=0; i<3; i++ )
 				flSample[i][iSensorSampleIndex] = event.values[i] + flSensorOffset[i];
-
 			if( --iTriggerCount==0 ) { 
 				iTriggerCount= iSubmitPeriod;
+
 				// time to submit a filtered sample
-				
-				// find the middle sample
-				int iMidIndex;
-				iMidIndex = iSensorSampleIndex + iCurveLength - 1;
-				if( iMidIndex >= iFilterLength ) // wrap
-					iMidIndex -= iFilterLength;
-				
-				// Apply digital filter
 				float[] flAccum = new float[3];
-				for(int i=0;i<3;i++) {
-					flAccum[i] = flSample[i][iMidIndex] * flFilter1[0];  // use the middle filter coeff
-					int iLeft = iMidIndex;
-					int iRight = iMidIndex;
-					for(int j=1;j<iCurveLength;j++) {  // traverse half the curve, exploiting symmetry
-						iRight++;
-						if( iRight > iFilterLength-1 ) // wrap 
-							iRight = 0;
-						iLeft--;
-						if( iLeft < 0 ) // wrap
-							iLeft = iFilterLength-1;
-						flAccum[i] += (flSample[i][iLeft] + flSample[i][iRight])*flFilter1[j];
-					}		
+
+				int index = iSensorSampleIndex;
+
+				switch (eFilterType) {
+				case KAISER: // AKA Kaiser
+					// find the middle sample
+					int iMidIndex;
+					iMidIndex = iSensorSampleIndex + iCurveLength - 1;
+					if (iMidIndex >= iFilterLength) // wrap
+						iMidIndex -= iFilterLength;
+
+					// Apply digital filter
+					for (int i = 0; i < 3; i++) {
+						flAccum[i] = flSample[i][iMidIndex] * flFilter[0]; // use middle filter coeff
+						int iLeft = iMidIndex;
+						int iRight = iMidIndex;
+						for (int j = 1; j < iCurveLength; j++) { // traverse half the curve, exploiting symmetry
+							iRight++;
+							if (iRight > iFilterLength - 1) // wrap
+								iRight = 0;
+							iLeft--;
+							if (iLeft < 0) // wrap
+								iLeft = iFilterLength - 1;
+							flAccum[i] += (flSample[i][iLeft] + flSample[i][iRight])
+									* flFilter[j];
+						}
+					}
+					iAdjusted = iTimeSinceAppStart - (iCurveLength - 1) * 20;
+					break;
+
+				case MOVING_SHORT: // AKA 8-point Moving Average
+					for (int i = 0; i < 3; i++) {
+						for (int j = 0; j < 8; j++) {
+							flAccum[i] += flSample[i][index];
+							if (--index < 0)
+								index = iFilterLength - 1;
+						}
+						flAccum[i] /= (8 * SensorManager.GRAVITY_EARTH);
+					}
+					iAdjusted = iTimeSinceAppStart - 20 * 7 / 2;
+					break;
+
+				case MOVING_LONG: // AKA Moving Average, length is iFilterLength
+					for (int i = 0; i < 3; i++) {
+						for (int j = 0; j < iFilterLength; j++) {
+							flAccum[i] += flSample[i][index];
+							if (--index < 0)
+								index = iFilterLength - 1;
+						}
+						flAccum[i] /= (iFilterLength * SensorManager.GRAVITY_EARTH);
+					}
+					iAdjusted = iTimeSinceAppStart - 20 * iFilterLength / 2;
+					break;
+
+				default: // or NONE
+					// Just submit the current sample
+					for (int i = 0; i < 3; i++) {
+						flAccum[i] = (event.values[i] + flSensorOffset[i])
+								/ SensorManager.GRAVITY_EARTH;
+					}
+					iAdjusted = iTimeSinceAppStart;
+					break;
 				}
-				
+
 				// Correct for the angle of the car mount, if requested
-				float[] flCorrected = new float[3]; // acceleration data, after shifting and rotating
-				if( fUseAccelCorrection ) {
+				float[] flCorrected = new float[3]; // acceleration data, after
+													// shifting and rotating
+				if (fUseAccelCorrection) {
 					// this math block is about 35 us on my LG 2X
 					float flSinTheta, flCosTheta;
 					flSinTheta = (float) Math.sin(Math.toRadians(-flRoll));
 					flCosTheta = (float) Math.cos(Math.toRadians(-flRoll));
-					
+
 					flCorrected[0] = flAccum[0] * flCosTheta - flAccum[2] * flSinTheta;
 					flCorrected[2] = flAccum[0] * flSinTheta + flAccum[2] * flCosTheta;
-					
+
 					flSinTheta = (float) Math.sin(Math.toRadians(-flPitch));
 					flCosTheta = (float) Math.cos(Math.toRadians(-flPitch));
-					
+
 					flCorrected[1] = flAccum[1] * flCosTheta - flCorrected[2] * flSinTheta;
 					flCorrected[2] = flAccum[1] * flSinTheta + flCorrected[2] * flCosTheta;
-				}
-				else
+				} else
 					flCorrected = flAccum.clone();
 
 				// Axis mapping: axis labels vs sensor event indicies:
-			  	// in this program, x is the left/right force, y is the accel/deaccel force.  z is gravity
-				//    right turns are -x, braking is +y
-				
-				if( bPortraitDisplay ) {
+				// in this program, x is the left/right force, y is the
+				// accel/deaccel force. z is gravity
+				// right turns are -x, braking is +y
+
+				if (bPortraitDisplay) {
 					// remap the axes, depending on orientation
 					xAccelCum = -flCorrected[0];
-					yAccelCum =  flCorrected[2];
-					zAccelCum =  flCorrected[1];
+					yAccelCum = flCorrected[2];
+					zAccelCum = flCorrected[1];
 				} else {
-					xAccelCum =  flCorrected[1];
-					yAccelCum =  flCorrected[2];
-					zAccelCum =  flCorrected[0];
+					xAccelCum = flCorrected[1];
+					yAccelCum = flCorrected[2];
+					zAccelCum = flCorrected[0];
 				}
 
 				// These adds take about 350us on average
-				int iAdjusted = iTimeSinceAppStart - 120; // fake the time to compensate some filter delay (6*20ms)
-				m_XAccel.AddData(xAccelCum/SensorManager.GRAVITY_EARTH,iAdjusted);
-				m_YAccel.AddData(yAccelCum/SensorManager.GRAVITY_EARTH,iAdjusted);
-				m_ZAccel.AddData(zAccelCum/SensorManager.GRAVITY_EARTH,iAdjusted);
+				m_XAccel.AddData(xAccelCum, iAdjusted);
+				m_YAccel.AddData(yAccelCum, iAdjusted);
+				m_ZAccel.AddData(zAccelCum, iAdjusted);
 
 			}
-			
+
 			// increment the sample index, with wrap
-			if( ++iSensorSampleIndex == iFilterLength )
+			if (++iSensorSampleIndex == iFilterLength)
 				iSensorSampleIndex = 0;
-						
 
-//			// End profiling block
-//			profile[iProfileIndex] = System.nanoTime() - profile[iProfileIndex];
-//			if( ++iProfileIndex == 500 ) {
-//				iProfileIndex = 0;
-//				profileLoops++;
-//			}
-//			if( profileLoops==2 ){
-//				long min=99999999, max=0;
-//				double average=0;
-//				for( int i=0; i<500; i++ ) {
-//					if( min > profile[i] )
-//						min = profile[i];
-//					if( max < profile[i] )
-//						max = profile[i];
-//					average += profile[i];
-//				}
-//				average = average/500;
-//				profileLoops = 0;	
-//			}
-
+			// // End profiling block
+			// profile[iProfileIndex] = System.nanoTime() -
+			// profile[iProfileIndex];
+			// if( ++iProfileIndex == 500 ) {
+			// iProfileIndex = 0;
+			// profileLoops++;
+			// }
+			// if( profileLoops==2 ){
+			// long min=99999999, max=0;
+			// double average=0;
+			// for( int i=0; i<500; i++ ) {
+			// if( min > profile[i] )
+			// min = profile[i];
+			// if( max < profile[i] )
+			// max = profile[i];
+			// average += profile[i];
+			// }
+			// average = average/500;
+			// profileLoops = 0;
+			// }
 
 		} // end if accelerometer
 	}
@@ -1048,22 +1215,6 @@ implements
     		iLastGPSGap++;
     		iLastGPSGap = iLastGPSGap % rgLastGPSGaps.length;
     		
-    		// determine the acceleration
-    		if(m_pLastLocation.hasBearing() && location.hasBearing() && lGap > 0)
-    		{
-    			final float flGapSeconds = ((float)lGap) / 1000.0f;
-    			final Vector2D vLastSpeed = Vector2D.FromBearing(m_pLastLocation.getBearing(),m_pLastLocation.getSpeed());
-    			final Vector2D vThisSpeed = Vector2D.FromBearing(location.getBearing(), location.getSpeed());
-    			
-    			// finds the delta-v
-    			final Vector2D vChangeSpeed = vThisSpeed.Minus(vLastSpeed);
-    			
-    			// finds the delta-v in terms of acceleration
-    			final Vector2D vAcceleration = vChangeSpeed.Multiply(1/flGapSeconds);
-    			
-    			// finds the acceleration relative to the current heading of the car
-    			final Vector2D vRelativeAcceleration = vAcceleration.Rotate(-location.getBearing());
-    		}
     	}
     	
     	m_pLastLocation = location;
@@ -1114,15 +1265,6 @@ implements
     	}
     	else if(m_eState == State.MOVING_TO_STARTLINE)
     	{
-    		// Lock the screen orientation, so it doesn't change during a race
-    		if(getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-    		    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-    		    bPortraitDisplay = true;
-    		} else {
-    			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-    			bPortraitDisplay = false;
-    		}
-    		
     		if(m_myLaps == null)
     		{
     			m_myLaps = new LapAccumulator(m_lapParams, m_ptCurrent, iUnixTime, -1, (int)location.getTime(), location.getSpeed());
@@ -1153,7 +1295,22 @@ implements
 	    		}
 	    		else // if we're point-to-point, then start worrying about getting back to the start line
 	    		{
+		    		SetState(State.MOVING_TO_STARTLINE);
+	    		}
+	    	}
+	    	else
+	    	{
+	    		if( m_myLaps != null && m_best != null && 
+	    				(m_myLaps.GetAgeInMilliseconds()/1000 > 2*m_best.GetLapTime() ) ) 
+	    		{
+	    			TrackLastLap(m_myLaps, true, false);
+	    			m_tmLastLap = 0; // This prevents a goofy 'last lap' display while moving to startline
 	    			SetState(State.MOVING_TO_STARTLINE);
+	    			/*m_myLaps.ForceFinish();
+		    		TrackLastLap(m_myLaps, true, true);
+	    			m_myLaps = new LapAccumulator(m_lapParams, m_myLaps.GetFinishPoint(), iUnixTime, -1, m_myLaps.GetLastCrossTime(), location.getSpeed());
+	    			m_myLaps.AddPosition(m_ptCurrent, (int)location.getTime(), location.getSpeed());
+	    			 */
 	    		}
 	    	}
 	    	m_currentView.invalidate();
@@ -1220,7 +1377,6 @@ implements
     // this will instantiate and set the proper view
     LapAccumulator GetCurrentLap() {return m_myLaps;}
     LapAccumulator GetLastLap() {return m_lastLap;}
-    LapAccumulator GetDriverBestLap() {return m_driverBest;}
     LapAccumulator GetBestLap() {return m_best;}
     
 	public float GetTimeSinceLastSplit()
@@ -1330,8 +1486,11 @@ implements
     		break;
     	}
     	case PLOTTING:
-    		assert(this.m_lapParams != null && m_lapParams.IsValid(this.m_fUseP2P));
-    		
+    		if( BuildConfig.DEBUG && !(this.m_lapParams != null && m_lapParams.IsValid(this.m_fUseP2P))) 
+    		{
+    			throw new AssertionError("Failed in Plotting state");
+    		}
+
     		View vView = View.inflate(this, R.layout.lapping_laptimeview, null);
     		MapPaintView view = (MapPaintView)vView.findViewById(R.id.laptimeview);
     		view.SetData(this, m_strSpeedoStyle, m_eUnitSystem);
@@ -1434,7 +1593,6 @@ implements
 		protected LineSeg ln;
 		protected Vector2D vCrossDir;
 		
-		private int iLapsToGo;
 	}
 	private static class SpeedSplitDecider extends BaseSplitDecider
 	{
@@ -1546,7 +1704,6 @@ implements
 		
 		Prefs.UNIT_SYSTEM eSystem;
 		private float flNeededDistance; // how far do we need to go (in meters)?
-		private float flGoneDistance; // how far have we gone? (in meters)
 	}
 	private static class LineSplitDecider extends BaseSplitDecider
 	{
@@ -1607,55 +1764,66 @@ implements
 	{ 
 		return m_pLastLocation;
 	}
-	
+
 	public static class FakeLocationGenerator extends Thread implements Runnable
 	{
 		private Handler m_listener;
 		private int m_hz;
 		private float m_goalSpeed;
-		private long m_lLastGoalSpeedUpdate = 0;
 		private boolean m_fShutdown = false;
+		
 		public FakeLocationGenerator(Handler h, int hz)
 		{
 			m_listener = h;
-			m_hz = hz;
-			m_goalSpeed = 20.0f;
+			m_hz = 15;//hz;
+			m_goalSpeed = 15f;// 17*60.0f;
 			start();
 		}
-		public void Shutdown()
-		{
+
+		public void Shutdown() {
 			m_fShutdown = true;
 		}
-		
+
 		@Override
-		public void run()
-		{
+		public void run() {
 			Thread.currentThread().setName("Fake location generator");
-			
-			long lTimeToReport = System.currentTimeMillis(); // gets incremented by iTimeToSleep + iJiggle
-			long lPositionTime = System.currentTimeMillis(); // always gets incremented by just iTimeToSleep
+
+			long lTimeToReport = System.currentTimeMillis(); // gets incremented
+			// by
+			// iTimeToSleep
+			// + iJiggle
+			long lPositionTime = System.currentTimeMillis(); // always gets
+			// incremented
+			// by just
+			// iTimeToSleep
+			long lStartTime = lPositionTime;
 			double dLastX = 0;
 			double dLastY = 0;
 			int iJiggle = 0;
-			while(!m_fShutdown)
-			{
+			double Angle = Math.random() * 2 * Math.PI;
+			
+			while (!m_fShutdown) {
 				int iTimeToSleep = 1000 / m_hz;
-				try
-				{
+				try {
 					Thread.sleep(iTimeToSleep);
 					Location loc = new Location("fake");
+					
 					lTimeToReport += iTimeToSleep + iJiggle;
 					lPositionTime += iTimeToSleep;
+
+					long curTime = lPositionTime - lStartTime;
+					if ( curTime % (90*60*1000) > (4*60*1000)) //( (lPositionTime - lStartTime) > 60*1000) && (lPositionTime - lStartTime) < 5*60*1000) 
+						m_goalSpeed = m_goalSpeed + .005f*(10000f-m_goalSpeed);
+					else
+						m_goalSpeed = m_goalSpeed + .05f*(15f-m_goalSpeed);
+
+					m_goalSpeed = 15f;
+					m_goalSpeed += Math.random()-.5f;
 					
-					if(lTimeToReport > m_lLastGoalSpeedUpdate + 20000)
-					{
-						iJiggle = (int)(Math.random() * (iTimeToSleep/2));
-						m_lLastGoalSpeedUpdate = lTimeToReport;
-					}
-					double dTimeInSec = lPositionTime / 1000.0;
-					double dAngle = (dTimeInSec * 2 * Math.PI) / m_goalSpeed;
-					double dX = Math.sin(dAngle + (Math.PI/2)) * 0.0003;
-					double dY = Math.cos(dAngle + (Math.PI/2)) * 0.0003;
+					double dAngle = 0*(Math.random()-0.5f)/75 + ( 2 * Math.PI ) * iTimeToSleep / (m_goalSpeed*1000);
+					double dX = Math.sin(Angle ) * 0.0003;
+					double dY = Math.cos(Angle ) * 0.0003;
+					Angle += dAngle;
 					
 					loc.setTime(System.currentTimeMillis());
 					
@@ -1665,8 +1833,8 @@ implements
 					
 					double dChangeX = dX - dLastX;
 					double dChangeY = dY - dLastY;
-					double dChange = Math.sqrt(dChangeX*dChangeX + dChangeY*dChangeY);
-					loc.setSpeed((float)Math.sqrt(System.currentTimeMillis() % 9000));
+					//loc.setSpeed((float)Math.sqrt(System.currentTimeMillis() % 9000));
+					loc.setSpeed(500/m_goalSpeed);
 					float flBearing = ((float)Math.atan2(dChangeX, dChangeY))*180.0f/3.14159f;
 					flBearing = (float)(((int)flBearing)%360);
 					loc.setBearing(flBearing);
@@ -1680,6 +1848,8 @@ implements
 				catch(InterruptedException e)
 				{
 					
+
+
 				}
 			}
 		}
@@ -1704,7 +1874,7 @@ implements
 	@Override
 	public void NotifyOBDParameter(int pid, float value) 
 	{
-		if(m_myLaps == null) return;
+		if(m_myLaps == null || m_eState != State.PLOTTING ) return;
 		
 		int iTimeSinceAppStart = (int)((System.nanoTime()/1000000) - this.m_tmAppStartUptime);
 		
@@ -1724,7 +1894,7 @@ implements
 	@Override
 	public void NotifyIOIOValue(int pin, int iCustomType, float flValue, boolean bSubmit) 
 	{
-		if(m_myLaps == null) return;
+		if(m_myLaps == null || m_eState != State.PLOTTING) return;
 		
 		int iTimeSinceAppStart = (int)(System.nanoTime()/1000000 - this.m_tmAppStartUptime);
 		
@@ -1738,7 +1908,7 @@ implements
 			chan = new DataChannel(iDCType,m_myLaps);
 		}
 		if( bSubmit ) {
-			if( bDeferring[pin] ) 
+			if( false && bDeferring[pin] ) // Beta-test the disabling of the extra submission 
 				chan.AddData(flLastIOIOSubmissionValue[pin], iLastIOIOSubmissionTime[pin]);
 			chan.AddData((float)flValue, iTimeSinceAppStart);
 			//
@@ -1782,16 +1952,47 @@ implements
 	{
 		this.m_pHandler.sendEmptyMessage(MSG_IOIO_BUTTON);
 	}
+
+	class TimeStamp
+	{
+		long lTimestamp;
+		int status;
+		public TimeStamp(long ts, int status ) 
+		{
+			this.lTimestamp = ts;
+			this.status=status;
+		}
+		public String toString()
+		{
+			return new String(String.valueOf(lTimestamp) + "," + String.valueOf(status)+"\n");
+		}
+	}
+
+	List<TimeStamp> lTimeStamps = new ArrayList<TimeStamp>();
+	final long lStartTime = System.currentTimeMillis();
+	CONNLEVEL lastLevel = CONNLEVEL.SEARCHING;
 	@Override
 	public void SetConnectionLevel(CONNLEVEL eLevel) 
 	{
+
 		this.m_fRecordReception = (eLevel == CONNLEVEL.CONNECTED) || (eLevel == CONNLEVEL.FULLYCONNECTED);
+		if( true || eLevel != lastLevel )
+		{
+			int iLevel = 0;
+			if(eLevel ==  CONNLEVEL.CONNECTED ) iLevel += 1;
+			if(eLevel ==  CONNLEVEL.FULLYCONNECTED) iLevel +=2;
+			lTimeStamps.add(new TimeStamp(System.currentTimeMillis()-lStartTime,iLevel));
+			lastLevel = eLevel;
+		}
 	}
+
 }
 
 class GPSWaitView extends View
 {
 	Paint paintSettings;
+	private Matrix myMatrix;
+	private Rect myRect;
 	
 	public GPSWaitView(Context context)
 	{
@@ -1812,16 +2013,20 @@ class GPSWaitView extends View
 	{
 		paintSettings = new Paint();
 		paintSettings.setARGB(255,255,255,255);
+		
+		myMatrix = new Matrix();
+		myRect = new Rect();
 	}
 	public void onDraw(Canvas canvas)
-	{
-		canvas.setMatrix(new Matrix());
+	{	
+		myMatrix.reset();
+		canvas.setMatrix(myMatrix);
 		canvas.clipRect(getLeft(),getTop(),getRight(),getBottom(),Op.REPLACE);
 		//canvas.scale(1.5f,1.5f);
 		
-		final Rect rc = new Rect(getLeft()+10,getTop()+10,getRight()-10,getBottom()-10);
+		myRect.set(getLeft()+10,getTop()+10,getRight()-10,getBottom()-10);
 		final String str = "Waiting for GPS";
-		Utility.DrawFontInBox(canvas, str, paintSettings, rc);
+		Utility.DrawFontInBox(canvas, str, paintSettings, myRect);
 	}
 }
 
@@ -1832,6 +2037,11 @@ class MoveToStartLineView extends View
 	Paint paintSmallText;
 	ApiDemos myApp;
 	NumberFormat num;
+	private Matrix myMatrix;
+	private Rect rcAll;
+	private Rect rcLapTime;
+	private Rect rcLapLabel;
+	private Rect rcOnScreen;
 	
 	public MoveToStartLineView(Context context)
 	{
@@ -1841,31 +2051,36 @@ class MoveToStartLineView extends View
 	{
 		super(context,attrs);
 	}
-	public MoveToStartLineView(Context context, AttributeSet attrs, int defStyle)
-	{
-		super(context,attrs,defStyle);
-	}
+	
 	public void DoInit(ApiDemos app)
 	{
 
 		num = NumberFormat.getInstance();
 		myApp = app;
 		paintSmallText = new Paint();
-		paintSmallText.setARGB(255,255,255,255);
+		paintSmallText.setColor(Color.WHITE);
 		paintSmallText.setTextSize(20);
 		
 		paintTrack = new Paint();
-		paintTrack.setARGB(255,50,50,50);
-		
+		paintTrack.setColor(Color.GRAY);
+				
 		paintLines = new Paint();
-		paintLines.setARGB(255,255,0,0);
+		paintLines.setColor(Color.RED);
+		
+		myMatrix = new Matrix();
+		rcAll = new Rect();
+		rcLapTime = new Rect();
+		rcLapLabel = new Rect();
+		rcOnScreen = new Rect();
+		
 	}
 	public void onDraw(Canvas canvas)
 	{
-		canvas.setMatrix(new Matrix());
+		myMatrix.reset();
+		canvas.setMatrix(myMatrix);
 		//canvas.scale(1.5f,1.5f);
 		canvas.clipRect(getLeft(),getTop(),getRight(),getBottom(),Op.REPLACE);
-		Rect rcAll = new Rect();
+		
 		rcAll.set(getLeft(),getTop(),getRight(), getBottom());
 
 		String strMsg = myApp.GetMessage();
@@ -1880,9 +2095,9 @@ class MoveToStartLineView extends View
 			final int cxLabels = getWidth()/10;
 			final int cxSplit = getRight() - cxLabels;
 			
-			Rect rcLapTime = new Rect(getLeft(),getTop(),cxSplit,getBottom());
-			Rect rcLapLabel = new Rect(cxSplit, getTop(),getRight(),getBottom());
-			// curent lap has no splits, so we must have just finished a lap
+			rcLapTime.set(getLeft(),getTop(),cxSplit,getBottom());
+			rcLapLabel.set(cxSplit, getTop(),getRight(),getBottom());
+			// current lap has no splits, so we must have just finished a lap
 			LapAccumulator lapLast = myApp.GetLastLap();
 			if(lapLast != null)
 			{
@@ -1894,7 +2109,6 @@ class MoveToStartLineView extends View
 		}
 		else if(strMsg != null)
 		{
-			Paint p = new Paint();
 			Utility.DrawFontInBox(canvas, strMsg, paintSmallText, rcAll);
 		}
 		else
@@ -1905,11 +2119,7 @@ class MoveToStartLineView extends View
 			if(lap != null)
 			{
 				FloatRect rcInWorld = lap.GetBounds(false);
-				Rect rcOnScreen = new Rect();
-				rcOnScreen.left = getLeft();
-				rcOnScreen.top = getTop();
-				rcOnScreen.right = getRight();
-				rcOnScreen.bottom = getBottom();
+				rcOnScreen.set(getLeft(),getTop(),getRight(),getBottom());
 				
 				List<LineSeg> lstSF = lap.GetSplitPoints(true);
 				if(lstSF != null && lstSF.size() > 0)
@@ -1921,11 +2131,10 @@ class MoveToStartLineView extends View
 					
 					float rg[] = new float[2];
 					Location.distanceBetween(flSFY, flSFX, lap.GetLastPoint().pt.y, lap.GetLastPoint().pt.x, rg);
-					
 					str += " (" + (int)rg[0] + " meters away)";
 				}
 				
-				LapAccumulator.DrawLap(lap, false, rcInWorld, canvas, paintTrack, paintLines, new Rect(rcOnScreen));
+				LapAccumulator.DrawLap(lap, false, rcInWorld, canvas, paintTrack, paintLines, rcOnScreen);
 			}
 			Utility.DrawFontInBox(canvas, str, paintSmallText, rcAll);
 		}
@@ -1941,6 +2150,10 @@ class DeciderWaitingView extends View
 	Paint paintSmallText;
 	Paint paintAttention;
 	ApiDemos myApp;
+	
+	private Matrix myMatrix;
+	private Rect rcOnScreen;
+	
 	public DeciderWaitingView(Context context)
 	{
 		super(context);
@@ -1978,10 +2191,15 @@ class DeciderWaitingView extends View
 		
 		paintAttention = new Paint();
 		paintAttention.setARGB(255,255,0,255);
+		
+		myMatrix = new Matrix();
+		rcOnScreen = new Rect();
+
 	}
 	public void onDraw(Canvas canvas)
 	{
-		canvas.setMatrix(new Matrix());
+		myMatrix.reset();
+		canvas.setMatrix(myMatrix);
 		//canvas.scale(1.5f,1.5f);
 		canvas.clipRect(getLeft(),getTop(),getRight(),getBottom(),Op.REPLACE);
 		
@@ -1991,13 +2209,9 @@ class DeciderWaitingView extends View
 			if(myApp.IsReadyForLineSet())
 			{
 				FloatRect rcInWorld = lap.GetBounds(false);
-				Rect rcOnScreen = new Rect();
-				rcOnScreen.left = getLeft();
-				rcOnScreen.top = getTop();
-				rcOnScreen.right = getRight();
-				rcOnScreen.bottom = getBottom();
+				rcOnScreen.set(getLeft(),getTop(),getRight(),getBottom());
 				
-				LapAccumulator.DrawLap(lap, false, rcInWorld, canvas, paintTrack, paintLines, new Rect(rcOnScreen));
+				LapAccumulator.DrawLap(lap, false, rcInWorld, canvas, paintTrack, paintLines, rcOnScreen);
 				
 				String str[] = myApp.GetDeciderWaitingStrings();
 				
@@ -2007,15 +2221,18 @@ class DeciderWaitingView extends View
 				if( System.currentTimeMillis()%2048 < 512)
 					canvas.drawPaint(paintAttention);
 				
-				Utility.DrawFontInBox(canvas, str[0], paintSmallText, new Rect(getLeft(),getTop(),getRight(),mid));
+				rcOnScreen.set(getLeft(),getTop(),getRight(),mid);
+				Utility.DrawFontInBox(canvas, str[0], paintSmallText, rcOnScreen);
 			}
 			else
 			{
 				final String str1 = "You must be moving to set";
 				final String str2 = "start/finish and split points";
 				final int mid = getTop() + getHeight()/2;
-				Utility.DrawFontInBox(canvas, str1, paintSmallText, new Rect(getLeft(),getTop(),getRight(),mid));
-				Utility.DrawFontInBox(canvas, str2, paintSmallText, new Rect(getLeft(),mid,getRight(),getBottom()));
+				rcOnScreen.set(getLeft(),getTop(),getRight(),mid);
+				Utility.DrawFontInBox(canvas, str1, paintSmallText, rcOnScreen);
+				rcOnScreen.set(getLeft(),mid,getRight(),getBottom());
+				Utility.DrawFontInBox(canvas, str2, paintSmallText, rcOnScreen);
 			}
 		}
 		//canvas.drawText("Wifi: " + pStateMan.GetState(), 50.0f, 110.0f, paintText);
@@ -2034,6 +2251,17 @@ class MapPaintView extends View
 	float fontSize[] = new float[5];
 	boolean fontInitialized = false;
 	
+	private Matrix myMatrix;
+	private Rect rcAll;
+	private Rect rcLapTime;
+	private Rect rcLapLabel;
+	private Rect rcBestTime;
+	private Rect rcBestLabel;
+	private Rect rcMain;
+	private Rect rcSecondary;
+	
+	private float flLastDiff = 0;				// last delta time printed (debug only)	
+
 	int cPaintCounts = 0;
 	public MapPaintView(Context context)
 	{
@@ -2066,6 +2294,16 @@ class MapPaintView extends View
 		paintBigText.setTextSize(150);
 		paintBigText.setARGB(255, 255, 255, 255);
 		fontInitialized = false;
+		
+		myMatrix = new Matrix();
+		rcAll = new Rect();
+		rcLapTime = new Rect();
+		rcLapLabel = new Rect();
+		rcBestTime = new Rect();
+		rcBestLabel = new Rect();
+		rcMain = new Rect();
+		rcSecondary = new Rect();
+
 	}
 	private void DrawSpeedDistance(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
 	{
@@ -2160,9 +2398,10 @@ class MapPaintView extends View
 		}
 		else
 		{
+
 			Paint p = new Paint();
 			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
-			if( flThisTime < 3 )
+			if( flThisTime < 0 )
 			{
 				// Display the word Lap for 3 seconds as the line is crossed
 				String strLap = "Lap";
@@ -2173,8 +2412,11 @@ class MapPaintView extends View
 				return;
 			}			
 			final TimePoint2D ptCurrent = lap.GetLastPoint();
-			final double flPercentage = ptCurrent.dDistance / lapBest.GetDistance();
-			final double flBestTime = (double)(lapBest.GetTimeAtPosition(ptCurrent,flPercentage)/1000.0);
+						
+			final TimePoint2D ptBest = lapBest.myGetInterpolatedPointAtPosition(ptCurrent);
+						
+			final float flBestTime = ptBest.iTime / 1000f;
+			
 			num.setMaximumFractionDigits(1);
 			num.setMinimumFractionDigits(1);
 			
@@ -2182,20 +2424,21 @@ class MapPaintView extends View
 			// it took us "flThisTime" seconds to get to the current distance
 			// on the best lap, it took us "flLastTime"
 			float flToPrint = (float)(flThisTime - flBestTime);
-						
-			if(flToPrint < 0)
-			{
-				// the current lap is ahead...
-				paintBigText.setARGB(255, 70, 255, 50);
-				p.setARGB(255, 50, 255, 50);
+			if( BuildConfig.DEBUG && Math.abs(flToPrint - flLastDiff) > 4 ) 
+				Log.d("wfl debug","Found a jump in delta time" + String.valueOf(flToPrint) + String.valueOf(flLastDiff));
+			flLastDiff = flToPrint;
+				
+			Rect rcDelta = new Rect(rcOnScreen);
+			final float flDelta = flToPrint/1f;
+			if( flToPrint > 0 ) {
+				p.setColor(Color.RED);
+				rcDelta.right = Math.min((int) (rcDelta.width() *flDelta), rcDelta.right);
 			}
-			else
-			{
-				paintBigText.setARGB(255, 255, 80, 80);
-				p.setARGB(255, 255, 80, 80);
+			else {
+				p.setColor(Color.GREEN);
+				rcDelta.left = Math.max((int) (rcDelta.width()+rcDelta.width() *flDelta), 0);				
 			}
-			canvas.drawRect(rcOnScreen, p);
-			p.setARGB(255, 0, 0, 0);
+			canvas.drawRect(rcDelta, p);
 
 			String strToPaint = num.format(Math.abs(flToPrint));
 
@@ -2203,12 +2446,29 @@ class MapPaintView extends View
 			Rect rcInset = new Rect(rcOnScreen);
 			rcInset.inset(offset, offset);
 
+			Paint.Style style = p.getStyle();
+			p.setStyle(Style.FILL_AND_STROKE);
+			p.setColor(Color.BLACK);
+			p.setStrokeWidth(12);
+
 			switch( strToPaint.length() ) {
 			case 3: 
-			case 4: Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, true, false); break;
+			case 4: 
+				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, true, false);
+				p.setStyle(Style.FILL);			
+				p.setColor(Color.WHITE);
+				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, true, false);
+				break;
+				
 			default:
 				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcInset, true, false);
+				p.setStyle(Style.FILL);			
+				p.setColor(Color.WHITE);
+				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcInset, true, false);
+				break;
 			}
+			p.setStyle(style);
+
 		}
 	}
 	private void DrawComparative(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
@@ -2222,11 +2482,10 @@ class MapPaintView extends View
 		final int cyTarget = rcOnScreen.bottom - rcOnScreen.top;
 		rcTop.set(rcOnScreen.left,rcOnScreen.top,rcOnScreen.right,rcOnScreen.top + cyTarget/2);
 		rcBottom.set(rcOnScreen.left, rcTop.bottom, rcOnScreen.right, rcOnScreen.bottom);
+		Paint p = new Paint();
+		p.setColor(Color.WHITE);
 		if(lap != null)
-		{
-			Paint p = new Paint();
-			p.setARGB(255, 255, 255, 255);
-			
+		{	
 			final TimePoint2D ptCurrent = lap.GetLastPoint();
 			
 			final float flSpeed = (float)ptCurrent.dVelocity;
@@ -2235,8 +2494,6 @@ class MapPaintView extends View
 		}
 		if(lapBest != null)
 		{
-			Paint p = new Paint();
-			p.setARGB(255, 255, 0, 255);
 			final TimePoint2D ptCurrent = lap.GetLastPoint();
 			final float flBestSpeed = (float)lapBest.GetSpeedAtPosition(ptCurrent);
 			String strSpeed = Prefs.FormatMetersPerSecond(flBestSpeed,num,eDisplayUnitSystem,false);
@@ -2262,16 +2519,26 @@ class MapPaintView extends View
 			final int rightSplit= rcOnScreen.left + rcOnScreen.width() * 4/5;
 
 			rcTimeDiff.set(rcOnScreen.left, rcOnScreen.top, rcOnScreen.right, midSplit);
+			rcUpperValue.set(rcOnScreen.left, midSplit, rcOnScreen.right, lowSplit);
+			rcUpperLabel.set(rightSplit, midSplit, rcOnScreen.right, lowSplit);
+			rcLowerValue.set(rcOnScreen.left, lowSplit, rcOnScreen.right, rcOnScreen.bottom);
+			rcLowerLabel.set(rightSplit, lowSplit, rcOnScreen.right, rcOnScreen.bottom);
+/*
+			final int midSplit  = rcOnScreen.centerY();
+			final int lowSplit  = rcOnScreen.top  + rcOnScreen.height() * 3/4;
+			final int rightSplit= rcOnScreen.left + rcOnScreen.width() * 4/5;
+
+			rcTimeDiff.set(rcOnScreen.left, rcOnScreen.top, rcOnScreen.right, midSplit);
 			rcUpperValue.set(rcOnScreen.left, midSplit, rightSplit, lowSplit);
 			rcUpperLabel.set(rightSplit, midSplit, rcOnScreen.right, lowSplit);
 			rcLowerValue.set(rcOnScreen.left, lowSplit, rightSplit, rcOnScreen.bottom);
 			rcLowerLabel.set(rightSplit, lowSplit, rcOnScreen.right, rcOnScreen.bottom);
+*/
 			}
 		else
 		{
 			// Landscape mode
 			final int midXSplit  = rcOnScreen.centerX();
-			final int midXSplit2 = (int)(midXSplit * 1.1);
 			final int midYSplit  = rcOnScreen.centerY();
 			final int labelSplit = rcOnScreen.height()/10;
 
@@ -2282,6 +2549,12 @@ class MapPaintView extends View
 			rcLowerValue.set(midXSplit, midYSplit+labelSplit, rcOnScreen.right, rcOnScreen.bottom);
 			
 		}
+		//rcTimeDiff.inset(10,10);
+		//rcUpperLabel.inset(10,10);
+		//rcUpperValue.inset(50,10);
+		//rcLowerLabel.inset(10,10);
+		//rcLowerValue.inset(50,10);
+
 		if( !fontInitialized ) {
 			// First, calculate the font size required for the delta time, whether <10 sec or >=10sec
 			float minFont=9999;
@@ -2310,7 +2583,7 @@ class MapPaintView extends View
 			fontSize[2] = minFont*.9f;
 
 			// This one is for the labels
-			Utility.DrawFontInBox(canvas, "Spdd", p, rcUpperLabel,false); // bogus, but covers drop chars and 4 chars
+			Utility.DrawFontInBox(canvas, "km/h", p, rcUpperLabel,false); // bogus, but covers drop chars and 4 chars
 			fontSize[3] = p.getTextSize();
 
 			// This one is for the time, minutes, sec, tenths
@@ -2325,7 +2598,11 @@ class MapPaintView extends View
 		final double dLastLap;
 		final String strLast;
 		final double dBestLap;
-		final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
+		final double flThisTime;
+		if( lap == null) // this will trigger as the app is exited, because laps are nulled
+			return;
+		else flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
+
 		String strBest = "-:--.-";
 
 		if(lapLast != null && lapBest != null)
@@ -2334,39 +2611,41 @@ class MapPaintView extends View
 			dBestLap = lapBest.GetLapTime();
 			strBest = buildLapTime(dBestLap);
 
-			if( flThisTime < 15 ) {
-				// Display last lap time for the first 15 seconds of the next lap
+			if( flThisTime < 5 ) {
+				// Display last lap time for the first 10 seconds of the next lap
 				dLastLap = lapLast.GetLapTime();
 				if( dLastLap > dBestLap )
-					p.setARGB(255,255,80,80); // last lap worse, make red
+					p.setColor(Color.RED); // last lap worse, make red
 				else
-					p.setARGB(255,50,255,50); // last lap better/equal, make green
+					p.setColor(Color.GREEN); // last lap better/equal, make green
 				strLast = buildLapTime(dLastLap);
-				Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[4], p, rcUpperValue, false, false);
-				Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcUpperLabel, false, false);
+				Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[4], p, rcUpperValue, true,false);
+				Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcUpperLabel, true, false);
 			}
 			else {
 				final TimePoint2D ptCurrent = lap.GetLastPoint();
 				final float flSpeed = (float)ptCurrent.dVelocity;
 				num.setMaximumFractionDigits(0);
 				String strSpeed = Prefs.FormatMetersPerSecond(flSpeed,num,eDisplayUnitSystem,false);
-				p.setARGB(255,255,255,255); // reset to white
-				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcUpperValue, false, false);
-				Utility.DrawFontInBoxFinal(canvas, "Spd", fontSize[3], p, rcUpperLabel,false,false);
+				//strBest = String.valueOf(iLastBestPoint);
+				p.setColor(Color.WHITE); // reset to white
+				rcUpperValue.right -= rcUpperValue.width() * .2; 
+				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcUpperValue, false,true);
+				Utility.DrawFontInBoxFinal(canvas, Prefs.GetSpeedUnits(eDisplayUnitSystem), fontSize[3], p, rcUpperLabel,true,false);
 			}
 		}
 		else // First lap, or best lap has been reset
 		{
-			p.setARGB(255,255,255,255); // reset to white
+			p.setColor(Color.WHITE); // reset to white
 
 			final String strLapTime = buildLapTime(flThisTime);
-			Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[4], p, rcUpperValue, false,false);
-			Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[3], p, rcUpperLabel, false,false);
+			Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[4], p, rcUpperValue, true, false);
+			Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[3], p, rcUpperLabel, true,false);
 		}
 		
-		p.setARGB(255,255,255,255); // Best lap in white
-		Utility.DrawFontInBoxFinal(canvas, strBest, fontSize[4], p, rcLowerValue, false, false);
-		Utility.DrawFontInBoxFinal(canvas, "Best", fontSize[3], p, rcLowerLabel, false, false);
+		p.setColor(Color.WHITE); // Best lap in white
+		Utility.DrawFontInBoxFinal(canvas, strBest, fontSize[4], p, rcLowerValue, true,false);
+		Utility.DrawFontInBoxFinal(canvas, "Best", fontSize[3], p, rcLowerLabel, true, false);
 	
 	}
 	
@@ -2384,12 +2663,13 @@ class MapPaintView extends View
 	}
 	public void onDraw(Canvas canvas)
 	{
-		canvas.setMatrix(new Matrix());
+		myMatrix.reset();
+		canvas.setMatrix(myMatrix);
 		//canvas.scale(1.5f,1.5f);
 		canvas.clipRect(getLeft(),getTop(),getRight(),getBottom(),Op.REPLACE);
 		
 		String strMsg = myApp.GetMessage();
-		Rect rcAll = new Rect();
+		
 		rcAll.set(getLeft(),getTop(),getRight(), getBottom());
 		
 		if((myApp.GetTimeSinceLastSplit() < 3.0) && !(strSpeedoStyle.equals(LandingOptions.SPEEDO_LAPTIMER)))
@@ -2404,10 +2684,10 @@ class MapPaintView extends View
 			final int cxSplit = getRight() - cxLabels;
 			final int hSplit = getTop() + getHeight()/2;
 			
-			Rect rcLapTime = new Rect(getLeft(),getTop(),cxSplit,hSplit);
-			Rect rcLapLabel = new Rect(cxSplit, getTop(),getRight(),hSplit);
-			Rect rcBestTime = new Rect(getLeft(),hSplit,cxSplit,getBottom());
-			Rect rcBestLabel = new Rect(cxSplit, hSplit,getRight(),getBottom());
+			rcLapTime.set(getLeft(),getTop(),cxSplit,hSplit);
+			rcLapLabel.set(cxSplit, getTop(),getRight(),hSplit);
+			rcBestTime.set(getLeft(),hSplit,cxSplit,getBottom());
+			rcBestLabel.set(cxSplit, hSplit,getRight(),getBottom());
 			// curent lap has no splits, so we must have just finished a lap
 			LapAccumulator lapLast = myApp.GetLastLap();
 			LapAccumulator lapBest = myApp.GetBestLap(); 
@@ -2434,9 +2714,9 @@ class MapPaintView extends View
 		{
 			final float cxSecondaryPct = 0.25f;
 			final int cxSecondaryPixels = (int)(getWidth() * cxSecondaryPct);
-			Rect rcMain = new Rect();
+			
 			rcMain.set(getLeft(), getTop(), getRight()-cxSecondaryPixels, getBottom());
-			Rect rcSecondary = new Rect();
+			
 			rcSecondary.set(rcMain.right,getTop(),getRight(),getBottom());
 
 			LapAccumulator lap = myApp.GetCurrentLap();
@@ -2463,6 +2743,7 @@ class MapPaintView extends View
 			}
 			else if(strSpeedoStyle.equals(LandingOptions.SPEEDO_LAPTIMER))
 			{
+				rcAll.inset(10,10);
 				DrawLapTimer(canvas, rcAll, lap, lapBest);
 			}
 		}

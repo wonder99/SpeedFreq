@@ -58,7 +58,7 @@ public class MessageMan
 		}
 		private void KillSocket(DatagramSocket ds)
 		{
-			if(ds != null && (ds.isBound() || ds.isConnected()))
+			if(ds != null )
 			{
 				ds.disconnect();
 				ds.close();
@@ -85,18 +85,30 @@ public class MessageMan
 			byte pbBuffer[] = new byte[268];
 			DatagramSocket dsIncoming = null;
 			DatagramSocket dsOutgoing = null;
+			try {
+				dsIncoming = new DatagramSocket(63940);
+				dsOutgoing = new DatagramSocket(63941);
+				dsIncoming.setSoTimeout(250);// was 1000
+			}
+			catch (IOException e){
+				Log.e("wifilapper","Failed creating datagram sockets");
+				KillSocket(dsIncoming);
+				KillSocket(dsOutgoing);
+				dsIncoming=null;
+				dsOutgoing=null;
+				Shutdown();				
+			}
+
+			DatagramPacket dp = null;
 			while(m_fContinue)
 			{
 				try
 				{
-					dsIncoming = new DatagramSocket(63940);
-					dsOutgoing = new DatagramSocket(63941);
-					dsIncoming.setSoTimeout(1000);
 					if(dsIncoming.isBound() && !dsIncoming.isClosed())
 					{
-						DatagramPacket dp = new DatagramPacket(pbBuffer, 268);
-						dsIncoming.receive(dp);
+						dp = new DatagramPacket(pbBuffer, 268);
 						
+						dsIncoming.receive(dp);
 						int checksum = GetCheckSum(pbBuffer);
 						
 						ByteArrayInputStream bais = new ByteArrayInputStream(pbBuffer);
@@ -126,8 +138,8 @@ public class MessageMan
 							time = Math.min(iMaxTime, time); // we don't want, in the case of a network error, to display a message forever.
 							
 							m_recv.SetMessage(time, str);
+						
 							
-
 							dsOutgoing.connect(dp.getAddress(), 63941);
 							ByteArrayOutputStream baos = new ByteArrayOutputStream(268);
 							DataOutputStream dos = new DataOutputStream(baos);
@@ -140,6 +152,7 @@ public class MessageMan
 							dsOutgoing.send(dpOut);
 						}
 					}
+				
 				}
 				catch(IOException e)
 				{
@@ -150,8 +163,8 @@ public class MessageMan
 				{
 					//Log.w("other ecxr",e.toString());
 				}
-				KillSocket(dsIncoming);
-				KillSocket(dsOutgoing);
+					//KillSocket(dsIncoming);
+				//KillSocket(dsOutgoing);
 				try
 				{
 					Thread.sleep(250);
@@ -161,6 +174,12 @@ public class MessageMan
 					// nobody cares
 				}
 			}
+			//redundant?
+			KillSocket(dsIncoming);
+			dsIncoming = null;
+			KillSocket(dsOutgoing);
+			dsOutgoing = null;
+			dp = null;
 		}
 	}
 }
