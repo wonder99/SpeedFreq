@@ -106,7 +106,7 @@ public class ComputerChooserActivity extends ListActivity implements Callback
 	{
 		List<FoundComputer> lstComps = m_finder.GetComputerList();
     	
-		ArrayAdapter<FoundComputer> adapter = new ArrayAdapter<FoundComputer>(this, android.R.layout.simple_gallery_item,lstComps);
+		ArrayAdapter<FoundComputer> adapter = new ArrayAdapter<FoundComputer>(this, R.layout.list_item,lstComps);
     	adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
     	setListAdapter(adapter);
 	}
