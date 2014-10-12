@@ -1291,16 +1291,12 @@ implements
 	    	else
 	    	{
 	    		if( m_myLaps != null && m_best != null && 
-	    				(m_myLaps.GetAgeInMilliseconds()/1000 > 2*m_best.GetLapTime() ) ) 
+	    				(m_myLaps.GetAgeInMilliseconds()/1000 > 2*m_best.GetLapTime() )  ||
+	    				m_myLaps.GetPositionCount() > iMaxPointsPerLap ) 
 	    		{
 	    			TrackLastLap(m_myLaps, true, false);
 	    			m_tmLastLap = 0; // This prevents a goofy 'last lap' display while moving to startline
 	    			SetState(State.MOVING_TO_STARTLINE);
-	    			/*m_myLaps.ForceFinish();
-		    		TrackLastLap(m_myLaps, true, true);
-	    			m_myLaps = new LapAccumulator(m_lapParams, m_myLaps.GetFinishPoint(), iUnixTime, -1, m_myLaps.GetLastCrossTime(), location.getSpeed());
-	    			m_myLaps.AddPosition(m_ptCurrent, (int)location.getTime(), location.getSpeed());
-	    			 */
 	    		}
 	    	}
 	    	m_currentView.invalidate();
@@ -1778,18 +1774,10 @@ implements
 		public void run() {
 			Thread.currentThread().setName("Fake location generator");
 
-			long lTimeToReport = System.currentTimeMillis(); // gets incremented
-			// by
-			// iTimeToSleep
-			// + iJiggle
-			long lPositionTime = System.currentTimeMillis(); // always gets
-			// incremented
-			// by just
-			// iTimeToSleep
+			long lPositionTime = System.currentTimeMillis(); // always gets incremented by just iTimeToSleep
 			long lStartTime = lPositionTime;
 			double dLastX = 0;
 			double dLastY = 0;
-			int iJiggle = 0;
 			double Angle = Math.random() * 2 * Math.PI;
 			
 			while (!m_fShutdown) {
@@ -1798,7 +1786,6 @@ implements
 					Thread.sleep(iTimeToSleep);
 					Location loc = new Location("fake");
 					
-					lTimeToReport += iTimeToSleep + iJiggle;
 					lPositionTime += iTimeToSleep;
 
 					long curTime = lPositionTime - lStartTime;
@@ -2426,9 +2413,9 @@ class MapPaintView extends View
 
 			String strToPaint = num.format(Math.abs(flToPrint));
 
-			final int offset = 20; 
+			final int offset = 0; 
 			Rect rcInset = new Rect(rcOnScreen);
-//			rcInset.inset(offset, offset);
+			rcInset.inset(offset, offset);
 
 			p.setColor(Color.BLACK);
 
