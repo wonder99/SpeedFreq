@@ -161,7 +161,7 @@ public class LandingScreen extends android.app.TabActivity
 	        String stacktrace = result.toString();
 	        printWriter.close();
 	        String filename = cal.get(Calendar.YEAR) + "." + String.valueOf(cal.get(Calendar.MONTH)+1) + "." + cal.get(Calendar.DAY_OF_MONTH) + 
-	        		"." + cal.get(Calendar.HOUR_OF_DAY) + "." + cal.get(Calendar.MINUTE) + ".stacktrace";
+	        		"." + cal.get(Calendar.HOUR_OF_DAY) + "." + cal.get(Calendar.MINUTE) + ".stacktrace.txt";
 
 	        if (localPath != null) {
 	            writeToFile(stacktrace, filename);
