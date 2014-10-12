@@ -18,6 +18,7 @@ package com.artsoft.wifilapper;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,7 +43,6 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.Region.Op;
-import android.graphics.Typeface;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
@@ -52,7 +52,6 @@ import android.os.Message;
 import android.os.Parcelable;
 import android.location.*;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.*;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -80,12 +79,11 @@ implements
 	MessageMan.MessageReceiver, 
 	OBDThread.OBDListener, IOIOListener, LapSenderListener
 {
-	Thread m_scanThd;
-	Thread m_wifiToggleThd;
-	
+
+	// For aggressive wifi scanning
+	Thread m_wifiScanThd;
 	static WifiManager mainWifiObj;
-	WifiManager.WifiLock myLocker;
-//	WifiScanReceiver wifiReciever;
+	private final boolean WIFILOGGING = false;
 	
 	public enum RESUME_MODE {NEW_RACE, REUSE_SPLITS, RESUME_RACE};
 	
@@ -169,6 +167,7 @@ implements
 	// data about this race
 	private String m_strRaceName;
 	private boolean m_fTestMode;
+	private boolean m_bWifiScan;
 	private long m_lRaceId;
 	private String m_strSpeedoStyle;
 	private Prefs.UNIT_SYSTEM m_eUnitSystem;
@@ -210,14 +209,13 @@ implements
     		m_me = this;
     	}
 
-    	mainWifiObj = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-		mainWifiObj.startScan();
-		mainWifiObj.createWifiLock("wfl");
-		m_wifiToggleThd = new myWifiKiller();
-		//m_wifiToggleThd.start();
-		m_scanThd = new myThread();
-		//m_scanThd.start();
-
+    	if( BuildConfig.DEBUG && WIFILOGGING ) {
+    		try {
+    			openLogFile("Wifi_log.txt");
+    		} catch (IOException e1) {
+    			e1.printStackTrace();
+    		}
+    	}
     	m_tmAppStartTime = 0;
 		
     	getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -258,6 +256,7 @@ implements
     	m_strRaceName = i.getStringExtra(Prefs.IT_RACENAME_STRING);
     	m_lRaceId = i.getLongExtra(Prefs.IT_RACEID_LONG, -1);
     	m_fTestMode = i.getBooleanExtra(Prefs.IT_TESTMODE_BOOL, false);
+    	m_bWifiScan = i.getBooleanExtra(Prefs.IT_WIFI_SCAN_BOOL, false);
     	m_strSpeedoStyle = i.getStringExtra(Prefs.IT_SPEEDOSTYLE_STRING);
     	m_fAcknowledgeBySMS = i.getBooleanExtra(Prefs.IT_ACKSMS_BOOLEAN, true);
     	m_strPrivacyPrefix = i.getStringExtra(Prefs.IT_PRIVACYPREFIX_STRING);
@@ -309,13 +308,17 @@ implements
 			bPortraitDisplay = false;
 		}
 
+		// Set up aggressive wifi logging, if enabled
+    	mainWifiObj = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+		m_wifiScanThd = new myWifiScan();
+		if( m_bWifiScan )
+			m_wifiScanThd.start();
+		
     	try
     	{
 	    	ActivityInfo info = getPackageManager().getActivityInfo(getComponentName(), PackageManager.GET_META_DATA);
 	    	Bundle bundle = info.metaData;
 	    	String apikey = bundle.getString("appmode");
-//	    	String strAppMode = info.metaData.getString("appmode");
-//	    	info.metaData.
 	    	m_fSupportSMS = !apikey.equals("tablet");
     	}
     	catch(Exception e)
@@ -327,30 +330,47 @@ implements
     	
     	StartupTracking(fRequireWifi, fUseIOIO, rgSelectedAnalPins, rgSelectedPulsePins, iButtonPin, rgSelectedPIDs, strIP, strSSID, strBTGPS, strOBD2, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, m_fTestMode, idLapLoadMode);
     }
-    /*	
-	class WifiScanReceiver extends BroadcastReceiver {
-		@SuppressLint("UseValueOf")
-		public void onReceive(Context c, Intent intent) {
-			List<ScanResult> wifiScanList = mainWifiObj.getScanResults();
-			wifis = new String[wifiScanList.size()];
-			for(int i = 0; i < wifiScanList.size(); i++){
-				wifis[i] = ((wifiScanList.get(i)).toString());
-			}
 
-			list.setAdapter(new ArrayAdapter<String>(getApplicationContext(),
-					android.R.layout.simple_list_item_1,wifis));
+    // Support logging to a file
+    static BufferedWriter bLogFile;
+    static long lLogStart=0;
+    private void openLogFile(String filename) throws IOException {
+    		String savePath = Environment.getExternalStorageDirectory().getPath()+"/WifiLapperCrashes/";
+    		lLogStart = System.currentTimeMillis();
+            bLogFile = new BufferedWriter(new FileWriter(savePath + "/" + filename));
+            bLogFile.write("Start of Log\n");
+    }
+    private void appendToLog(String strAppend) throws IOException {
+    	if( bLogFile == null )
+    		return;
+    	bLogFile.write(strAppend);
+    }
+    
+    private void closeLogFile() {
+    	if( bLogFile == null )
+    		return;
+    	try {
+    		bLogFile.write("End of log");
+        	bLogFile.flush();
+			bLogFile.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-	}
-*/
+    }
 
-	private static class myThread extends Thread implements Runnable {
+    volatile boolean bScanning = false;
+	boolean bWifiScanKill = false;
+
+	public void ShutdownScan() {
+		bWifiScanKill = true;
+	}
+
+	private class myWifiScan extends Thread implements Runnable {
 		public void run() {
 			Thread.currentThread().setName("Scan Thread");
-			boolean bResult;
-			while( true ) {
-				bResult = mainWifiObj.reconnect();
-				mainWifiObj.startScan();
-				
+			while( !bWifiScanKill ) {
+				if( bScanning) 
+					mainWifiObj.startScan();
 				try {
 					Thread.sleep(500);
 				} catch (InterruptedException e) {
@@ -359,29 +379,8 @@ implements
 			}
 		}
 	}
-	private static class myWifiKiller extends Thread implements Runnable {
-		public void run() {
-			Thread.currentThread().setName("Killer Thread");
-			
-			while( true ) {
-				//mainWifiObj.reconnect();
-				//mainWifiObj.startScan();
-				try {
-					Thread.sleep(90000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				mainWifiObj.disconnect();
-				try {
-					Thread.sleep(90000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
 
-    public static Intent BuildStartIntent(boolean fRequireWifi, boolean fUseIOIO, IOIOManager.PinParams rgAnalPins[], IOIOManager.PinParams rgPulsePins[], int iButtonPin, boolean fPointToPoint, int iStartMode, float flStartParam, int iStopMode, float flStopParam, List<Integer> lstSelectedPIDs, Context ctxApp, String strIP, String strSSID, LapAccumulator.LapAccumulatorParams lapParams, String strRaceName, String strPrivacy, boolean fAckSMS, boolean fUseAccel, boolean fUseAccelCorrection, int iFilterType, float flPitch, float flRoll, float[] flSensorOffset, boolean fTestMode, long idRace, long idModeSelected, String strBTGPS, String strBTOBD2, String strSpeedoStyle, String strUnitSystem)
+    public static Intent BuildStartIntent(boolean fRequireWifi, boolean fUseIOIO, IOIOManager.PinParams rgAnalPins[], IOIOManager.PinParams rgPulsePins[], int iButtonPin, boolean fPointToPoint, int iStartMode, float flStartParam, int iStopMode, float flStopParam, List<Integer> lstSelectedPIDs, Context ctxApp, String strIP, String strSSID, LapAccumulator.LapAccumulatorParams lapParams, String strRaceName, String strPrivacy, boolean fAckSMS, boolean fUseAccel, boolean fUseAccelCorrection, int iFilterType, float flPitch, float flRoll, float[] flSensorOffset, boolean fTestMode, boolean bWifiScan, long idRace, long idModeSelected, String strBTGPS, String strBTOBD2, String strSpeedoStyle, String strUnitSystem)
     {
     	Intent myIntent = new Intent(ctxApp, ApiDemos.class);
     	myIntent.putExtra(Prefs.IT_REQUIRE_WIFI, fRequireWifi);
@@ -389,6 +388,7 @@ implements
 		myIntent.putExtra(Prefs.IT_LAPPARAMS, lapParams);
 		myIntent.putExtra(Prefs.IT_RACENAME_STRING, strRaceName);
 		myIntent.putExtra(Prefs.IT_TESTMODE_BOOL, (boolean)fTestMode);
+		myIntent.putExtra(Prefs.IT_WIFI_SCAN_BOOL, (boolean)bWifiScan);
 		myIntent.putExtra(Prefs.IT_RACEID_LONG, (long)idRace);
 		myIntent.putExtra(Prefs.IT_LAPLOADMODE_LONG, (long)idModeSelected);
 		myIntent.putExtra(Prefs.IT_BTGPS_STRING, strBTGPS);
@@ -449,9 +449,6 @@ implements
     	
 		toLaunch.setAction("android.intent.action.MAIN");
 		
-		
-		writeToFile( lTimeStamps.toString(),"connect_times.txt");
-		
 		toLaunch.addCategory("android.intent.category.LAUNCHER");           
 		
 		
@@ -464,20 +461,6 @@ implements
 		
 		m_restartIntent = intentBack;
     }
-    private void writeToFile(String toWrite, String filename) {
-        try {
-			String savePath = Environment.getExternalStorageDirectory().getPath()+"/WifiLapperCrashes/";
-
-            BufferedWriter bos = new BufferedWriter(new FileWriter(
-                    savePath + "/" + filename));
-            bos.write(toWrite);
-            bos.flush();
-            bos.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
 	public void onResume()
     {
     	super.onResume();
@@ -557,6 +540,15 @@ implements
 			m_msgMan.Shutdown();
 			m_msgMan = null;
 		}
+		
+		if( this.m_wifiScanThd != null )
+		{
+			ShutdownScan();
+			m_wifiScanThd = null;
+		}
+		
+		closeLogFile();
+		
 		SensorManager sensorMan = (SensorManager)getSystemService(SENSOR_SERVICE);
 	    if(sensorMan != null)
 	    {
@@ -620,8 +612,6 @@ implements
     {
     	ApiDemos.State eEndState = ApiDemos.State.WAITING_FOR_GPS;
 
-    	m_scanThd = new Thread();
-    	
     	m_mapPIDS = new HashMap<Integer,DataChannel>();
     	m_mapPins = new HashMap<Integer,DataChannel>();
 
@@ -1812,13 +1802,13 @@ implements
 					lPositionTime += iTimeToSleep;
 
 					long curTime = lPositionTime - lStartTime;
-					if ( curTime % (90*60*1000) > (4*60*1000)) //( (lPositionTime - lStartTime) > 60*1000) && (lPositionTime - lStartTime) < 5*60*1000) 
+					if ( curTime % (2*60*1000) > (1*60*1000)) //( (lPositionTime - lStartTime) > 60*1000) && (lPositionTime - lStartTime) < 5*60*1000) 
 						m_goalSpeed = m_goalSpeed + .005f*(10000f-m_goalSpeed);
 					else
 						m_goalSpeed = m_goalSpeed + .05f*(15f-m_goalSpeed);
 
 					m_goalSpeed = 15f;
-					m_goalSpeed += Math.random()-.5f;
+					m_goalSpeed += 4*Math.random()-2f;
 					
 					double dAngle = 0*(Math.random()-0.5f)/75 + ( 2 * Math.PI ) * iTimeToSleep / (m_goalSpeed*1000);
 					double dX = Math.sin(Angle ) * 0.0003;
@@ -1974,18 +1964,17 @@ implements
 	@Override
 	public void SetConnectionLevel(CONNLEVEL eLevel) 
 	{
-
 		this.m_fRecordReception = (eLevel == CONNLEVEL.CONNECTED) || (eLevel == CONNLEVEL.FULLYCONNECTED);
-		if( true || eLevel != lastLevel )
-		{
-			int iLevel = 0;
-			if(eLevel ==  CONNLEVEL.CONNECTED ) iLevel += 1;
-			if(eLevel ==  CONNLEVEL.FULLYCONNECTED) iLevel +=2;
-			lTimeStamps.add(new TimeStamp(System.currentTimeMillis()-lStartTime,iLevel));
-			lastLevel = eLevel;
+		if( eLevel != CONNLEVEL.FULLYCONNECTED) 
+			bScanning = true;
+		else
+			bScanning = false;
+		try {
+			appendToLog(String.valueOf(System.currentTimeMillis()-lStartTime)+","+String.valueOf(bScanning) + "," + String.valueOf(eLevel) +  "\n");
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
-
 }
 
 class GPSWaitView extends View
@@ -2260,8 +2249,6 @@ class MapPaintView extends View
 	private Rect rcMain;
 	private Rect rcSecondary;
 	
-	private float flLastDiff = 0;				// last delta time printed (debug only)	
-
 	int cPaintCounts = 0;
 	public MapPaintView(Context context)
 	{
@@ -2390,7 +2377,7 @@ class MapPaintView extends View
 			Utility.DrawFontInBox(canvas, strToPaint, p, rcOnScreen);
 		}
 	}
-	private void DrawPlusMinusNew(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
+	private void DrawPlusMinusNew(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest, Paint p)
 	{
 		if(lapBest == null)
 		{
@@ -2399,15 +2386,15 @@ class MapPaintView extends View
 		else
 		{
 
-			Paint p = new Paint();
+			Paint pRect = new Paint();
 			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
-			if( flThisTime < 0 )
+			if( flThisTime < 3 )
 			{
 				// Display the word Lap for 3 seconds as the line is crossed
 				String strLap = "Lap";
-				p.setARGB(255, 255, 255, 255);
+				p.setColor(Color.WHITE);
+				p.setStyle(Style.FILL);
 				Rect rcInset = new Rect(rcOnScreen);
-				rcInset.inset((int)(rcInset.width()*.05),(int)(rcInset.width()*.05));
 				Utility.DrawFontInBox(canvas, strLap, p, rcInset);
 				return;
 			}			
@@ -2424,51 +2411,43 @@ class MapPaintView extends View
 			// it took us "flThisTime" seconds to get to the current distance
 			// on the best lap, it took us "flLastTime"
 			float flToPrint = (float)(flThisTime - flBestTime);
-			if( BuildConfig.DEBUG && Math.abs(flToPrint - flLastDiff) > 4 ) 
-				Log.d("wfl debug","Found a jump in delta time" + String.valueOf(flToPrint) + String.valueOf(flLastDiff));
-			flLastDiff = flToPrint;
-				
+			
 			Rect rcDelta = new Rect(rcOnScreen);
 			final float flDelta = flToPrint/1f;
 			if( flToPrint > 0 ) {
-				p.setColor(Color.RED);
+				pRect.setColor(Color.RED);
 				rcDelta.right = Math.min((int) (rcDelta.width() *flDelta), rcDelta.right);
 			}
 			else {
-				p.setColor(Color.GREEN);
+				pRect.setColor(Color.GREEN);
 				rcDelta.left = Math.max((int) (rcDelta.width()+rcDelta.width() *flDelta), 0);				
 			}
-			canvas.drawRect(rcDelta, p);
+			canvas.drawRect(rcDelta, pRect);
 
 			String strToPaint = num.format(Math.abs(flToPrint));
 
-			final int offset = (int)(rcOnScreen.width()*.05f); 
+			final int offset = 20; 
 			Rect rcInset = new Rect(rcOnScreen);
-			rcInset.inset(offset, offset);
+//			rcInset.inset(offset, offset);
 
-			Paint.Style style = p.getStyle();
-			p.setStyle(Style.FILL_AND_STROKE);
 			p.setColor(Color.BLACK);
-			p.setStrokeWidth(12);
 
 			switch( strToPaint.length() ) {
 			case 3: 
 			case 4: 
-				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, true, false);
+				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, false, false,false);
 				p.setStyle(Style.FILL);			
 				p.setColor(Color.WHITE);
-				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, true, false);
+				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, false, false,false);
 				break;
-				
+
 			default:
-				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcInset, true, false);
+				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcInset, false, false,false);
 				p.setStyle(Style.FILL);			
 				p.setColor(Color.WHITE);
-				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcInset, true, false);
+				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcInset, false, false,false);
 				break;
 			}
-			p.setStyle(style);
-
 		}
 	}
 	private void DrawComparative(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
@@ -2505,25 +2484,21 @@ class MapPaintView extends View
 		
 		// todo: move the paint declaration to the constructor, or reuse existing
 		Paint p = new Paint();
+		Paint pDelta = new Paint();
 		final Rect rcTimeDiff = new Rect();
 		final Rect rcUpperValue = new Rect();
 		final Rect rcUpperLabel = new Rect();
 		final Rect rcLowerValue = new Rect();
 		final Rect rcLowerLabel = new Rect();
-		
+
+		pDelta.setStyle(Style.FILL_AND_STROKE);
+		pDelta.setColor(Color.BLACK);
+		pDelta.setStrokeWidth(12);
+		//pDelta.setTypeface(Typeface.DEFAULT_BOLD);
+
 		if( rcOnScreen.width() < rcOnScreen.height() )
 		{
 			// Portrait mode
-			final int midSplit  = rcOnScreen.centerY();
-			final int lowSplit  = rcOnScreen.top  + rcOnScreen.height() * 3/4;
-			final int rightSplit= rcOnScreen.left + rcOnScreen.width() * 4/5;
-
-			rcTimeDiff.set(rcOnScreen.left, rcOnScreen.top, rcOnScreen.right, midSplit);
-			rcUpperValue.set(rcOnScreen.left, midSplit, rcOnScreen.right, lowSplit);
-			rcUpperLabel.set(rightSplit, midSplit, rcOnScreen.right, lowSplit);
-			rcLowerValue.set(rcOnScreen.left, lowSplit, rcOnScreen.right, rcOnScreen.bottom);
-			rcLowerLabel.set(rightSplit, lowSplit, rcOnScreen.right, rcOnScreen.bottom);
-/*
 			final int midSplit  = rcOnScreen.centerY();
 			final int lowSplit  = rcOnScreen.top  + rcOnScreen.height() * 3/4;
 			final int rightSplit= rcOnScreen.left + rcOnScreen.width() * 4/5;
@@ -2533,7 +2508,7 @@ class MapPaintView extends View
 			rcUpperLabel.set(rightSplit, midSplit, rcOnScreen.right, lowSplit);
 			rcLowerValue.set(rcOnScreen.left, lowSplit, rightSplit, rcOnScreen.bottom);
 			rcLowerLabel.set(rightSplit, lowSplit, rcOnScreen.right, rcOnScreen.bottom);
-*/
+
 			}
 		else
 		{
@@ -2549,38 +2524,52 @@ class MapPaintView extends View
 			rcLowerValue.set(midXSplit, midYSplit+labelSplit, rcOnScreen.right, rcOnScreen.bottom);
 			
 		}
-		//rcTimeDiff.inset(10,10);
-		//rcUpperLabel.inset(10,10);
-		//rcUpperValue.inset(50,10);
-		//rcLowerLabel.inset(10,10);
-		//rcLowerValue.inset(50,10);
+
+		// Optionally inset the boxes
+//		rcTimeDiff.inset(20,20);
+//		rcUpperLabel.inset(10,0);
+//		rcUpperValue.inset(20,0);
+//		rcLowerLabel.inset(10,10);
+		rcLowerValue.inset(20,0);
+		
+		p.setColor(Color.WHITE);
+
+		// Optionally draw screen dividers
+//		Paint.Style style = p.getStyle();
+//		p.setStyle(Style.STROKE);
+//		canvas.drawRect(rcTimeDiff, p);
+//		canvas.drawRect(rcUpperLabel, p);
+//		canvas.drawRect(rcUpperValue, p);
+//		canvas.drawRect(rcLowerLabel, p);
+//		canvas.drawRect(rcLowerValue, p);
+//		p.setStyle(style);
 
 		if( !fontInitialized ) {
 			// First, calculate the font size required for the delta time, whether <10 sec or >=10sec
 			float minFont=9999;
 			for( float f = 0; f<10; f=f+1.1f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcTimeDiff,false);
-				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), pDelta, rcTimeDiff,false);
+				if( pDelta.getTextSize() < minFont ) minFont = pDelta.getTextSize();
 			}
-			fontSize[0] = minFont*.9f;
+			fontSize[0] = minFont;
 
 			// now for >= 10sec
 			minFont=9999;
 			num.setMinimumIntegerDigits(2);
 			for( float f = 0; f<100; f=f+11.1f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcTimeDiff,false);
-				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), pDelta, rcTimeDiff,false);
+				if( pDelta.getTextSize() < minFont ) minFont = pDelta.getTextSize();
 			}
-			fontSize[1] = minFont*.9f;
+			fontSize[1] = minFont;
 			num.setMinimumIntegerDigits(1);
 
 			// This one is for the speed display
 			minFont=9999;
-			for( float f = 0; f<1000; f=f+111f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcUpperValue,false);
+			for( float f = 111; f<1000; f=f+111f) {
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcUpperValue,true);
 				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
 			}
-			fontSize[2] = minFont*.9f;
+			fontSize[2] = minFont;
 
 			// This one is for the labels
 			Utility.DrawFontInBox(canvas, "km/h", p, rcUpperLabel,false); // bogus, but covers drop chars and 4 chars
@@ -2588,7 +2577,7 @@ class MapPaintView extends View
 
 			// This one is for the time, minutes, sec, tenths
 			Utility.DrawFontInBox(canvas, "4:44.4", p, rcUpperValue,false);
-			fontSize[4] = p.getTextSize() * .9f;
+			fontSize[4] = p.getTextSize();
 
 			fontInitialized = true; 
 		}
@@ -2603,11 +2592,11 @@ class MapPaintView extends View
 			return;
 		else flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
 
-		String strBest = "-:--.-";
+		String strBest = "";
 
 		if(lapLast != null && lapBest != null)
 		{
-			DrawPlusMinusNew(canvas, rcTimeDiff, lap, lapBest);
+			DrawPlusMinusNew(canvas, rcTimeDiff, lap, lapBest,pDelta);
 			dBestLap = lapBest.GetLapTime();
 			strBest = buildLapTime(dBestLap);
 
@@ -2619,19 +2608,16 @@ class MapPaintView extends View
 				else
 					p.setColor(Color.GREEN); // last lap better/equal, make green
 				strLast = buildLapTime(dLastLap);
-				Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[4], p, rcUpperValue, true,false);
-				Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcUpperLabel, true, false);
+				Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[4], p, rcUpperValue, true,false,true);
+				Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcUpperLabel, false,false,true);
 			}
 			else {
 				final TimePoint2D ptCurrent = lap.GetLastPoint();
 				final float flSpeed = (float)ptCurrent.dVelocity;
 				num.setMaximumFractionDigits(0);
 				String strSpeed = Prefs.FormatMetersPerSecond(flSpeed,num,eDisplayUnitSystem,false);
-				//strBest = String.valueOf(iLastBestPoint);
-				p.setColor(Color.WHITE); // reset to white
-				rcUpperValue.right -= rcUpperValue.width() * .2; 
-				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcUpperValue, false,true);
-				Utility.DrawFontInBoxFinal(canvas, Prefs.GetSpeedUnits(eDisplayUnitSystem), fontSize[3], p, rcUpperLabel,true,false);
+				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcUpperValue, false,true,true);
+				Utility.DrawFontInBoxFinal(canvas, Prefs.GetSpeedUnits(eDisplayUnitSystem), fontSize[3], p, rcUpperLabel,false,false,true);
 			}
 		}
 		else // First lap, or best lap has been reset
@@ -2639,13 +2625,13 @@ class MapPaintView extends View
 			p.setColor(Color.WHITE); // reset to white
 
 			final String strLapTime = buildLapTime(flThisTime);
-			Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[4], p, rcUpperValue, true, false);
-			Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[3], p, rcUpperLabel, true,false);
+			Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[4], p, rcUpperValue, true, false,true);
+			Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[3], p, rcUpperLabel, false,false,true);
 		}
 		
 		p.setColor(Color.WHITE); // Best lap in white
-		Utility.DrawFontInBoxFinal(canvas, strBest, fontSize[4], p, rcLowerValue, true,false);
-		Utility.DrawFontInBoxFinal(canvas, "Best", fontSize[3], p, rcLowerLabel, true, false);
+		Utility.DrawFontInBoxFinal(canvas, strBest, fontSize[4], p, rcLowerValue, false,false,true);
+		Utility.DrawFontInBoxFinal(canvas, "Best", fontSize[3], p, rcLowerLabel, false,false,true);
 	
 	}
 	
@@ -2743,7 +2729,6 @@ class MapPaintView extends View
 			}
 			else if(strSpeedoStyle.equals(LandingOptions.SPEEDO_LAPTIMER))
 			{
-				rcAll.inset(10,10);
 				DrawLapTimer(canvas, rcAll, lap, lapBest);
 			}
 		}
