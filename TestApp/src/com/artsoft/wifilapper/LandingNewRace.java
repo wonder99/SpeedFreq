@@ -121,6 +121,7 @@ public class LandingNewRace extends LandingRaceBase implements OnClickListener, 
     		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
     		String strSpeedoStyle = settings.getString(Prefs.PREF_SPEEDOSTYLE_STRING, Prefs.DEFAULT_SPEEDOSTYLE_STRING);
     		boolean fTestMode = settings.getBoolean(Prefs.PREF_TESTMODE_BOOL, Prefs.DEFAULT_TESTMODE_BOOL);
+    		boolean bWifiScan = settings.getBoolean(Prefs.PREF_WIFI_SCAN_BOOL, Prefs.DEFAULT_WIFI_SCAN_BOOL);
     		String strUnitSystem = settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString());
 			String strBTGPS = settings.getString(Prefs.PREF_BTGPSNAME_STRING, Prefs.DEFAULT_GPS_STRING);
 			String strBTOBD2 = settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING);
@@ -162,7 +163,7 @@ public class LandingNewRace extends LandingRaceBase implements OnClickListener, 
     		lapParams.iSecondaryCarNumber = (int)(Math.random() * 100000.0); 
     		lapParams.iFinishCount = iFinishCount;
     		
-    		Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins,rgPulsePins, iButtonPin, fUseP2P, iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,strSSID, lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, flSensorOffset, fTestMode, -1, -1, strBTGPS, strBTOBD2, strSpeedoStyle, eUnitSystem.toString());
+    		Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins,rgPulsePins, iButtonPin, fUseP2P, iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,strSSID, lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, flSensorOffset, fTestMode, bWifiScan, -1, -1, strBTGPS, strBTOBD2, strSpeedoStyle, eUnitSystem.toString());
     		if(fTestMode)
     		{
     			// they're about to start a run in test mode.  Test mode sucks for real users, so warn them

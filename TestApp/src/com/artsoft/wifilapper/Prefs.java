@@ -38,6 +38,7 @@ public class Prefs
 	// the strings we use as keys in SharedPreferences
 	public static String PREF_SPEEDOSTYLE_STRING = "Speedostyle";
 	public static String PREF_TESTMODE_BOOL = "TestMode";
+	public static String PREF_WIFI_SCAN_BOOL = "WifiScan";
 	public static String PREF_IP_STRING = "IP"; // stores the target IP of their pitside laptop
 	public static String PREF_SSID_STRING = "SSID"; // stores the ssid of the wifi network they use
 	public static String PREF_BTGPSNAME_STRING = "btgps"; // stores the bluetooth name of their preferred btgps unit
@@ -77,6 +78,7 @@ public class Prefs
 	public static String DEFAULT_RACENAME_STRING = "race";
 	public static String DEFAULT_SPEEDOSTYLE_STRING = LandingOptions.rgstrSpeedos[0];
 	public static boolean DEFAULT_TESTMODE_BOOL = false;
+	public static boolean DEFAULT_WIFI_SCAN_BOOL = true;
 	public static Prefs.UNIT_SYSTEM DEFAULT_UNITS_STRING = Prefs.UNIT_SYSTEM.MPH;
 	public static boolean DEFAULT_DBLOCATION_BOOL = true; // whether the DB is on internal storage
 	public static boolean DEFAULT_USEIOIO_BOOLEAN = false;
@@ -108,6 +110,7 @@ public class Prefs
 	public static String IT_BTOBD2_STRING = PREF_BTOBD2NAME_STRING;
 	public static String IT_RACENAME_STRING = PREF_RACENAME_STRING;
 	public static String IT_TESTMODE_BOOL = "testmode";
+	public static String IT_WIFI_SCAN_BOOL = "wifiscan";
 	public static String IT_RACEID_LONG = "raceid";
 	public static String IT_LAPLOADMODE_LONG = "laploadmode";
 	public static String IT_SPEEDOSTYLE_STRING = PREF_SPEEDOSTYLE_STRING;

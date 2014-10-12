@@ -362,7 +362,9 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
         	flSensorOffset[2]  = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Y, Prefs.DEFAULT_ACCEL_OFFSET_Y);
         	flSensorOffset[0]  = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Z, Prefs.DEFAULT_ACCEL_OFFSET_Z);
         	int iFilterType = settings.getInt(Prefs.PREF_ACCEL_FILTER,Prefs.DEFAULT_ACCEL_FILTER);
-        	
+
+    		boolean bWifiScan = settings.getBoolean(Prefs.PREF_WIFI_SCAN_BOOL, Prefs.DEFAULT_WIFI_SCAN_BOOL);
+
     		boolean fAckSMS = settings.getBoolean(Prefs.PREF_ACKSMS_BOOLEAN, Prefs.DEFAULT_ACKSMS);
     		String strPrivacy = settings.getString(Prefs.PREF_PRIVACYPREFIX_STRING, Prefs.DEFAULT_PRIVACYPREFIX);
     		int iButtonPin = settings.getInt(Prefs.PREF_IOIOBUTTONPIN, Prefs.DEFAULT_IOIOBUTTONPIN);
@@ -382,7 +384,7 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
     		IOIOManager.PinParams rgPulsePins[] = Prefs.LoadIOIOPulsePins(settings);
     		
 			ApiDemos.SaveSharedPrefs(settings, strIP, strSSID, null, null);
-			Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins, rgPulsePins, iButtonPin, fUseP2P, iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,strSSID, r.lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, flSensorOffset, r.fTestMode, listData.id, idModeSelected, strBTGPS, strOBD2, strSpeedoStyle, eUnitSystem.toString());
+			Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins, rgPulsePins, iButtonPin, fUseP2P, iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,strSSID, r.lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, flSensorOffset, r.fTestMode, bWifiScan, listData.id, idModeSelected, strBTGPS, strOBD2, strSpeedoStyle, eUnitSystem.toString());
 			startActivity(i);
 		}
 		else
