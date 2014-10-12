@@ -51,8 +51,8 @@ public class LapSender
 	private long m_lRaceId;
 	
 	private static final int PRUNE_MINUTES = 60; // how many minutes we allow things to languish before busting out the prunes
-	private static final int SOCKET_TIMEOUT = 3000; // was 10000
-	private static final int ONE_SECOND = 1000; 
+	private static final int SOCKET_TIMEOUT = 10000; // was 10000, doesn't seem to affect connect time
+	private static final int ONE_SECOND = 3000; // was 3000, doesn't seem to affect connect time
 	
 	private boolean fContinue;
 	private SendThd m_thd;
@@ -379,6 +379,7 @@ public class LapSender
 				}
 				else
 				{
+					// apparently not needed: pWifi.startScan();
 					pStateMan.SetState(LapSender.class, Utility.MultiStateObject.STATE.TROUBLE_GOOD, "Wifi present.  Is Pitside running?");
 				}
 				return false;
@@ -447,6 +448,7 @@ public class LapSender
 			{
 				// we're not connected to any network
 			}
+			// apparently not needed pWifi.startScan();
 			listener.SetConnectionLevel(LapSenderListener.CONNLEVEL.SEARCHING);
 			
 			// ok, we should now be fully disconnected from the network we had before (if any)
