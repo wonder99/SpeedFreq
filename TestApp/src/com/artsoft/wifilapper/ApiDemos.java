@@ -2553,7 +2553,7 @@ class MapPaintView extends View
 			// This one is for the speed display
 			minFont=9999;
 			for( float f = 111; f<1000; f=f+111f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcUpperValue,true);
+				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcUpperValue,false);
 				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
 			}
 			fontSize[2] = minFont;
