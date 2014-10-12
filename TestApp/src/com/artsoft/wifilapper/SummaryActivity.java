@@ -322,7 +322,7 @@ public class SummaryActivity extends Activity implements OnClickListener
 		{
 			for(int row = 0; row < 2; row++)
 			{
-				Utility.DrawFontInBoxFinal(canvas, strBoxText[col][row], flNeededFontSize, paintSmallText, rcBoxes[col][row], true, false);				
+				Utility.DrawFontInBoxFinal(canvas, strBoxText[col][row], flNeededFontSize, paintSmallText, rcBoxes[col][row], true, false,false);				
 			}
 		}
 	}
@@ -648,8 +648,8 @@ public class SummaryActivity extends Activity implements OnClickListener
 				String strRight = s.GetString(x, y, false);
 				if(strLeft != null && strRight != null)
 				{
-					Utility.DrawFontInBoxFinal(canvas, strLeft, flTextSize, paintText, rcText, true, false);
-					Utility.DrawFontInBoxFinal(canvas, strRight, flTextSize, paintText, rcText, false, true);
+					Utility.DrawFontInBoxFinal(canvas, strLeft, flTextSize, paintText, rcText, true, false,false);
+					Utility.DrawFontInBoxFinal(canvas, strRight, flTextSize, paintText, rcText, false, true,false);
 					flTextSize = Math.min(paintText.getTextSize(), flTextSize);
 					cyWritePos += cyLineHeight;
 				}
@@ -834,7 +834,7 @@ public class SummaryActivity extends Activity implements OnClickListener
 				}
 				else
 				{
-					Utility.DrawFontInBoxFinal(canvas, strHeaders[ixCol], flFontSize, paint, rcHeader, false, false);
+					Utility.DrawFontInBoxFinal(canvas, strHeaders[ixCol], flFontSize, paint, rcHeader, false, false,false);
 				}
 			}
 		}
@@ -891,7 +891,7 @@ public class SummaryActivity extends Activity implements OnClickListener
 						}
 						else
 						{
-							Utility.DrawFontInBoxFinal(canvas, str, flFontSize, paint, rcBox, fLeft, fRight);
+							Utility.DrawFontInBoxFinal(canvas, str, flFontSize, paint, rcBox, fLeft, fRight,false);
 						}
 					}
 				}

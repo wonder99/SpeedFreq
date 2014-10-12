@@ -28,6 +28,7 @@ import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
@@ -200,34 +201,79 @@ public class Utility
 		num.setMinimumFractionDigits(digits);
 		return num.format(fl);
 	}
-	public static void DrawFontInBoxFinal(Canvas c, final String str, float flFontSize, Paint p, final Rect rcScreen, boolean fLeftJustify, boolean fRightJustify)
+	public static void DrawFontInBoxFinal(Canvas c, final String str, float flFontSize, Paint p, final Rect rcScreen, boolean fLeftJustify, boolean fRightJustify, boolean fTopJustify)
 	{
 		// we've found the answer
-		p.setTextSize(flFontSize);
+		p.setTextSize(Math.round(flFontSize));
 		
-		Rect rcBounds = new Rect();
-		p.getTextBounds(str, 0, str.length(), rcBounds);
+		RectF rcBounds = new RectF();
+		//p.getTextBounds(str, 0, str.length(), rcBounds);
 		
-		// we want to put the centerline of the font rect on the centre of the screen rect
-		float flShiftX = 0;
-		if(fLeftJustify)
-		{
-			flShiftX = -rcScreen.left;
-		}
-		else if(fRightJustify)
-		{
-			float flNeededPos = rcScreen.right - rcBounds.width();
-			flShiftX = -flNeededPos;
-		}
+		rcBounds = new RectF(rcScreen);
+		// measure text width
+		rcBounds.right = p.measureText(str);
+		// measure text height
+		rcBounds.bottom =  p.getFontSpacing();//-p.descent();
+
+		if( fLeftJustify )
+			rcBounds.left = rcScreen.left;
+		else if ( fRightJustify )
+			rcBounds.left = rcScreen.right - rcBounds.right;
 		else
-		{
-			flShiftX = rcBounds.exactCenterX() - rcScreen.exactCenterX();
-		}
-		final float flShiftY = rcBounds.exactCenterY() - rcScreen.exactCenterY();
-		//c.clipRect(new Rect(0,0,rcScreen.right,320), Op.REPLACE);
-		c.drawText(str, -flShiftX, -flShiftY, p);
+			rcBounds.left += (rcScreen.width() - rcBounds.right) / 2.0f;
+		
+		if( fTopJustify )
+			rcBounds.top = rcScreen.top;
+		else
+			rcBounds.top += (rcScreen.height() - rcBounds.bottom) / 2.0f;
+
+		c.drawText(str, rcBounds.left, rcBounds.top-p.ascent(), p);
 	}
+
 	public static void DrawFontInBox(Canvas c, final String str, Paint p, final Rect rcScreen, boolean fActuallyDraw)
+	{
+		final int cxPermitted = rcScreen.width();//right - rcScreen.left;
+		final int cyPermitted = rcScreen.height();//bottom - rcScreen.top;
+		float fFontHigh = 522; // this will take 10 loops, but will support tablets 
+		float fFontLow = 10;  
+		
+		while(true)
+		{
+			if(fFontHigh - fFontLow < .5)
+			{
+				// we've found the answer
+				if(fActuallyDraw)
+				{
+					DrawFontInBoxFinal(c, str, Math.round(fFontLow), p, rcScreen, false,false,false);
+				}
+				else
+				{
+					p.setTextSize(Math.round(fFontLow));
+				}
+				return;
+			}
+			else
+			{
+				float fFontCheck = (fFontHigh+fFontLow)/2;
+				p.setTextSize(fFontCheck);
+				final float cxFont = p.measureText(str);
+				Rect rTest = new Rect(rcScreen);
+				p.getTextBounds(new String("0123456789"), 0, 10, rTest);
+				final float cyFont = p.getFontSpacing()-p.descent();//rTest.height();
+				final boolean fTooBig = cxFont > cxPermitted || cyFont > cyPermitted;
+				if(fTooBig)
+				{
+					fFontHigh = fFontCheck;
+				}
+				else
+				{
+					fFontLow = fFontCheck;
+				}
+			}
+		}
+	}
+
+	public static void oldDrawFontInBox(Canvas c, final String str, Paint p, final Rect rcScreen, boolean fActuallyDraw)
 	{
 		final int cxPermitted = rcScreen.right - rcScreen.left;
 		final int cyPermitted = rcScreen.bottom - rcScreen.top;
@@ -242,7 +288,7 @@ public class Utility
 				// we've found the answer
 				if(fActuallyDraw)
 				{
-					DrawFontInBoxFinal(c, str, iFontLow, p, rcScreen, false,false);
+					DrawFontInBoxFinal(c, str, iFontLow, p, rcScreen, false,false,false);
 				}
 				else
 				{
