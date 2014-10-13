@@ -182,7 +182,7 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 	        if (v == null) 
 	        {
 	            LayoutInflater vi = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-	            v = vi.inflate(R.layout.landingloadrace_item, null);
+	            v = vi.inflate(R.layout.landingloadrace_item, parent);
 	        }
 	        ListRaceData myobject = items.get(position);
 
