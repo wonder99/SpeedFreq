@@ -855,7 +855,7 @@ public class LapAccumulator
 		if(dWidth > 0 && dHeight > 0 && iTargetWidth > 0 && iTargetHeight > 0)
 		{
 			TimePoint2D ptLast = null;
-			float rgflPoints[] = new float[4 * (lap.m_lstPositions.size() - 1)];
+			float rgflPts[] = new float[4 * 2];
 			
 			int cSkipRate = 1;
 			
@@ -873,25 +873,28 @@ public class LapAccumulator
 					x2 += rcOnScreen.left;
 					y2 += rcOnScreen.top;
 					
-					//x1 = (rcOnScreen.right - x1) + rcOnScreen.left;
-					//x2 = (rcOnScreen.right - x2) + rcOnScreen.left;
 					y1 = (rcOnScreen.bottom - y1) + rcOnScreen.top;
 					y2 = (rcOnScreen.bottom - y2) + rcOnScreen.top;
-					rgflPoints[4*(ix-1)] = x1;
-					rgflPoints[4*(ix-1) + 1] = y1;
-					rgflPoints[4*(ix-1) + 2] = x2;
-					rgflPoints[4*(ix-1) + 3] = y2;
-					
+					if( ix > 1) {
+						rgflPts[0] = rgflPts[4];
+						rgflPts[1] = rgflPts[5];
+						rgflPts[2] = rgflPts[6];
+						rgflPts[3] = rgflPts[7];
+					}
+					rgflPts[4] = x1;
+					rgflPts[5] = y1;
+					rgflPts[6] = x2;
+					rgflPts[7] = y2;
+					if( ix > 1 )
+						canvas.drawLines(rgflPts, paintLap);
+
 				}
 				ptLast = pt;
 			}
 			
-			if(rgflPoints.length >= 2) // making sure we don't crash...
+			if(lap.m_lstPositions.size() >= 2) // making sure we don't crash...
 			{
-				canvas.drawLines(rgflPoints, paintLap);
-				final int ixX = rgflPoints.length - 2;
-				final int ixY = rgflPoints.length - 1;
-				canvas.drawRect(rgflPoints[ixX]-5,rgflPoints[ixY]-5, rgflPoints[ixX]+5,rgflPoints[ixY]+5, paintLap);
+				canvas.drawRect(rgflPts[6]-5,rgflPts[7]-5, rgflPts[6]+5,rgflPts[7]+5, paintLap);
 	
 				List<LineSeg> lstSF = lap.GetSplitPoints(false);
 				if(lstSF != null && paintSplits != null)
@@ -933,7 +936,7 @@ public class LapAccumulator
 		// speed on y axis
 		
 		TimePoint2D ptLast = null;
-		float rgflPoints[] = new float[4 * (lap.m_lstPositions.size() - 1)];
+		float rgflPts[] = new float[4 * 2];
 		int ixPoint = 0;
 		
 		final float dDistanceSpan = (float)(rcInWorld.right - rcInWorld.left); // how "wide" the timespan to draw is
@@ -964,22 +967,28 @@ public class LapAccumulator
 
 					ixPoint++;
 					final int ixBase = 4*(ixPoint-1);
-					rgflPoints[ixBase] = x1;
-					rgflPoints[ixBase + 1] = y1;
-					rgflPoints[ixBase + 2] = x2;
-					rgflPoints[ixBase + 3] = y2;
+					if( ix > 1) {
+						rgflPts[0] = rgflPts[4];
+						rgflPts[1] = rgflPts[5];
+						rgflPts[2] = rgflPts[6];
+						rgflPts[3] = rgflPts[7];
+					}
+					rgflPts[4] = x1;
+					rgflPts[5] = y1;
+					rgflPts[6] = x2;
+					rgflPts[7] = y2;
+					if( ix > 1 )
+						canvas.drawLines(rgflPts, paintLap);
+
+				
 				}
 			}
 			ptLast = pt;
 		}
 
-		canvas.drawLines(rgflPoints, 0, ixPoint*4, paintLap);
-		final int ixX = ixPoint*4-2;
-		final int ixY = ixPoint*4-1;
-		if(ixX >= 0 && ixX < rgflPoints.length && ixY >= 0 && ixY < rgflPoints.length)
-		{
-			canvas.drawRect(rgflPoints[ixX]-3,rgflPoints[ixY]-3, rgflPoints[ixX]+3,rgflPoints[ixY]+3, paintLap);
-		}
+		if(lap.m_lstPositions.size() >= 2) // making sure we don't crash...
+			canvas.drawRect(rgflPts[6]-3,rgflPts[7]-3, rgflPts[6]+3,rgflPts[7]+3, paintLap);
+
 	}
 	public static void DrawLap(LapAccumulator lap, boolean fSpeedDist, final FloatRect _rcInWorld, Canvas canvas, Paint paintLap, Paint paintSplits, final Rect _rcOnScreen)
 	{

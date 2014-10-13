@@ -101,7 +101,7 @@ implements
 	private SplitDecider m_startDecider;
 	private SplitDecider m_stopDecider;
 
-	private static int iMaxPointsPerLap = 10*60*30;  // 10Hz  * 60s/min * 30 min
+	private static int iMaxPointsPerLap = 10*60*15;  // 10Hz  * 60s/min * 15 min
 	
 	private boolean m_fUseP2P;
 	private int m_iP2PStartMode;
@@ -917,13 +917,14 @@ implements
     			{
     				m_best = lap.CreateCopy(true,false);
     			}
-    			m_best.ResetSearchPoint(); // start searching from the beginning of the best lap
     		}
     		if(fTransmit)
     		{
     			m_lapSender.SendLap(lap);
     		}
     	}
+		if( m_best != null )
+			m_best.ResetSearchPoint(); // start searching from the beginning of the best lap
     }
 
 	@Override
@@ -1261,6 +1262,12 @@ implements
     			m_myLaps = new LapAccumulator(m_lapParams, m_ptCurrent, iUnixTime, -1, (int)location.getTime(), location.getSpeed());
     		}
 	    	m_myLaps.AddPosition(m_ptCurrent, (int)location.getTime(), location.getSpeed());
+	    	if( m_myLaps.GetPositionCount() > iMaxPointsPerLap ) {
+	    		// spent too long waiting for start line.  prune off memory
+	    		Log.d("Pruning","Spent too long waiting for start line crossing (too many pts in lap)");
+	    		m_myLaps.Prune();
+	    		m_myLaps = new LapAccumulator(m_lapParams, m_ptCurrent, iUnixTime, -1, (int)location.getTime(), location.getSpeed());
+	    	}
 	    	if(this.m_startDecider.NotifyPoint(m_myLaps, m_ptLast, m_ptCurrent, location.getSpeed()))
 	    	{
 	    		m_myLaps.Prune();
@@ -1295,6 +1302,7 @@ implements
 	    				(m_myLaps.GetAgeInMilliseconds()/1000 > 2*m_best.GetLapTime() )  ||
 	    				m_myLaps.GetPositionCount() > iMaxPointsPerLap ) 
 	    		{
+		    		Log.d("Pruning","Due to slow lap or too many points in the lap.");
 	    			TrackLastLap(m_myLaps, true, false);
 	    			m_tmLastLap = 0; // This prevents a goofy 'last lap' display while moving to startline
 	    			SetState(State.MOVING_TO_STARTLINE);
@@ -1779,8 +1787,8 @@ implements
 			long lStartTime = lPositionTime;
 			double dLastX = 0;
 			double dLastY = 0;
-			double Angle = Math.random() * 2 * Math.PI;
-			
+			double Angle = 0;
+						
 			while (!m_fShutdown) {
 				int iTimeToSleep = 1000 / m_hz;
 				try {
@@ -1790,13 +1798,13 @@ implements
 					lPositionTime += iTimeToSleep;
 
 					long curTime = lPositionTime - lStartTime;
-					if ( curTime % (2*60*1000) > (1*60*1000)) //( (lPositionTime - lStartTime) > 60*1000) && (lPositionTime - lStartTime) < 5*60*1000) 
+					if ( curTime % (60*60*1000) > (1.2*60*1000)) //( (lPositionTime - lStartTime) > 60*1000) && (lPositionTime - lStartTime) < 5*60*1000) 
 						m_goalSpeed = m_goalSpeed + .005f*(10000f-m_goalSpeed);
 					else
 						m_goalSpeed = m_goalSpeed + .05f*(15f-m_goalSpeed);
 
-					m_goalSpeed = 15f;
-					m_goalSpeed += 4*Math.random()-2f;
+					//m_goalSpeed = 15f;
+					m_goalSpeed += Math.random()-.5f;
 					
 					double dAngle = 0*(Math.random()-0.5f)/75 + ( 2 * Math.PI ) * iTimeToSleep / (m_goalSpeed*1000);
 					double dX = Math.sin(Angle ) * 0.0003;
@@ -1826,9 +1834,6 @@ implements
 				}
 				catch(InterruptedException e)
 				{
-					
-
-
 				}
 			}
 		}
@@ -2144,6 +2149,8 @@ class DeciderWaitingView extends View
 	private Matrix myMatrix;
 	private Rect rcOnScreen;
 	
+	LapAccumulator lap;
+	
 	public DeciderWaitingView(Context context)
 	{
 		super(context);
@@ -2190,10 +2197,9 @@ class DeciderWaitingView extends View
 	{
 		myMatrix.reset();
 		canvas.setMatrix(myMatrix);
-		//canvas.scale(1.5f,1.5f);
 		canvas.clipRect(getLeft(),getTop(),getRight(),getBottom(),Op.REPLACE);
 		
-		LapAccumulator lap = myApp.GetCurrentLap();
+		lap = myApp.GetCurrentLap();
 		if(lap != null)
 		{
 			if(myApp.IsReadyForLineSet())
@@ -2250,7 +2256,20 @@ class MapPaintView extends View
 	private Rect rcBestLabel;
 	private Rect rcMain;
 	private Rect rcSecondary;
+	Paint p;
+	Paint pDelta;
+	Paint pRect;
 	
+	private Rect rcTimeDiff;
+	private Rect rcUpperValue;
+	private Rect rcUpperLabel;
+	private Rect rcLowerValue;
+	private Rect rcLowerLabel;
+	
+	private LapAccumulator lap;
+	private LapAccumulator lapLast;
+	private LapAccumulator lapBest;
+
 	int cPaintCounts = 0;
 	public MapPaintView(Context context)
 	{
@@ -2292,6 +2311,16 @@ class MapPaintView extends View
 		rcBestLabel = new Rect();
 		rcMain = new Rect();
 		rcSecondary = new Rect();
+		p = new Paint();
+		pDelta = new Paint();
+		pRect = new Paint();
+
+		rcTimeDiff = new Rect();
+		rcUpperValue= new Rect();
+		rcUpperLabel= new Rect();
+		rcLowerValue= new Rect();
+		rcLowerLabel= new Rect();
+
 
 	}
 	private void DrawSpeedDistance(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
@@ -2339,7 +2368,6 @@ class MapPaintView extends View
 		}
 		else
 		{
-			Paint p = new Paint();
 			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
 			if( flThisTime < 3 )
 			{
@@ -2388,8 +2416,6 @@ class MapPaintView extends View
 		else
 		{
 
-			Paint pRect = new Paint();
-
 			final TimePoint2D ptCurrent = lap.GetLastPoint();
 			final TimePoint2D ptBest = lapBest.myGetInterpolatedPointAtPosition(ptCurrent);
 
@@ -2428,12 +2454,8 @@ class MapPaintView extends View
 
 			String strToPaint = num.format(Math.abs(flToPrint));
 
-			final int offset = 0; 
-			Rect rcInset = new Rect(rcOnScreen);
-			rcInset.inset(offset, offset);
-
 			p.setColor(Color.BLACK);
-
+			p.setStyle(Style.FILL_AND_STROKE);
 			switch( strToPaint.length() ) {
 			case 3: 
 			case 4:
@@ -2484,73 +2506,63 @@ class MapPaintView extends View
 	private void DrawLapTimer(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
 	{
 		
-		// todo: move the paint declaration to the constructor, or reuse existing
-		Paint p = new Paint();
-		Paint pDelta = new Paint();
-		final Rect rcTimeDiff = new Rect();
-		final Rect rcUpperValue = new Rect();
-		final Rect rcUpperLabel = new Rect();
-		final Rect rcLowerValue = new Rect();
-		final Rect rcLowerLabel = new Rect();
+		if( !fontInitialized ) {
 
-		pDelta.setStyle(Style.FILL_AND_STROKE);
-		pDelta.setColor(Color.BLACK);
-		pDelta.setStrokeWidth(12);
-		//pDelta.setTypeface(Typeface.DEFAULT_BOLD);
+			if( rcAll.width() < rcAll.height() )
+			{
+				// Portrait mode
+				final int midSplit  = rcAll.top  + rcAll.height() * 3/5;
+				final int lowSplit  = rcAll.top  + rcAll.height() * 4/5;
+				final int rightSplit= rcAll.left + rcAll.width() * 4/5;
 
-		if( rcOnScreen.width() < rcOnScreen.height() )
-		{
-			// Portrait mode
-			final int midSplit  = rcOnScreen.centerY();
-			final int lowSplit  = rcOnScreen.top  + rcOnScreen.height() * 3/4;
-			final int rightSplit= rcOnScreen.left + rcOnScreen.width() * 4/5;
-
-			rcTimeDiff.set(rcOnScreen.left, rcOnScreen.top, rcOnScreen.right, midSplit);
-			rcUpperValue.set(rcOnScreen.left, midSplit, rightSplit, lowSplit);
-			rcUpperLabel.set(rightSplit, midSplit, rcOnScreen.right, lowSplit);
-			rcLowerValue.set(rcOnScreen.left, lowSplit, rightSplit, rcOnScreen.bottom);
-			rcLowerLabel.set(rightSplit, lowSplit, rcOnScreen.right, rcOnScreen.bottom);
+				rcTimeDiff.set(rcAll.left, rcAll.top, rcAll.right, midSplit);
+				rcUpperValue.set(rcAll.left, midSplit, rightSplit, lowSplit);
+				rcUpperLabel.set(rightSplit, midSplit, rcAll.right, lowSplit);
+				rcLowerValue.set(rcAll.left, lowSplit, rightSplit, rcAll.bottom);
+				rcLowerLabel.set(rightSplit, lowSplit, rcAll.right, rcAll.bottom);
 
 			}
-		else
-		{
-			// Landscape mode
-			final int midXSplit  = rcOnScreen.centerX();
-			final int midYSplit  = rcOnScreen.centerY();
-			final int labelSplit = rcOnScreen.height()/9;
+			else
+			{
+				// Landscape mode
+				final int midXSplit  = rcAll.left + rcAll.width() * 3/5;
+				final int midYSplit  = rcAll.centerY();
+				final int labelSplit = rcAll.height()/8;
 
-			rcTimeDiff.set(rcOnScreen.left, rcOnScreen.top, midXSplit, rcOnScreen.bottom);
-			rcUpperLabel.set(midXSplit, rcOnScreen.top, rcOnScreen.right, rcOnScreen.top+labelSplit);
-			rcUpperValue.set(midXSplit, rcOnScreen.top+labelSplit, rcOnScreen.right, midYSplit);
-			rcLowerLabel.set(midXSplit, midYSplit, rcOnScreen.right, midYSplit+labelSplit);
-			rcLowerValue.set(midXSplit, midYSplit+labelSplit, rcOnScreen.right, rcOnScreen.bottom);
-			
-		}
+				rcTimeDiff.set(rcAll.left, rcAll.top, midXSplit, rcAll.bottom);
+				rcUpperLabel.set(midXSplit, rcAll.top, rcAll.right, rcAll.top+labelSplit);
+				rcUpperValue.set(midXSplit, rcAll.top+labelSplit, rcAll.right, midYSplit);
+				rcLowerLabel.set(midXSplit, midYSplit, rcAll.right, midYSplit+labelSplit);
+				rcLowerValue.set(midXSplit, midYSplit+labelSplit, rcAll.right, rcAll.bottom);
 
-		// Optionally inset the boxes
-//		rcTimeDiff.inset(20,20);
-//		rcUpperLabel.inset(10,0);
-//		rcUpperValue.inset(20,20);
-//		rcLowerLabel.inset(10,10);
-//		rcLowerValue.inset(20,20);
-		
-		p.setColor(Color.WHITE);
+			}
 
-		// Optionally draw screen dividers
-//		Paint.Style style = p.getStyle();
-//		p.setStyle(Style.STROKE);
-//		canvas.drawRect(rcTimeDiff, p);
-//		canvas.drawRect(rcUpperLabel, p);
-//		canvas.drawRect(rcUpperValue, p);
-//		canvas.drawRect(rcLowerLabel, p);
-//		canvas.drawRect(rcLowerValue, p);
-//		p.setStyle(style);
+			// Optionally inset the boxes
+			//			rcTimeDiff.inset(20,20);
+			//			rcUpperLabel.inset(10,0);
+			//			rcUpperValue.inset(20,20);
+			//			rcLowerLabel.inset(10,10);
+			//			rcLowerValue.inset(20,20);
+			pDelta.setStrokeWidth(rcTimeDiff.width()/20);
+			pDelta.setTypeface(Typeface.DEFAULT_BOLD);
 
-		if( !fontInitialized ) {
+			p.setColor(Color.WHITE);
+
+			// Optionally draw screen dividers
+			//			Paint.Style style = p.getStyle();
+			//			p.setStyle(Style.STROKE);
+			//			canvas.drawRect(rcTimeDiff, p);
+			//			canvas.drawRect(rcUpperLabel, p);
+			//			canvas.drawRect(rcUpperValue, p);
+			//			canvas.drawRect(rcLowerLabel, p);
+			//			canvas.drawRect(rcLowerValue, p);
+			//			p.setStyle(style);
+
 			Rect rcResult = new Rect();
 
 			// Optionally inset the boxes
-			rcTimeDiff.inset(10,10);
+			Rect rcTimeDiffInset = new Rect(rcTimeDiff);
+			rcTimeDiffInset.inset(rcTimeDiff.width()/20,rcTimeDiff.height()/20);
 			rcUpperLabel.inset(5,5);
 			rcUpperValue.inset(5,5);
 			rcLowerLabel.inset(5,5);
@@ -2561,31 +2573,30 @@ class MapPaintView extends View
 			num.setMinimumIntegerDigits(1);
 			num.setMinimumFractionDigits(1);
 			for( float f = 0; f<10; f=f+1.1f) {
-				rcResult = Utility.GetNeededFontSize(String.valueOf(num.format(f)), pDelta, rcTimeDiff);
+				rcResult = Utility.GetNeededFontSize(String.valueOf(num.format(f)), pDelta, rcTimeDiffInset);
 				if( pDelta.getTextSize() < fontSize[0] ) {
 					fontSize[0] = pDelta.getTextSize();
 					rcFontBounds[0] = rcResult;
 				}
 			}
-			rcFontBounds[0] = Utility.Justify(rcFontBounds[0], rcTimeDiff, Utility.BOXJUSTIFY.CENTER_CENTER);
+			rcFontBounds[0] = Utility.Justify(rcFontBounds[0], rcTimeDiffInset, Utility.BOXJUSTIFY.CENTER_CENTER);
 
 			// now for >= 10sec
 			fontSize[1]=9999;
 			num.setMinimumIntegerDigits(2);
 			for( float f = 0; f<100; f=f+11.1f) {
-				rcResult = Utility.GetNeededFontSize(String.valueOf(num.format(f)), pDelta, rcTimeDiff);
+				rcResult = Utility.GetNeededFontSize(String.valueOf(num.format(f)), pDelta, rcTimeDiffInset);
 				if( pDelta.getTextSize() < fontSize[1] ) {
 					fontSize[1] = pDelta.getTextSize();
 					rcFontBounds[1] = rcResult;
 				}
 			}
-			rcFontBounds[1] = Utility.Justify(rcFontBounds[1], rcTimeDiff, Utility.BOXJUSTIFY.CENTER_CENTER);
+			rcFontBounds[1] = Utility.Justify(rcFontBounds[1], rcTimeDiffInset, Utility.BOXJUSTIFY.CENTER_CENTER);
 
 			// This one is for the speed display
 			num.setMinimumIntegerDigits(1);
 			num.setMinimumFractionDigits(0);
 			fontSize[2]=9999;
-			Log.d("font", String.valueOf(rcUpperValue.width()) + ", " + String.valueOf(rcUpperValue.height())); 
 
 			for( float f = 111; f<1000; f=f+111f) {
 				rcResult = Utility.GetNeededFontSize(String.valueOf(num.format(f)), p, rcUpperValue);
@@ -2631,7 +2642,7 @@ class MapPaintView extends View
 			rcFontBounds[6] = Utility.GetNeededFontSize("km/h", p, rcLowerLabel); // Best			
 			fontSize[6] = p.getTextSize();
 
-			if( rcOnScreen.width() > rcOnScreen.height() ) {
+			if( rcAll.width() > rcAll.height() ) {
 				// landscape adjustments
 				rcFontBounds[2] = Utility.Justify(rcFontBounds[2], rcUpperValue, Utility.BOXJUSTIFY.CENTER_TOP);
 				rcFontBounds[3] = Utility.Justify(rcFontBounds[3], rcUpperLabel, Utility.BOXJUSTIFY.CENTER_BOTTOM);
@@ -2648,7 +2659,7 @@ class MapPaintView extends View
 			fontInitialized = true; 
 		}
 
-		LapAccumulator lapLast = myApp.GetLastLap();
+		lapLast = myApp.GetLastLap();
 
 		final double dLastLap;
 		final String strLast;
@@ -2741,8 +2752,8 @@ class MapPaintView extends View
 			rcBestTime.set(getLeft(),hSplit,cxSplit,getBottom());
 			rcBestLabel.set(cxSplit, hSplit,getRight(),getBottom());
 			// curent lap has no splits, so we must have just finished a lap
-			LapAccumulator lapLast = myApp.GetLastLap();
-			LapAccumulator lapBest = myApp.GetBestLap(); 
+			lapLast = myApp.GetLastLap();
+			lapBest = myApp.GetBestLap(); 
 			if(lapLast != null)
 			{
 				final double dLastLap = lapLast.GetLapTime();
@@ -2771,8 +2782,8 @@ class MapPaintView extends View
 			
 			rcSecondary.set(rcMain.right,getTop(),getRight(),getBottom());
 
-			LapAccumulator lap = myApp.GetCurrentLap();
-			LapAccumulator lapBest = myApp.GetBestLap();
+			lap = myApp.GetCurrentLap();
+			lapBest = myApp.GetBestLap();
 			if(strSpeedoStyle.equals(LandingOptions.SPEEDO_SPEEDDISTANCE))
 			{
 				DrawSpeedDistance(canvas, rcMain, lap, lapBest);
