@@ -27,6 +27,7 @@ import android.content.DialogInterface;
 import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Paint.Align;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.net.Uri;
@@ -34,6 +35,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.view.View.MeasureSpec;
 import android.view.ViewGroup;
@@ -117,37 +119,69 @@ public class Utility
         listView.setLayoutParams(params);
         listView.requestLayout();
     }
-
-	public static int GetNeededFontSize(String str, Paint p, Rect rcScreen)
+	
+	enum BOXJUSTIFY {LEFT_TOP,CENTER_TOP,RIGHT_TOP,LEFT_CENTER,CENTER_CENTER,RIGHT_CENTER,LEFT_BOTTOM,CENTER_BOTTOM,RIGHT_BOTTOM};
+	public static Rect Justify(Rect rcToAlign, Rect rcTarget, BOXJUSTIFY iJustify)
 	{
-		final int cxPermitted = rcScreen.right - rcScreen.left;
-		final int cyPermitted = rcScreen.bottom - rcScreen.top;
-		int iFontHigh = 200;
-		int iFontLow = 10;
-		
+		int iDx = rcTarget.width() - rcToAlign.width() ;
+		int iDy = rcTarget.height() - rcToAlign.height() ;
+		switch( iJustify ) {
+		case LEFT_TOP: 
+		case LEFT_CENTER:
+		case LEFT_BOTTOM:
+			iDx = 0; break;			
+		case CENTER_TOP:
+		case CENTER_CENTER:
+		case CENTER_BOTTOM:
+			iDx = Math.round(iDx/2);
+		default: // do nothigh for right justify 
+		}
+		switch( iJustify ) {
+		case LEFT_TOP: 
+		case CENTER_TOP:
+		case RIGHT_TOP:
+			iDy = 0; break;			// top justify
+		case LEFT_CENTER: 
+		case CENTER_CENTER:
+		case RIGHT_CENTER:
+			iDy = Math.round(iDy/2);// center justify
+		default:	// do nothing for bottom justify 
+		}
+
+		return new Rect(rcTarget.left+iDx,rcTarget.top+iDy,rcTarget.left+iDx+rcToAlign.width(),rcTarget.top+iDy+rcToAlign.height());
+	}
+	
+	public static Rect GetNeededFontSize(String str, Paint p, Rect rcScreen)
+	{
+		final int cxPermitted = rcScreen.width();
+		final int cyPermitted = rcScreen.height();
+		float fFontHigh = 522;
+		float fFontLow = 10;
+		boolean fTooBig = true;
+
 		Rect rcBounds = new Rect();
 		while(true)
 		{
-			if(iFontHigh - iFontLow <= 1)
+			if(fFontHigh - fFontLow <= 1 && !fTooBig)
 			{
-				// we've found the answer
-				return iFontLow;
+				// we've found the answer.  Return the smaller box
+				return rcBounds;
 			}
 			else
 			{
-				int iFontCheck = (iFontHigh+iFontLow)/2;
-				p.setTextSize(iFontCheck);
+				float fFontCheck = (fFontHigh+fFontLow)/2;
+				p.setTextSize(fFontCheck);
 				p.getTextBounds(str, 0, str.length(), rcBounds);
-				final int cxFont = rcBounds.right - rcBounds.left;
-				final int cyFont = rcBounds.bottom - rcBounds.top;
-				final boolean fTooBig = cxFont > cxPermitted || cyFont > cyPermitted;
+				final int cxFont = rcBounds.width();
+				final int cyFont = rcBounds.height();
+				fTooBig = cxFont > cxPermitted || cyFont > cyPermitted;
 				if(fTooBig)
 				{
-					iFontHigh = iFontCheck;
+					fFontHigh = fFontCheck;
 				}
 				else
 				{
-					iFontLow = iFontCheck;
+					fFontLow = fFontCheck;
 				}
 			}
 		}
@@ -201,6 +235,30 @@ public class Utility
 		num.setMinimumFractionDigits(digits);
 		return num.format(fl);
 	}
+	enum TEXTJUSTIFY {LEFT,CENTER,RIGHT};
+	public static void DrawFontInBoxFinal(Canvas c, final String str, float flFontSize, Paint p, Rect rcBounds, TEXTJUSTIFY iJustify)
+	{
+		p.setTextSize(flFontSize);
+		
+		switch ( iJustify ) {
+		case LEFT: 
+			p.setTextAlign(Align.LEFT);
+			c.drawText(str, rcBounds.left,  rcBounds.bottom, p);
+			break;
+		case CENTER:
+			p.setTextAlign(Align.CENTER);
+			c.drawText(str, rcBounds.left + rcBounds.width()/2,  rcBounds.bottom, p);
+			break;
+		case RIGHT:
+			p.setTextAlign(Align.RIGHT);
+			c.drawText(str, rcBounds.right,  rcBounds.bottom, p);
+			break;
+		default:
+			Log.e("DrawFontInBoxFinal","bad H justification");
+		}
+		p.setTextAlign(Align.LEFT);
+	}
+	
 	public static void DrawFontInBoxFinal(Canvas c, final String str, float flFontSize, Paint p, final Rect rcScreen, boolean fLeftJustify, boolean fRightJustify, boolean fTopJustify)
 	{
 		// we've found the answer

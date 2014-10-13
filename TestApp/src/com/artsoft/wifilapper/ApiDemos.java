@@ -52,6 +52,7 @@ import android.os.Message;
 import android.os.Parcelable;
 import android.location.*;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.*;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -1812,6 +1813,7 @@ implements
 					double dChangeY = dY - dLastY;
 					//loc.setSpeed((float)Math.sqrt(System.currentTimeMillis() % 9000));
 					loc.setSpeed(500/m_goalSpeed);
+					loc.setSpeed((System.currentTimeMillis() % 9000)/300f+4);
 					float flBearing = ((float)Math.atan2(dChangeX, dChangeY))*180.0f/3.14159f;
 					flBearing = (float)(((int)flBearing)%360);
 					loc.setBearing(flBearing);
@@ -2089,7 +2091,8 @@ class MoveToStartLineView extends View
 		}
 		else
 		{
-			String str = "Proceed to start/finish line";
+			String str = "Proceed to start/finish";
+			String str2 = "";
 			
 			LapAccumulator lap = myApp.GetCurrentLap();
 			if(lap != null)
@@ -2107,12 +2110,23 @@ class MoveToStartLineView extends View
 					
 					float rg[] = new float[2];
 					Location.distanceBetween(flSFY, flSFX, lap.GetLastPoint().pt.y, lap.GetLastPoint().pt.x, rg);
-					str += " (" + (int)rg[0] + " meters away)";
+					str2 = " (" + (int)rg[0] + "m away)";
 				}
 				
 				LapAccumulator.DrawLap(lap, false, rcInWorld, canvas, paintTrack, paintLines, rcOnScreen);
 			}
-			Utility.DrawFontInBox(canvas, str, paintSmallText, rcAll);
+			if( rcOnScreen.width() < rcOnScreen.height() ) {
+				// Portrait screen.  Print on 2 lines
+				rcOnScreen = Utility.GetNeededFontSize(str, paintSmallText, rcAll);
+				rcLapLabel.set(rcAll.left,rcAll.top,rcAll.right,rcAll.top+rcAll.height()/2);
+				rcOnScreen = Utility.Justify(rcOnScreen, rcLapLabel, Utility.BOXJUSTIFY.CENTER_BOTTOM);
+				Utility.DrawFontInBoxFinal(canvas, str, paintSmallText.getTextSize(), paintSmallText, rcOnScreen, Utility.TEXTJUSTIFY.CENTER);
+				rcLapLabel.set(rcAll.left,rcAll.top+rcAll.height()/2,rcAll.right,rcAll.top+rcAll.bottom);
+				rcOnScreen = Utility.Justify(rcOnScreen, rcLapLabel, Utility.BOXJUSTIFY.CENTER_TOP);
+				Utility.DrawFontInBoxFinal(canvas, str2, paintSmallText.getTextSize(), paintSmallText, rcOnScreen, Utility.TEXTJUSTIFY.CENTER);
+			}
+			else
+				Utility.DrawFontInBox(canvas, str+str2, paintSmallText, rcAll);
 		}
 	}
 }
@@ -2224,7 +2238,8 @@ class MapPaintView extends View
 	String strSpeedoStyle;
 	NumberFormat num;
 	Prefs.UNIT_SYSTEM eDisplayUnitSystem;
-	float fontSize[] = new float[5];
+	float fontSize[] = new float[7];
+	Rect rcFontBounds[] = new Rect[7];
 	boolean fontInitialized = false;
 	
 	private Matrix myMatrix;
@@ -2374,20 +2389,20 @@ class MapPaintView extends View
 		{
 
 			Paint pRect = new Paint();
+
+			final TimePoint2D ptCurrent = lap.GetLastPoint();
+			final TimePoint2D ptBest = lapBest.myGetInterpolatedPointAtPosition(ptCurrent);
+
 			final double flThisTime = ((double)lap.GetAgeInMilliseconds())/1000.0;
 			if( flThisTime < 3 )
 			{
 				// Display the word Lap for 3 seconds as the line is crossed
-				String strLap = "Lap";
 				p.setColor(Color.WHITE);
 				p.setStyle(Style.FILL);
-				Rect rcInset = new Rect(rcOnScreen);
-				Utility.DrawFontInBox(canvas, strLap, p, rcInset);
+
+				Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[1], p, rcFontBounds[1], Utility.TEXTJUSTIFY.CENTER);
 				return;
 			}			
-			final TimePoint2D ptCurrent = lap.GetLastPoint();
-						
-			final TimePoint2D ptBest = lapBest.myGetInterpolatedPointAtPosition(ptCurrent);
 						
 			final float flBestTime = ptBest.iTime / 1000f;
 			
@@ -2421,18 +2436,18 @@ class MapPaintView extends View
 
 			switch( strToPaint.length() ) {
 			case 3: 
-			case 4: 
-				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, false, false,false);
+			case 4:
+				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcFontBounds[strToPaint.length()-3], Utility.TEXTJUSTIFY.CENTER);
 				p.setStyle(Style.FILL);			
 				p.setColor(Color.WHITE);
-				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcInset, false, false,false);
+				Utility.DrawFontInBoxFinal(canvas, strToPaint, fontSize[strToPaint.length()-3], p, rcFontBounds[strToPaint.length()-3], Utility.TEXTJUSTIFY.CENTER);
 				break;
 
 			default:
-				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcInset, false, false,false);
+				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcFontBounds[1], Utility.TEXTJUSTIFY.CENTER);
 				p.setStyle(Style.FILL);			
 				p.setColor(Color.WHITE);
-				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcInset, false, false,false);
+				Utility.DrawFontInBoxFinal(canvas, "99.9", fontSize[1], p, rcFontBounds[1], Utility.TEXTJUSTIFY.CENTER);
 				break;
 			}
 		}
@@ -2502,7 +2517,7 @@ class MapPaintView extends View
 			// Landscape mode
 			final int midXSplit  = rcOnScreen.centerX();
 			final int midYSplit  = rcOnScreen.centerY();
-			final int labelSplit = rcOnScreen.height()/10;
+			final int labelSplit = rcOnScreen.height()/9;
 
 			rcTimeDiff.set(rcOnScreen.left, rcOnScreen.top, midXSplit, rcOnScreen.bottom);
 			rcUpperLabel.set(midXSplit, rcOnScreen.top, rcOnScreen.right, rcOnScreen.top+labelSplit);
@@ -2515,9 +2530,9 @@ class MapPaintView extends View
 		// Optionally inset the boxes
 //		rcTimeDiff.inset(20,20);
 //		rcUpperLabel.inset(10,0);
-//		rcUpperValue.inset(20,0);
+//		rcUpperValue.inset(20,20);
 //		rcLowerLabel.inset(10,10);
-		rcLowerValue.inset(20,0);
+//		rcLowerValue.inset(20,20);
 		
 		p.setColor(Color.WHITE);
 
@@ -2532,40 +2547,104 @@ class MapPaintView extends View
 //		p.setStyle(style);
 
 		if( !fontInitialized ) {
+			Rect rcResult = new Rect();
+
+			// Optionally inset the boxes
+			rcTimeDiff.inset(10,10);
+			rcUpperLabel.inset(5,5);
+			rcUpperValue.inset(5,5);
+			rcLowerLabel.inset(5,5);
+			rcLowerValue.inset(5,5);
+
 			// First, calculate the font size required for the delta time, whether <10 sec or >=10sec
-			float minFont=9999;
+			fontSize[0]=9999;
+			num.setMinimumIntegerDigits(1);
+			num.setMinimumFractionDigits(1);
 			for( float f = 0; f<10; f=f+1.1f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), pDelta, rcTimeDiff,false);
-				if( pDelta.getTextSize() < minFont ) minFont = pDelta.getTextSize();
+				rcResult = Utility.GetNeededFontSize(String.valueOf(num.format(f)), pDelta, rcTimeDiff);
+				if( pDelta.getTextSize() < fontSize[0] ) {
+					fontSize[0] = pDelta.getTextSize();
+					rcFontBounds[0] = rcResult;
+				}
 			}
-			fontSize[0] = minFont;
+			rcFontBounds[0] = Utility.Justify(rcFontBounds[0], rcTimeDiff, Utility.BOXJUSTIFY.CENTER_CENTER);
 
 			// now for >= 10sec
-			minFont=9999;
+			fontSize[1]=9999;
 			num.setMinimumIntegerDigits(2);
 			for( float f = 0; f<100; f=f+11.1f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), pDelta, rcTimeDiff,false);
-				if( pDelta.getTextSize() < minFont ) minFont = pDelta.getTextSize();
+				rcResult = Utility.GetNeededFontSize(String.valueOf(num.format(f)), pDelta, rcTimeDiff);
+				if( pDelta.getTextSize() < fontSize[1] ) {
+					fontSize[1] = pDelta.getTextSize();
+					rcFontBounds[1] = rcResult;
+				}
 			}
-			fontSize[1] = minFont;
-			num.setMinimumIntegerDigits(1);
+			rcFontBounds[1] = Utility.Justify(rcFontBounds[1], rcTimeDiff, Utility.BOXJUSTIFY.CENTER_CENTER);
 
 			// This one is for the speed display
-			minFont=9999;
-			for( float f = 111; f<1000; f=f+111f) {
-				Utility.DrawFontInBox(canvas, String.valueOf(num.format(f)), p, rcUpperValue,false);
-				if( p.getTextSize() < minFont ) minFont = p.getTextSize();
-			}
-			fontSize[2] = minFont;
+			num.setMinimumIntegerDigits(1);
+			num.setMinimumFractionDigits(0);
+			fontSize[2]=9999;
+			Log.d("font", String.valueOf(rcUpperValue.width()) + ", " + String.valueOf(rcUpperValue.height())); 
 
+			for( float f = 111; f<1000; f=f+111f) {
+				rcResult = Utility.GetNeededFontSize(String.valueOf(num.format(f)), p, rcUpperValue);
+				if( p.getTextSize() < fontSize[2] ) {
+					fontSize[2] = p.getTextSize();
+					rcFontBounds[2] = rcResult;
+				}
+				
+//				String str = new String();
+//				str = String.valueOf(num.format(f));
+//				float flMeas = p.measureText(str);
+//				float fAscent = p.ascent();
+//				float fDescent = p.descent();
+//				float fSpacing = p.getFontSpacing();
+//				
+//				Rect bds = new Rect();
+//				p.getTextBounds(str,0,str.length(),bds);
+//				Log.d("font", 
+//						String.valueOf(p.getTextSize()) + ", " +
+//						String.valueOf(flMeas) + ", " +
+//						String.valueOf(fAscent) + ", " +
+//						String.valueOf(fDescent) + ", " +
+//						String.valueOf(fSpacing) + ", " +
+//						bds.toString() + "," +
+//						String.valueOf(bds.width()) + ", " +
+//						String.valueOf(bds.height()) 
+//						);
+				
+			}
+			rcFontBounds[2] = Utility.Justify(rcFontBounds[2], rcUpperValue, Utility.BOXJUSTIFY.CENTER_CENTER);
+			
 			// This one is for the labels
-			Utility.DrawFontInBox(canvas, "km/h", p, rcUpperLabel,false); // bogus, but covers drop chars and 4 chars
+			rcFontBounds[3] = Utility.GetNeededFontSize("km/h", p, rcUpperLabel); // km/h
 			fontSize[3] = p.getTextSize();
 
 			// This one is for the time, minutes, sec, tenths
-			Utility.DrawFontInBox(canvas, "4:44.4", p, rcUpperValue,false);
+			rcFontBounds[4] = Utility.GetNeededFontSize("4:44.4", p, rcLowerValue);
 			fontSize[4] = p.getTextSize();
+			
+			rcFontBounds[5] = Utility.GetNeededFontSize("4:44.4", p, rcUpperValue);
+			fontSize[5] = p.getTextSize();
 
+			rcFontBounds[6] = Utility.GetNeededFontSize("km/h", p, rcLowerLabel); // Best			
+			fontSize[6] = p.getTextSize();
+
+			if( rcOnScreen.width() > rcOnScreen.height() ) {
+				// landscape adjustments
+				rcFontBounds[2] = Utility.Justify(rcFontBounds[2], rcUpperValue, Utility.BOXJUSTIFY.CENTER_TOP);
+				rcFontBounds[3] = Utility.Justify(rcFontBounds[3], rcUpperLabel, Utility.BOXJUSTIFY.CENTER_BOTTOM);
+				rcFontBounds[5] = Utility.Justify(rcFontBounds[5], rcUpperValue, Utility.BOXJUSTIFY.CENTER_TOP);
+				rcFontBounds[6] = Utility.Justify(rcFontBounds[6], rcLowerLabel, Utility.BOXJUSTIFY.CENTER_BOTTOM);
+				rcFontBounds[4] = Utility.Justify(rcFontBounds[4], rcLowerValue, Utility.BOXJUSTIFY.CENTER_TOP);
+			}
+			else {
+				rcFontBounds[2] = Utility.Justify(rcFontBounds[2], rcUpperValue, Utility.BOXJUSTIFY.CENTER_CENTER);
+				rcFontBounds[3] = Utility.Justify(rcFontBounds[3], rcUpperLabel, Utility.BOXJUSTIFY.CENTER_CENTER);
+				rcFontBounds[4] = Utility.Justify(rcFontBounds[4], rcLowerValue, Utility.BOXJUSTIFY.CENTER_CENTER);
+				rcFontBounds[5] = Utility.Justify(rcFontBounds[5], rcUpperValue, Utility.BOXJUSTIFY.CENTER_CENTER);
+				rcFontBounds[6] = Utility.Justify(rcFontBounds[6], rcLowerLabel, Utility.BOXJUSTIFY.CENTER_CENTER);			}
 			fontInitialized = true; 
 		}
 
@@ -2587,7 +2666,7 @@ class MapPaintView extends View
 			dBestLap = lapBest.GetLapTime();
 			strBest = buildLapTime(dBestLap);
 
-			if( flThisTime < 5 ) {
+			if( flThisTime < 3 ) {
 				// Display last lap time for the first 10 seconds of the next lap
 				dLastLap = lapLast.GetLapTime();
 				if( dLastLap > dBestLap )
@@ -2595,16 +2674,16 @@ class MapPaintView extends View
 				else
 					p.setColor(Color.GREEN); // last lap better/equal, make green
 				strLast = buildLapTime(dLastLap);
-				Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[4], p, rcUpperValue, true,false,true);
-				Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcUpperLabel, false,false,true);
+				Utility.DrawFontInBoxFinal(canvas, strLast, fontSize[5], p, rcFontBounds[5], Utility.TEXTJUSTIFY.CENTER);
+				Utility.DrawFontInBoxFinal(canvas, "Last", fontSize[3], p, rcFontBounds[3], Utility.TEXTJUSTIFY.CENTER);
 			}
 			else {
 				final TimePoint2D ptCurrent = lap.GetLastPoint();
 				final float flSpeed = (float)ptCurrent.dVelocity;
 				num.setMaximumFractionDigits(0);
 				String strSpeed = Prefs.FormatMetersPerSecond(flSpeed,num,eDisplayUnitSystem,false);
-				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcUpperValue, false,true,true);
-				Utility.DrawFontInBoxFinal(canvas, Prefs.GetSpeedUnits(eDisplayUnitSystem), fontSize[3], p, rcUpperLabel,false,false,true);
+				Utility.DrawFontInBoxFinal(canvas, strSpeed, fontSize[2], p, rcFontBounds[2], Utility.TEXTJUSTIFY.CENTER);
+				Utility.DrawFontInBoxFinal(canvas, Prefs.GetSpeedUnits(eDisplayUnitSystem), fontSize[3], p, rcFontBounds[3],Utility.TEXTJUSTIFY.CENTER);
 			}
 		}
 		else // First lap, or best lap has been reset
@@ -2612,13 +2691,13 @@ class MapPaintView extends View
 			p.setColor(Color.WHITE); // reset to white
 
 			final String strLapTime = buildLapTime(flThisTime);
-			Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[4], p, rcUpperValue, true, false,true);
-			Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[3], p, rcUpperLabel, false,false,true);
+			Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[5], p, rcFontBounds[5], Utility.TEXTJUSTIFY.CENTER);
+			Utility.DrawFontInBoxFinal(canvas, "Lap", fontSize[3], p, rcFontBounds[3], Utility.TEXTJUSTIFY.CENTER);
 		}
 		
 		p.setColor(Color.WHITE); // Best lap in white
-		Utility.DrawFontInBoxFinal(canvas, strBest, fontSize[4], p, rcLowerValue, false,false,true);
-		Utility.DrawFontInBoxFinal(canvas, "Best", fontSize[3], p, rcLowerLabel, false,false,true);
+		Utility.DrawFontInBoxFinal(canvas, strBest, fontSize[4], p, rcFontBounds[4], Utility.TEXTJUSTIFY.CENTER);
+		Utility.DrawFontInBoxFinal(canvas, "Best", fontSize[6], p, rcFontBounds[6],Utility.TEXTJUSTIFY.CENTER);
 	
 	}
 	
