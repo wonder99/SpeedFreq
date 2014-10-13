@@ -53,7 +53,7 @@
             <EditText
                 android:id="@+id/txtIP"
                 android:layout_width="0dip"
-                android:layout_height="wrap_content"
+                android:layout_height="fill_parent"
                 android:layout_gravity="center_vertical"
                 android:layout_weight="2"
                 android:hint="input IP address here"

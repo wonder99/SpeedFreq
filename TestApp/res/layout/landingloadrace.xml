@@ -43,37 +43,31 @@
 	            android:layout_gravity="center_vertical"
 	            android:text="Pitside IP Address" />
 	    </TableRow>
-	    
-		<TableRow
-		    android:id="@+id/tableRow2"
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content" >
+	    <LinearLayout
+            android:id="@+id/LinearLayout01"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal" >
 
-		    <LinearLayout
-		        android:id="@+id/LinearLayout01"
-		        android:layout_width="fill_parent"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:orientation="horizontal" >
+            <EditText
+                android:id="@+id/txtIP"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="input IP address here"
+                android:inputType="text"
+                android:text="192.168.1.100" >
+            </EditText>
 
-		        <EditText
-		            android:id="@+id/txtIP"
-		            android:layout_width="0dip"
-		            android:layout_height="wrap_content"
-		            android:layout_weight="1"
-		            android:hint="input IP address here"
-		            android:inputType="text"
-		            android:text="192.168.1.100" >
-		        </EditText>
+            <Button
+                android:id="@+id/btnAutoIP"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Auto find IPs" >
+            </Button>
+        </LinearLayout>
 
-		        <Button
-		            android:id="@+id/btnAutoIP"
-		            android:layout_width="wrap_content"
-		            android:layout_height="wrap_content"
-		            android:text="Auto find IPs" >
-		        </Button>
-		    </LinearLayout>
-		</TableRow>
 </TableLayout>
 	
 	<ListView
