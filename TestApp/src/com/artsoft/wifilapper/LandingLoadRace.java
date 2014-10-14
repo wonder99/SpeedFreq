@@ -18,7 +18,7 @@ package com.artsoft.wifilapper;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -175,14 +175,15 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 	        this.items = objects;
 	    }
 
-	    @Override
+	    @SuppressLint("InflateParams")
+		@Override
 	    public View getView(int position, View convertView, ViewGroup parent) 
 	    {
 	        View v = convertView;
 	        if (v == null) 
 	        {
 	            LayoutInflater vi = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-	            v = vi.inflate(R.layout.landingloadrace_item, parent);
+	            v = vi.inflate(R.layout.landingloadrace_item, null);
 	        }
 	        ListRaceData myobject = items.get(position);
 
