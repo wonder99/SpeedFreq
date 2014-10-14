@@ -407,6 +407,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		if( this.getApplicationContext().getPackageName().contains("wifilappertab")) { 
     		btnComms.setEnabled(false);
     		btnComms.setText("Not in Tablet Version");
+    		chkCellular.setEnabled(false);
 		}
 		
 		chkInternal.setOnCheckedChangeListener(this);
