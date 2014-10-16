@@ -35,6 +35,7 @@ import com.artsoft.wifilapper.Utility.MultiStateObject.STATE;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.net.DhcpInfo;
+import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -52,7 +53,7 @@ public class LapSender
 	
 	private static final int PRUNE_MINUTES = 60; // how many minutes we allow things to languish before busting out the prunes
 	private static final int SOCKET_TIMEOUT = 10000; // was 10000, doesn't seem to affect connect time
-	private static final int ONE_SECOND = 3000; // was 3000, doesn't seem to affect connect time
+	private static final int ONE_SECOND = 1000; // was 3000, doesn't seem to affect connect time
 	
 	private boolean fContinue;
 	private SendThd m_thd;
@@ -406,6 +407,8 @@ public class LapSender
 				Thread.sleep(2000);
 			}
 			
+			String strLocalSSID;
+			
 			// second: check if we're already connected to the desired network
 			WifiInfo pInfo = pWifi.getConnectionInfo();
 			if(pInfo != null)
@@ -413,42 +416,36 @@ public class LapSender
 				String strCurrentSSID = pInfo.getSSID();
 				if(strCurrentSSID != null)
 				{
-					String strLocalSSID = GetSSID();
+					strLocalSSID = GetSSID();
 					// Strip leading and trailing quotes, if present, but not if string is empty: ""
 					if( strCurrentSSID.length() > 2 && strCurrentSSID.charAt(0)=='"' ) {
 						strCurrentSSID = strCurrentSSID.substring(1,strCurrentSSID.length()-1);
 					}
-				
 					if(strCurrentSSID.equalsIgnoreCase(strLocalSSID))
 					{
-						DhcpInfo pDHCPInfo = pWifi.getDhcpInfo();
-						if(pDHCPInfo != null)
+						if(pInfo.getSupplicantState() == SupplicantState.COMPLETED)
 						{
-							if(pDHCPInfo.ipAddress != 0)
-							{
-								// we're good!
-								listener.SetConnectionLevel(LapSenderListener.CONNLEVEL.CONNECTED);
-								pStateMan.SetState(LapSender.class, Utility.MultiStateObject.STATE.TROUBLE_GOOD, "Connected to " + strLocalSSID + ", searching for Pitside @ " + this.strIP);
-								return;
-							}
+							// we're good!
+							listener.SetConnectionLevel(LapSenderListener.CONNLEVEL.CONNECTED);
+							pStateMan.SetState(LapSender.class, Utility.MultiStateObject.STATE.TROUBLE_GOOD, "Connected to " + strLocalSSID + ", searching for Pitside @ " + this.strIP);
+							return;
 						}
 					}
-					else
+					else // SSID is not what's expected
 					{
-						// we're connected to the wrong network!
 						pWifi.disconnect();
 					}
 				}
-				else
+				else // note: (strCurrentSSID == null)
 				{
 					// we're not connected to any network.
 				}
 			}
-			else if(pInfo == null)
+			else // note: (pInfo == null)
 			{
 				// we're not connected to any network
 			}
-			// apparently not needed pWifi.startScan();
+			// not connected
 			listener.SetConnectionLevel(LapSenderListener.CONNLEVEL.SEARCHING);
 			
 			// ok, we should now be fully disconnected from the network we had before (if any)
@@ -457,6 +454,7 @@ public class LapSender
 			{
 				String strPickedSSID = GetSSID();
 				WifiConfiguration pConfig = lstNetworks.get(x);
+				
 				if(pConfig.SSID.equalsIgnoreCase("\"" + strPickedSSID + "\""))
 				{
 					pWifi.enableNetwork(pConfig.networkId, true);
@@ -464,7 +462,9 @@ public class LapSender
 					int cAttempts = 0;
 					while(fContinue)
 					{
-						String strLocalSSID = GetSSID();
+						pWifi.startScan();	// This helps newer phones reconnect more quickly
+						pWifi.reconnect();
+						strLocalSSID = GetSSID();
 						if(!strLocalSSID.equals(strPickedSSID)) break; // they must have changed their target SSID.  break out of this attempt to connect to the old one and look for the other one
 
 						listener.SetConnectionLevel(LapSenderListener.CONNLEVEL.SEARCHING);
@@ -472,8 +472,7 @@ public class LapSender
 						pInfo = pWifi.getConnectionInfo();
 						if(pInfo != null)
 						{
-							String strCurrentSSID = pInfo.getSSID();
-							if(strCurrentSSID != null)
+							if(pInfo.getSupplicantState() == SupplicantState.COMPLETED)
 							{	
 								listener.SetConnectionLevel(LapSenderListener.CONNLEVEL.CONNECTED);
 								pStateMan.SetState(LapSender.class, Utility.MultiStateObject.STATE.TROUBLE_GOOD, "Connected to " + strLocalSSID + ", searching for Pitside @ " + this.strIP);
