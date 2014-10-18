@@ -16,9 +16,12 @@
 
 package com.artsoft.wifilapper;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
@@ -64,7 +67,7 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
 		{
 			m_listener = new BroadcastListener();
 			IntentFilter wifiFilter = new IntentFilter();
-			wifiFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+//			wifiFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
 			wifiFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
 			this.registerReceiver(m_listener, wifiFilter);
 		}
@@ -162,21 +165,36 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
     	try
     	{
     		WifiManager pWifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
-    		List<WifiConfiguration> lstNetworks = pWifi.getConfiguredNetworks();
-    		
     		List<String> lstSSIDs = new ArrayList<String>();
-    		int ixDefault = -1;
-    		for(int x = 0;x < lstNetworks.size(); x++)
-    		{
-    			String strSSID = lstNetworks.get(x).SSID;
-    			strSSID = strSSID.replace("\"", "");
-    			lstSSIDs.add(strSSID);
-    			if(strSSID.equalsIgnoreCase(strDefault))
+			int ixDefault = -1;
+    		
+			List<WifiConfiguration> lstNetworks = pWifi.getConfiguredNetworks();
+
+			if( lstNetworks != null )  // will be null if wifi is off
+    		{    		
+    			// Sort the list alphabetically, ignoring case
+    			Collections.sort(lstNetworks, new Comparator<WifiConfiguration>(){
+    				public int compare(WifiConfiguration emp1, WifiConfiguration emp2) {
+    					return emp1.SSID.compareToIgnoreCase(emp2.SSID);
+    				} }
+    					);
+    			
+    			for(int x = 0;x < lstNetworks.size(); x++)
     			{
-    				ixDefault = x;
+    				String strSSID = lstNetworks.get(x).SSID;
+    				strSSID = strSSID.replace("\"", "");
+    				lstSSIDs.add(strSSID);
+    				if(strSSID.equalsIgnoreCase(strDefault))
+    				{
+    					ixDefault = x;
+    				}
     			}
     		}
-    		
+    		else	// wifi is off, so just put the default SSID in the box, which will be disabled 
+    		{
+    			lstSSIDs.add(strDefault);
+    			ixDefault = 0;
+    		}
     		ArrayAdapter<String> adapter = new ArrayAdapter<String> (this, android.R.layout.simple_spinner_item, lstSSIDs);
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             spn.setAdapter(adapter);
@@ -184,8 +202,11 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
         	{
 	        	spn.setSelection(ixDefault,true);
         	}
-	        
-	        spn.setOnItemSelectedListener(this);
+
+	        if( !pWifi.isWifiEnabled() )
+	        	spn.setEnabled(false);
+	        else
+	        	spn.setOnItemSelectedListener(this);
     	}
         catch(Exception e)
         {
@@ -303,6 +324,7 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
     
     private class BroadcastListener extends BroadcastReceiver
     {
+    	String lastSSID=null;
     	@Override
 		public void onReceive(Context ctx, Intent intent)
 		{
@@ -322,7 +344,10 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
     					strSSID = null;
     				}
     			}
-    			NotifyWifiChange(strSSID);
+    			if( strSSID != null && !strSSID.equalsIgnoreCase(lastSSID) ) {
+    				NotifyWifiChange(strSSID);
+    			}
+				lastSSID = strSSID;
     		}
 		}
     }
