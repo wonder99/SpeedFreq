@@ -18,6 +18,9 @@ package com.artsoft.wifilapper;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.artsoft.wifilapper.RaceDatabase.RaceData;
+
 import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
@@ -26,6 +29,7 @@ import android.content.DialogInterface.OnDismissListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -320,6 +324,15 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 			
 			ShowNextActivity(lrd, lrd.strRaceName, ApiDemos.RESUME_MODE.RESUME_RACE.ordinal());
 		}
+		else if(item.getItemId() == R.id.mnuExportRaceParams)
+		{
+			AdapterContextMenuInfo info = (AdapterContextMenuInfo)item.getMenuInfo();
+			ListView list = (ListView)info.targetView.getParent();
+			ListRaceData lrd = (ListRaceData)list.getItemAtPosition(info.position);
+			RenameDialog<ListRaceData> rd = new RenameDialog<ListRaceData>(this, "Ready to export track", lrd, lrd.strRaceName, R.id.mnuExportRaceParams);
+			rd.setOnDismissListener(this);
+			rd.show();
+		}
 		else if(item.getItemId() == R.id.mnuReuseSplits)
 		{
 			AdapterContextMenuInfo info = (AdapterContextMenuInfo)item.getMenuInfo();
@@ -419,6 +432,14 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 					ListRaceData lrd = rd.GetData();
 					
 					ShowNextActivity(lrd, rd.GetResultText(), ApiDemos.RESUME_MODE.REUSE_SPLITS.ordinal());
+				}
+				
+				else if(rd.GetParam() == R.id.mnuExportRaceParams)
+				{
+					ListRaceData lrd = rd.GetData();
+					RaceData rd3 = RaceDatabase.GetRaceData(RaceDatabase.Get(), lrd.GetId(), -1);
+					
+					RaceDatabase.CreateTrackIfNotExist(RaceDatabase.Get(), rd.GetResultText(), rd3.lapParams, rd3.fTestMode,false, rd3.lapParams.iFinishCount,RaceDatabase.GetRaceOutlineImage(RaceDatabase.Get(),lrd.GetId(),100,100));
 				}
 			}
 		}

@@ -16,6 +16,7 @@
 
 package com.artsoft.wifilapper;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.Vector;
 
@@ -26,6 +27,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteDatabase.CursorFactory;
 import android.graphics.Bitmap;
+import android.graphics.Bitmap.CompressFormat;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
@@ -156,6 +159,72 @@ public class RaceDatabase extends BetterOpenHelper
 			try
 			{
 				long id = db.insertOrThrow("races", null, content);
+				return id;
+			}
+			catch(SQLiteException e)
+			{
+				return -1;
+			}
+		}
+		return -1;
+	}
+	public synchronized static long CreateTrackIfNotExist(SQLiteDatabase db, String strTrackName, LapAccumulator.LapAccumulatorParams lapParams, boolean fTestMode, boolean fP2P, int iFinishCount, Bitmap bitTrackImage)
+	{
+		if(db == null)
+		{
+			Toast.makeText(null, "Wifilapper was unable to create a database.  Track will not be saved", Toast.LENGTH_LONG).show();
+			return -1;
+		}
+
+		// Add the track database, if doesn't exist
+//		db.execSQL("drop table tracks"); // changing table format 
+		db.execSQL(CREATE_TRACK_SQL);
+		
+		if(strTrackName != null && strTrackName.length() > 0 && lapParams.IsValid(fP2P))
+		{
+			// blow away any tracks with the same name
+			db.execSQL("delete from tracks where name = " + "\"" + strTrackName + "\"");
+			
+			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+			bitTrackImage.compress(CompressFormat.PNG, 0, outputStream);
+
+			ContentValues content = new ContentValues();
+			content.put("\"name\"", strTrackName);
+			content.put("\"date\"", "");
+			content.put("x1", lapParams.lnStart != null ? lapParams.lnStart.GetP1().GetX() : 0);
+			content.put("y1", lapParams.lnStart != null ? lapParams.lnStart.GetP1().GetY() : 0);
+			content.put("x2", lapParams.lnStart != null ? lapParams.lnStart.GetP2().GetX() : 0);
+			content.put("y2", lapParams.lnStart != null ? lapParams.lnStart.GetP2().GetY() : 0);
+			
+			content.put("x3", lapParams.lnStop != null ? lapParams.lnStop.GetP1().GetX() : 0);
+			content.put("y3", lapParams.lnStop != null ? lapParams.lnStop.GetP1().GetY() : 0);
+			content.put("x4", lapParams.lnStop != null ? lapParams.lnStop.GetP2().GetX() : 0);
+			content.put("y4", lapParams.lnStop != null ? lapParams.lnStop.GetP2().GetY() : 0);
+			
+			content.put("x5", 0);
+			content.put("y5", 0);
+			content.put("x6", 0);
+			content.put("y6", 0);
+			
+			content.put("vx1", lapParams.vStart != null ? lapParams.vStart.GetX() : 0);
+			content.put("vy1", lapParams.vStart != null ? lapParams.vStart.GetY() : 0);
+			
+			content.put("vx2", lapParams.vStop != null ? lapParams.vStop.GetX() : 0);
+			content.put("vy2", lapParams.vStop != null ? lapParams.vStop.GetY() : 0);
+			
+			content.put("vx3", 0);
+			content.put("vy3", 0);
+			
+			
+			content.put("\"testmode\"", fTestMode);
+			content.put("p2p", fP2P ? 1 : 0);
+			content.put("finishcount", iFinishCount);
+
+			content.put("image", outputStream.toByteArray());
+
+			try
+			{
+				long id = db.insertOrThrow("tracks", null, content);
 				return id;
 			}
 			catch(SQLiteException e)
@@ -452,6 +521,32 @@ public class RaceDatabase extends BetterOpenHelper
 		return null;
 	}
 	
+	private final static String CREATE_TRACK_SQL =  "create table if not exists tracks (	_id integer primary key asc autoincrement, " +
+			"\"name\" string, " +
+			"\"date\" string, " +
+			"\"testmode\" integer, " +
+			"x1 real, " +
+			"y1 real, " +
+			"x2 real, " +
+			"y2 real, " +
+			"x3 real, " +
+			"y3 real, " +
+			"x4 real, " +
+			"y4 real, " +
+			"x5 real, " +
+			"y5 real, " +
+			"x6 real, " +
+			"y6 real, " +
+			"vx1 real," +
+			"vy1 real," +
+			"vx2 real," +
+			"vy2 real," +
+			"vx3 real," +
+			"vy3 real," +
+			"p2p integer not null default 0," +
+			"finishcount integer not null default 1," +
+			"image BLOB)";
+
 	private final static String CREATE_RACE_SQL =  "create table if not exists races (	_id integer primary key asc autoincrement, " +
 																						"\"name\" string, " +
 																						"\"date\" string, " +
@@ -519,6 +614,7 @@ public class RaceDatabase extends BetterOpenHelper
 	@Override
 	public void onCreate(SQLiteDatabase db)
 	{
+		db.execSQL(CREATE_TRACK_SQL);
 		db.execSQL(CREATE_RACE_SQL);
 		db.execSQL(CREATE_LAPS_SQL);
 		db.execSQL(CREATE_POINTS_SQL);
