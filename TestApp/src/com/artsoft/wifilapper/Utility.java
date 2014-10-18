@@ -70,28 +70,24 @@ public class Utility
 		}
 		return iRet;
 	}
+
 	// true -> a change was made
 	// false -> no changes were made
 	public static boolean ConnectToSSID(String strSSID, WifiManager pWifi)
 	{
 		WifiInfo pInfo = pWifi.getConnectionInfo();
-		if(pInfo != null && pInfo.getSSID() != null && !pInfo.getSSID().equalsIgnoreCase(strSSID))
+		if(pInfo != null && pInfo.getSSID() != null && !pInfo.getSSID().replace("\"", "").equalsIgnoreCase(strSSID))
 		{
 			pWifi.disconnect();
-		}
-		else if(pInfo != null && pInfo.getSSID() != null && pInfo.getSSID().equalsIgnoreCase(strSSID))
-		{
-			return false; // nothing to do!
-		}
-		
-		List<WifiConfiguration> lstNetworks = pWifi.getConfiguredNetworks();
-		for(int x = 0;x < lstNetworks.size(); x++)
-		{
-			WifiConfiguration pNet = lstNetworks.get(x);
-			if(pNet.SSID != null && pNet.SSID.equalsIgnoreCase("\"" + strSSID + "\""))
+			List<WifiConfiguration> lstNetworks = pWifi.getConfiguredNetworks();
+			for(int x = 0;x < lstNetworks.size(); x++)
 			{
-				pWifi.enableNetwork(pNet.networkId, true);
-				return true;
+				WifiConfiguration pNet = lstNetworks.get(x);
+				if(pNet.SSID != null && pNet.SSID.replace("\"","").equalsIgnoreCase(strSSID))
+				{
+					pWifi.enableNetwork(pNet.networkId, true);
+					return true;
+				}
 			}
 		}
 		return false;
