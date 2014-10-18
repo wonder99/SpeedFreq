@@ -8,6 +8,12 @@
 <CheckBox android:text="Test Mode" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/chkTestMode"></CheckBox>
 <CheckBox android:text="Use cellular data instead of wifi" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/chkCellular"></CheckBox>
 <!-- bluetooth gps spinner -->
+<CheckBox
+    android:id="@+id/chkScan"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="Aggressively scan wifi" />
+
 
 <TableLayout
     android:id="@+id/tableLayout1"
@@ -264,4 +270,5 @@
 </RadioGroup>
 
 </LinearLayout>
+
 </ScrollView>
