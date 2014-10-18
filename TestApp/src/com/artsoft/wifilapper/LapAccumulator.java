@@ -966,7 +966,6 @@ public class LapAccumulator
 					y2 += rcOnScreen.top;
 
 					ixPoint++;
-					final int ixBase = 4*(ixPoint-1);
 					if( ix > 1) {
 						rgflPts[0] = rgflPts[4];
 						rgflPts[1] = rgflPts[5];
