@@ -75,6 +75,7 @@ public class Utility
 	// false -> no changes were made
 	public static boolean ConnectToSSID(String strSSID, WifiManager pWifi)
 	{
+		// Note: since the SSID spinner is disabled if wifi is disabled, we know there will be non-null values for pInfo, lstNetworks.
 		WifiInfo pInfo = pWifi.getConnectionInfo();
 		if(pInfo != null && pInfo.getSSID() != null && !pInfo.getSSID().replace("\"", "").equalsIgnoreCase(strSSID))
 		{
