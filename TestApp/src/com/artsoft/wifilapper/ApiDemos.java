@@ -783,7 +783,7 @@ implements
     				{
     					m_lapParams.lnStop = m_stopDecider.GetLine();
     					m_lapParams.vStop = m_stopDecider.GetDir();
-    					TrackLastLap(m_myLaps,true,false);
+    					TrackLastLap(m_myLaps,false,false);
     				}
     				SetState(State.WAITINGFORSTOP);
     			}
@@ -798,7 +798,7 @@ implements
     			{
     				m_lapParams.lnStop = m_stopDecider.GetLine();
     				m_lapParams.vStop = m_stopDecider.GetDir();
-					TrackLastLap(m_myLaps,true,false);
+    				TrackLastLap(m_myLaps,false,false);
     				SetState(State.MOVING_TO_STARTLINE);
     			}
     		}
@@ -1803,7 +1803,7 @@ implements
 					else
 						m_goalSpeed = m_goalSpeed + .05f*(15f-m_goalSpeed);
 
-					//m_goalSpeed = 15f;
+					m_goalSpeed = 15f;
 					m_goalSpeed += Math.random()-.5f;
 					
 					double dAngle = 0*(Math.random()-0.5f)/75 + ( 2 * Math.PI ) * iTimeToSleep / (m_goalSpeed*1000);
