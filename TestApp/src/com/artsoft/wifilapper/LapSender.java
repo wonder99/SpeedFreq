@@ -34,7 +34,6 @@ import com.artsoft.wifilapper.Utility.MultiStateObject.STATE;
 
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
-import android.net.DhcpInfo;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
@@ -53,7 +52,7 @@ public class LapSender
 	
 	private static final int PRUNE_MINUTES = 60; // how many minutes we allow things to languish before busting out the prunes
 	private static final int SOCKET_TIMEOUT = 10000; // was 10000, doesn't seem to affect connect time
-	private static final int ONE_SECOND = 1000; // was 3000, doesn't seem to affect connect time
+	private static final int THREE_SECS = 3000; // was 3000, doesn't seem to affect connect time
 	
 	private boolean fContinue;
 	private SendThd m_thd;
@@ -200,7 +199,7 @@ public class LapSender
 
 					Socket s = new Socket();
 					s.connect(sConnect, 500);
-					s.setSoTimeout(ONE_SECOND);
+					s.setSoTimeout(THREE_SECS);
 					
 					String strDBPath = db.getPath();
 					InputStream in = new FileInputStream(strDBPath);
@@ -356,10 +355,12 @@ public class LapSender
 				long tmStart = System.currentTimeMillis();
 				while(true)
 				{
-					if(System.currentTimeMillis() - tmStart > ONE_SECOND)
+					if(System.currentTimeMillis() - tmStart > THREE_SECS)
 					{
 						return false;
 					}
+					if( pWifi.getConnectionInfo().getSupplicantState() != SupplicantState.COMPLETED )
+						return false;
 					if(dataIn.available() >= 4)
 					{
 						break;
@@ -403,8 +404,10 @@ public class LapSender
 			// first: is wifi even on?
 			if(!pWifi.isWifiEnabled())
 			{
-				pWifi.setWifiEnabled(true);
-				Thread.sleep(2000);
+				pStateMan.SetState(LapSender.class, Utility.MultiStateObject.STATE.OFF, "Wifi is off");
+				return;
+//				pWifi.setWifiEnabled(true);
+//				Thread.sleep(2000);
 			}
 			
 			String strLocalSSID;
@@ -413,7 +416,7 @@ public class LapSender
 			WifiInfo pInfo = pWifi.getConnectionInfo();
 			if(pInfo != null)
 			{
-				String strCurrentSSID = pInfo.getSSID();
+				String strCurrentSSID = pInfo.getSSID().replace("\"", "");	// will have leading and trailing "
 				if(strCurrentSSID != null)
 				{
 					strLocalSSID = GetSSID();
@@ -434,6 +437,7 @@ public class LapSender
 					else // SSID is not what's expected
 					{
 						pWifi.disconnect();
+						throw new AssertionError("Somehow the SSID didn't match");
 					}
 				}
 				else // note: (strCurrentSSID == null)
@@ -450,20 +454,21 @@ public class LapSender
 			
 			// ok, we should now be fully disconnected from the network we had before (if any)
 			List<WifiConfiguration> lstNetworks = pWifi.getConfiguredNetworks();
+			String strPickedSSID;
+			WifiConfiguration pConfig;
 			for(int x = 0; x < lstNetworks.size(); x++)
 			{
-				String strPickedSSID = GetSSID();
-				WifiConfiguration pConfig = lstNetworks.get(x);
+				strPickedSSID = GetSSID();
+				pConfig = lstNetworks.get(x);
 				
 				if(pConfig.SSID.equalsIgnoreCase("\"" + strPickedSSID + "\""))
 				{
 					pWifi.enableNetwork(pConfig.networkId, true);
-					pWifi.reconnect();
 					int cAttempts = 0;
 					while(fContinue)
 					{
 						pWifi.startScan();	// This helps newer phones reconnect more quickly
-						pWifi.reconnect();
+						pWifi.reconnect();  // may not be needed
 						strLocalSSID = GetSSID();
 						if(!strLocalSSID.equals(strPickedSSID)) break; // they must have changed their target SSID.  break out of this attempt to connect to the old one and look for the other one
 
@@ -511,7 +516,7 @@ public class LapSender
 				s = new Socket();
 				sConnect = new InetSocketAddress(addr, iPort);
 				s.connect(sConnect, 500);
-				s.setSoTimeout(ONE_SECOND);
+				s.setSoTimeout(THREE_SECS);
 				
 				m_watchdog = new SocketWatchdog(this, s);
 			}
