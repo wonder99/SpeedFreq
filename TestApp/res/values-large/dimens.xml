@@ -1,0 +1,7 @@
+
+    <resources>
+		<!--         5.1" wVGA -->
+        <dimen name="font_size">80sp</dimen>
+        <dimen name="font_size_smaller">35sp</dimen>
+        <dimen name="font_size_very_small">20sp</dimen>
+    </resources>

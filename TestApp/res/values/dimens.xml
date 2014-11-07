@@ -1,0 +1,7 @@
+
+    <resources>
+<!-- Used for 'normal' screens like my LG and Samsung ?? -->
+	<dimen name="font_size">28sp</dimen>
+    <dimen name="font_size_smaller">20sp</dimen>
+    <dimen name="font_size_very_small">20sp</dimen>
+</resources>
