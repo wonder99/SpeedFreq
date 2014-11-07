@@ -16,17 +16,18 @@
 
 package com.artsoft.wifilapper;
 
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.StatFs;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -34,6 +35,7 @@ import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
 import android.widget.RadioButton;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -46,7 +48,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	public final static String SPEEDO_SIMPLE = "Speedometer - Simple";
 	public final static String SPEEDO_LAPTIMER = "Lap Timer";
 	
-	public final static String[] rgstrSpeedos = {SPEEDO_SPEEDDISTANCE,SPEEDO_LIVEPLUSMINUS, SPEEDO_COMPARATIVE,SPEEDO_SIMPLE,SPEEDO_LAPTIMER};
+	public final static String[] rgstrSpeedos = {SPEEDO_LAPTIMER};
 	
 	private static final int ACTIVITYRESULT_BLUETOOTH_GPS = 51;
 	private static final int ACTIVITYRESULT_BLUETOOTH_OBD2 = 52;
@@ -55,6 +57,8 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
 		setContentView(R.layout.landingoptions);
 	}
 	
@@ -76,13 +80,18 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		
 		// save settings
 		// load UI elements
+		EditText txtIP = (EditText)findViewById(R.id.txtIP);
+		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
+
+    	final boolean fSSIDGood = (spnSSID.isEnabled() && spnSSID.getSelectedItem() != null);
+		
 		CheckBox chkTestMode = (CheckBox)findViewById(R.id.chkTestMode);
 		CheckBox chkScan = (CheckBox)findViewById(R.id.chkScan);
 		Spinner spnSpeedo = (Spinner)findViewById(R.id.spnDisplayMode);
 		Spinner spnUnits = (Spinner)findViewById(R.id.spnUnits);
 		RadioButton chkInternal = (RadioButton)findViewById(R.id.chkDBInternal);
 		EditText edtCarNumber = (EditText)findViewById(R.id.edtCarNumber);
-		CheckBox chkCellular = (CheckBox)findViewById(R.id.chkCellular);
+//		CheckBox chkCellular = (CheckBox)findViewById(R.id.chkCellular);
 		
 		// get data
 		String strSpeedoStyle = spnSpeedo.getSelectedItem().toString();
@@ -90,7 +99,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		boolean bWifiScan = chkScan.isChecked();
 		Prefs.UNIT_SYSTEM eUnits = Prefs.UNIT_SYSTEM.valueOf(spnUnits.getSelectedItem().toString());
 		boolean fInternal = chkInternal.isChecked();
-		boolean fRequireWifi = !chkCellular.isChecked();
+		boolean fRequireWifi = true;//!chkCellular.isChecked();
 		
 		int iCarNumber = -1;
 		try
@@ -105,6 +114,12 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		// save data
 		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
 		SharedPreferences.Editor edit = settings.edit();
+
+		ApiDemos.SaveSharedPrefs(settings, 
+				txtIP.getText().toString(), 
+				fSSIDGood ? spnSSID.getSelectedItem().toString() : null, 
+				null, 
+				null);
 		
 		edit.putBoolean(Prefs.PREF_TESTMODE_BOOL, fTestMode)
 		  .putBoolean(Prefs.PREF_WIFI_SCAN_BOOL, bWifiScan)
@@ -171,29 +186,29 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	
 	
 	
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent data)
-	{
-		if(requestCode == ACTIVITYRESULT_BLUETOOTH_GPS)
-		{
-			// hooray, bluetooth has been dealt with
-			boolean fBTWorking = resultCode == Activity.RESULT_OK;
-			if(!fBTWorking)
-			{
-				Toast.makeText(this, "Failed to enable Bluetooth (are you in flight/airplane mode?)", Toast.LENGTH_SHORT).show();
-			}
-		}
-		else if(requestCode == ACTIVITYRESULT_BLUETOOTH_OBD2)
-		{
-			// hooray, bluetooth has been dealt with
-			boolean fBTWorking = resultCode == Activity.RESULT_OK;
-			if(!fBTWorking)
-			{
-				Toast.makeText(this, "Failed to enable Bluetooth (are you in flight/airplane mode?)", Toast.LENGTH_SHORT).show();
-			}
-		}
-		UpdateUI();
-	}
+//	@Override
+//	public void onActivityResult(int requestCode, int resultCode, Intent data)
+//	{
+//		if(requestCode == ACTIVITYRESULT_BLUETOOTH_GPS)
+//		{
+//			// hooray, bluetooth has been dealt with
+//			boolean fBTWorking = resultCode == Activity.RESULT_OK;
+//			if(!fBTWorking)
+//			{
+//				Toast.makeText(this, "Failed to enable Bluetooth (are you in flight/airplane mode?)", Toast.LENGTH_SHORT).show();
+//			}
+//		}
+//		else if(requestCode == ACTIVITYRESULT_BLUETOOTH_OBD2)
+//		{
+//			// hooray, bluetooth has been dealt with
+//			boolean fBTWorking = resultCode == Activity.RESULT_OK;
+//			if(!fBTWorking)
+//			{
+//				Toast.makeText(this, "Failed to enable Bluetooth (are you in flight/airplane mode?)", Toast.LENGTH_SHORT).show();
+//			}
+//		}
+//		UpdateUI();
+//	}
 	
 	private String MakeGPSText(boolean fBTWorking, String strUnit)
 	{
@@ -267,51 +282,51 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 			return "IOIO: Off";
 		}
 	}
-	private String MakeP2PText(SharedPreferences settings)
-	{
-		String strStart = "";
-		NumberFormat nf = NumberFormat.getInstance();
-		nf.setMaximumFractionDigits(2);
-		Prefs.UNIT_SYSTEM eCurrentSystem = Prefs.UNIT_SYSTEM.valueOf(settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString()));
-		{
-			final int iStartMode = settings.getInt(Prefs.PREF_P2P_STARTMODE, Prefs.DEFAULT_P2P_STARTMODE);
-			final float flStartParam = settings.getFloat(Prefs.PREF_P2P_STARTPARAM, Prefs.DEFAULT_P2P_STARTPARAM); // parameter: how fast do we have to be going for this to count?
-						
-			switch(iStartMode)
-			{
-			case Prefs.P2P_STARTMODE_SPEED:
-				strStart = "Start when speed over " + Prefs.FormatMetersPerSecond(flStartParam, nf, eCurrentSystem, true) + ".";
-				break;
-			case Prefs.P2P_STARTMODE_SCREEN:
-				strStart = "Start on screen tap.";
-				break;
-			case Prefs.P2P_STARTMODE_ACCEL:
-				strStart = "Start on " + nf.format(flStartParam) + "G acceleration.";
-				break;
-			}
-		}
-		
-		String strStop="";
-		{
-			final int iStopMode = settings.getInt(Prefs.PREF_P2P_STOPMODE, Prefs.DEFAULT_P2P_STOPMODE);
-			final float flStopParam = settings.getFloat(Prefs.PREF_P2P_STOPPARAM, Prefs.DEFAULT_P2P_STOPPARAM); // parameter: how fast do we have to be going for this to count?
-			
-			switch(iStopMode)
-			{
-			case Prefs.P2P_STOPMODE_DISTANCE:
-				strStop = "Stop after moving " + Prefs.FormatDistance(flStopParam, nf, eCurrentSystem, true) + ".";
-				break;
-			case Prefs.P2P_STOPMODE_SCREEN:
-				strStop = "Stop on screen tap.";
-				break;
-			case Prefs.P2P_STOPMODE_SPEED:
-				strStop = "Stop when speed below " + Prefs.FormatMetersPerSecond(flStopParam, nf, eCurrentSystem, true) + ".";
-				break;
-			}
-		}
-		
-		return "Point to point: " + strStart + "  " + strStop;
-	}
+//	private String MakeP2PText(SharedPreferences settings)
+//	{
+//		String strStart = "";
+//		NumberFormat nf = NumberFormat.getInstance();
+//		nf.setMaximumFractionDigits(2);
+//		Prefs.UNIT_SYSTEM eCurrentSystem = Prefs.UNIT_SYSTEM.valueOf(settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString()));
+//		{
+//			final int iStartMode = settings.getInt(Prefs.PREF_P2P_STARTMODE, Prefs.DEFAULT_P2P_STARTMODE);
+//			final float flStartParam = settings.getFloat(Prefs.PREF_P2P_STARTPARAM, Prefs.DEFAULT_P2P_STARTPARAM); // parameter: how fast do we have to be going for this to count?
+//						
+//			switch(iStartMode)
+//			{
+//			case Prefs.P2P_STARTMODE_SPEED:
+//				strStart = "Start when speed over " + Prefs.FormatMetersPerSecond(flStartParam, nf, eCurrentSystem, true) + ".";
+//				break;
+//			case Prefs.P2P_STARTMODE_SCREEN:
+//				strStart = "Start on screen tap.";
+//				break;
+//			case Prefs.P2P_STARTMODE_ACCEL:
+//				strStart = "Start on " + nf.format(flStartParam) + "G acceleration.";
+//				break;
+//			}
+//		}
+//		
+//		String strStop="";
+//		{
+//			final int iStopMode = settings.getInt(Prefs.PREF_P2P_STOPMODE, Prefs.DEFAULT_P2P_STOPMODE);
+//			final float flStopParam = settings.getFloat(Prefs.PREF_P2P_STOPPARAM, Prefs.DEFAULT_P2P_STOPPARAM); // parameter: how fast do we have to be going for this to count?
+//			
+//			switch(iStopMode)
+//			{
+//			case Prefs.P2P_STOPMODE_DISTANCE:
+//				strStop = "Stop after moving " + Prefs.FormatDistance(flStopParam, nf, eCurrentSystem, true) + ".";
+//				break;
+//			case Prefs.P2P_STOPMODE_SCREEN:
+//				strStop = "Stop on screen tap.";
+//				break;
+//			case Prefs.P2P_STOPMODE_SPEED:
+//				strStop = "Stop when speed below " + Prefs.FormatMetersPerSecond(flStopParam, nf, eCurrentSystem, true) + ".";
+//				break;
+//			}
+//		}
+//		
+//		return "Point to point: " + strStart + "  " + strStop;
+//	}
 	private String MakeAccelText(SharedPreferences settings)
 	{
 		if(settings.getBoolean(Prefs.PREF_USEACCEL_BOOLEAN,Prefs.DEFAULT_USEACCEL))
@@ -325,30 +340,40 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	}
 	private void UpdateUI()
 	{
+		// Hide keyboard by default
+		getWindow().setSoftInputMode(
+			      WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+
 		// load UI elements
+		EditText txtIP = (EditText)findViewById(R.id.txtIP);
+		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
+
+		Button btnIP = (Button)findViewById(R.id.btnAutoIP2);
+		btnIP.setOnClickListener(this);
+		
 		CheckBox chkTestMode = (CheckBox)findViewById(R.id.chkTestMode);
 		CheckBox chkScan = (CheckBox)findViewById(R.id.chkScan);
 		Spinner spnSpeedo = (Spinner)findViewById(R.id.spnDisplayMode);
 		Spinner spnUnits = (Spinner)findViewById(R.id.spnUnits);
 		RadioButton chkInternal = (RadioButton)findViewById(R.id.chkDBInternal);
 		RadioButton chkExternal = (RadioButton)findViewById(R.id.chkDBExternal);
-		
 		Button btnGPS = (Button)findViewById(R.id.btnConfigureGPS);
 		Button btnOBD2 = (Button)findViewById(R.id.btnConfigureOBD2);
 		Button btnIOIO = (Button)findViewById(R.id.btnConfigureIOIO);
 		Button btnAccel = (Button)findViewById(R.id.btnConfigureAccel);
-		Button btnComms = (Button)findViewById(R.id.btnConfigureComms);
-		Button btnP2P = (Button)findViewById(R.id.btnConfigureP2P);
+//		Button btnComms = (Button)findViewById(R.id.btnConfigureComms);
+//		Button btnP2P = (Button)findViewById(R.id.btnConfigureP2P);
 		TextView chkGPS = (TextView)findViewById(R.id.lblUseExternalGPS);
 		TextView chkOBD2 = (TextView)findViewById(R.id.lblUseExternalOBD2);
 		TextView chkIOIO = (TextView)findViewById(R.id.lblUseIOIO);
 		TextView chkAccel = (TextView)findViewById(R.id.lblUseAccel);
-		TextView txtP2P = (TextView)findViewById(R.id.lblP2P);
+//		TextView txtP2P = (TextView)findViewById(R.id.lblP2P);
 		EditText edtCarNumber = (EditText)findViewById(R.id.edtCarNumber);
-		CheckBox chkCellular = (CheckBox)findViewById(R.id.chkCellular);
+		//CheckBox chkCellular = (CheckBox)findViewById(R.id.chkCellular);
 		
 		// load settings
 		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+		String strIP = settings.getString(Prefs.PREF_IP_STRING,Prefs.DEFAULT_IP_STRING);
 		String strSpeedoStyle = settings.getString(Prefs.PREF_SPEEDOSTYLE_STRING, rgstrSpeedos[0]);
 		boolean fTestMode = settings.getBoolean(Prefs.PREF_TESTMODE_BOOL, Prefs.DEFAULT_TESTMODE_BOOL);
 		boolean bWifiScan = settings.getBoolean(Prefs.PREF_WIFI_SCAN_BOOL, Prefs.DEFAULT_WIFI_SCAN_BOOL);
@@ -358,6 +383,10 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		String strBTOBD2 = settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING);
 		int iCarNumber = settings.getInt(Prefs.PREF_CARNUMBER, Prefs.DEFAULT_CARNUMBER);
 		boolean fRequireWifi = settings.getBoolean(Prefs.PREF_REQUIRE_WIFI, Prefs.DEFAULT_REQUIRE_WIFI);
+
+		txtIP.setText(strIP);
+		String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);
+		SetupSSIDSpinner(spnSSID, strSSID);
 		
 		BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
 		final boolean fBTWorking = ba != null && ba.isEnabled();
@@ -373,25 +402,41 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		chkIOIO.setText(MakeIOIOText(settings,fIOIO));
 		chkIOIO.setClickable(false);
 		
-		chkCellular.setChecked(!fRequireWifi);
+//		chkCellular.setChecked(!fRequireWifi);
 		
 		
-		txtP2P.setText(MakeP2PText(settings));
+//		txtP2P.setText(MakeP2PText(settings));
 		
 		edtCarNumber.setText("" + iCarNumber);
 		
 		chkAccel.setText(MakeAccelText(settings));
+		StatFs sfs = null;
+    	int iMBAvailable=0;
+
+    	sfs = new StatFs(android.os.Environment.getDataDirectory().getPath());
+    	iMBAvailable = (int)Math.round(sfs.getBlockSize() * sfs.getAvailableBlocks() / 1024f / 1024f);
+    	chkInternal.setText("Internal DB (" + String.valueOf(iMBAvailable) + "MB free)");
 		
 		if(!isSdPresent())
 		{
+
 			fInternalDB = true;
 			chkExternal.setEnabled(false);
 			chkInternal.setChecked(true);
+			
 		}
 		else
 		{
+			sfs = new StatFs(RaceDatabase.Get().getPath());
+	    	iMBAvailable = Math.round(sfs.getBlockSize() * sfs.getAvailableBlocks() / 1024f / 1024f);
 			chkExternal.setEnabled(true);
-		}
+			chkExternal.setText("External DB (" + String.valueOf(iMBAvailable) + "MB free)");
+		}		
+		
+		if(fInternalDB) chkInternal.setChecked(true);
+		else chkExternal.setChecked(true);
+		
+
 		
 		SetupSpeedoSpinner(spnSpeedo, strSpeedoStyle);
 		SetupUnitSpinner(spnUnits, eUnits);
@@ -401,14 +446,12 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		spnSpeedo.setOnItemSelectedListener(this);
 		spnUnits.setOnItemSelectedListener(this);
 		
-		if(fInternalDB) chkInternal.setChecked(true);
-		else chkExternal.setChecked(true);
 
-		if( this.getApplicationContext().getPackageName().contains("wifilappertab")) { 
-    		btnComms.setEnabled(false);
-    		btnComms.setText("Not in Tablet Version");
-    		chkCellular.setEnabled(false);
-		}
+//		if( this.getApplicationContext().getPackageName().contains("wifilappertab")) { 
+//    		btnComms.setEnabled(false);
+//    		btnComms.setText("Not in Tablet Version");
+////    		chkCellular.setEnabled(false);
+//		}
 		
 		chkInternal.setOnCheckedChangeListener(this);
 		chkExternal.setOnCheckedChangeListener(this);
@@ -416,14 +459,20 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		btnOBD2.setOnClickListener(this);
 		btnIOIO.setOnClickListener(this);
 		btnAccel.setOnClickListener(this);
-		btnComms.setOnClickListener(this);
-		btnP2P.setOnClickListener(this);
+//		btnComms.setOnClickListener(this);
+//		btnP2P.setOnClickListener(this);
+
 	}
 
 	
 	@Override
 	public void onClick(View v) 
 	{
+		if(v.getId() == R.id.btnAutoIP2)
+		{
+			ShowAutoIPActivity();
+		}
+
 		if(v.getId() == R.id.btnConfigureGPS)
 		{
 			Intent i = new Intent(this.getApplicationContext(), ConfigureGPSActivity.class);
@@ -442,16 +491,6 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		else if(v.getId() == R.id.btnConfigureAccel)
 		{
 			Intent i = new Intent(this.getApplicationContext(), ConfigureAccelerometerActivity.class);
-			startActivity(i);
-		}
-		else if(v.getId() == R.id.btnConfigureComms)
-		{
-			Intent i = new Intent(this.getApplicationContext(), ConfigureCommunications.class);
-			startActivity(i);
-		}
-		else if(v.getId() == R.id.btnConfigureP2P)
-		{
-			Intent i = new Intent(this.getApplicationContext(), ConfigurePointToPoint.class);
 			startActivity(i);
 		}
 		/*if(v.getId() == R.id.btnScanPIDs)
@@ -500,10 +539,19 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 			}
 		}*/
 	}
+
 	@Override
-	protected void SetIPString(String strIP) 
-	{
-		// shouldn't even be possible!
+	protected void SetIPString(String strIP) {
+		Log.d("debug","Help!!");
+		EditText txtIP = (EditText)findViewById(R.id.txtIP);
+		txtIP.setText(strIP);
+		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+		ApiDemos.SaveSharedPrefs(settings, 
+				strIP, 
+				null, 
+				null, 
+				null);
 	}
+
 
 }

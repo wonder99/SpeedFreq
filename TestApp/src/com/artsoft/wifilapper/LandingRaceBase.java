@@ -36,6 +36,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
@@ -48,11 +49,14 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
 {
 	private BroadcastListener m_listener;
 	private boolean m_fRequireWifi;
+	private String lastSSID;
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		lastSSID = null;
 	}
 	
 	@Override
@@ -231,6 +235,8 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
     		String strSSID = spn.getSelectedItem().toString();
     		if(strSSID != null && strSSID.length() > 0)
     		{
+    			// reset the last SSID, so we get a notification when new one is connected
+    			lastSSID = "no way this could be your SSID";
     			// they've selected a valid SSID.  Let's try to connect to it
     			if(Utility.ConnectToSSID(strSSID, pWifi))
     			{
@@ -273,7 +279,7 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
 		    		}
 		    	}
 		    	
-		        ArrayAdapter<BTListItem> adapter = new ArrayAdapter<BTListItem>(ctx, android.R.layout.test_list_item, lstDevices);
+		        ArrayAdapter<BTListItem> adapter = new ArrayAdapter<BTListItem>(ctx, android.R.layout.simple_spinner_item, lstDevices);
 		        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		        spn.setAdapter(adapter);
 		        if(ixDefault >= 0) spn.setSelection(ixDefault);
@@ -306,9 +312,14 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
     }
     
     private static final int AUTO_IP = 1;
+    private static final int SEL_TRACK = 2;
     protected void ShowAutoIPActivity()
     {
     	startActivityForResult(new Intent(this,ComputerChooserActivity.class),AUTO_IP);
+    }
+    protected void ShowTrackActivity()
+    {
+    	startActivityForResult(new Intent(this,LandingTracks.class),SEL_TRACK);
     }
     protected void onActivityResult(int requestCode, int resultCode,Intent data) 
     {
@@ -320,11 +331,18 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
             	SetIPString(strIP);
             }
         }
+        if (requestCode == SEL_TRACK) 
+        {
+            if (resultCode == RESULT_OK) 
+            {
+            	String strIP = data.getStringExtra(Prefs.IT_TRACK_ID);
+            	SetIPString(strIP);
+            }
+        }
     }
-    
+
     private class BroadcastListener extends BroadcastReceiver
     {
-    	String lastSSID=null;
     	@Override
 		public void onReceive(Context ctx, Intent intent)
 		{
@@ -344,7 +362,9 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
     					strSSID = null;
     				}
     			}
-    			if( strSSID != null && !strSSID.equalsIgnoreCase(lastSSID) ) {
+    			// prevent message if the connected SSID is the same as the last, or if
+    			// this is the first invocation
+    			if( lastSSID != null && strSSID != null && !strSSID.equalsIgnoreCase(lastSSID) ) {
     				NotifyWifiChange(strSSID);
     			}
 				lastSSID = strSSID;

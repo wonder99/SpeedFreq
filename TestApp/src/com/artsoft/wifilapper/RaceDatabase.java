@@ -16,9 +16,26 @@
 
 package com.artsoft.wifilapper;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+import com.artsoft.wifilapper.LapAccumulator.LapAccumulatorParams;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -30,10 +47,16 @@ import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -42,10 +65,13 @@ public class RaceDatabase extends BetterOpenHelper
 	public RaceDatabase(Context context, String strPath, CursorFactory factory,int version) 
 	{
 		super(context, strPath, factory, version);
+		m_context = context;
 	}
-	
+
+	private static final boolean bImageMode = false;
 	private static RaceDatabase g_raceDB = null;
 	
+	private static Context m_context;
 	// ahare: 1->2 clearing shit in debug
 	// ahare: 2->3 adding start/finish lines to races
 	// ahare: 3->14 making races table actually work, added laps and points tables
@@ -53,9 +79,10 @@ public class RaceDatabase extends BetterOpenHelper
 	// 15->16: messed everything up, need freshness
 	// 16->17: adding accelerometer data in DB
 	// 20->21: adding "point-to-point" member in races table
-	private static final int m_iVersion = 23;
+	// 23->24: adding tracks table
+	private static final int m_iVersion = 24;
 	private static final String DATABASE_NAME_INTERNAL = "races";
-	
+	private static       String strDBFileName;
 	public static final String KEY_RACENAME = "name";
 	public static final String KEY_LAPCOUNT = "lapcount";
 	public static final String KEY_RACEID = "raceid";
@@ -63,10 +90,19 @@ public class RaceDatabase extends BetterOpenHelper
 	public static final String KEY_STARTTIME = "starttime";
 	public static final String KEY_P2P = "p2p";
 	public static final String KEY_FINISHCOUNT = "finishcount";
+	private static final int MSG_DOWNLOAD_COMPLETE = 252;
+	
+	public static int getVersion()
+	{
+		return m_iVersion;
+	}
+	public static String getPath()
+	{
+		return strDBFileName;
+	}
 	public static boolean CreateInternal(Context ctx, String strBasePath)
 	{
-		String strPath = strBasePath + "/" + DATABASE_NAME_INTERNAL;
-		return CreateOnPath(ctx, strPath);
+		return CreateOnPath(ctx, strBasePath + "/" + DATABASE_NAME_INTERNAL);
 	}
 	public static boolean CreateExternal(Context ctx)
 	{
@@ -99,7 +135,8 @@ public class RaceDatabase extends BetterOpenHelper
 	
 	public static boolean CreateOnPath(Context ctx, String strPath)
 	{
-		RaceDatabase race = new RaceDatabase(ctx, strPath, null, m_iVersion);
+		strDBFileName = strPath;
+		RaceDatabase race = new RaceDatabase(ctx, strDBFileName, null, m_iVersion);
 		if(race.m_db != null)
 		{
 			if(g_raceDB != null && g_raceDB.m_db != null)
@@ -114,7 +151,151 @@ public class RaceDatabase extends BetterOpenHelper
 	{
 		return g_raceDB.getWritableDatabase();
 	}
-	
+	public static class download extends AsyncTask<Handler, Void, Integer> {
+		Handler m_handler=null;
+		protected Integer doInBackground(Handler...h) {
+			m_handler = h[0];
+
+			int result=downloadFile("https://www.dropbox.com/s/x37l9skm9ecf8ma/speedfreq.tracks?dl=1");
+			return result;
+
+		}
+		
+	    protected void onPostExecute(Integer result) {
+	    	Message msg = new Message();
+	    	msg.what = MSG_DOWNLOAD_COMPLETE;
+	    	if( result == 0 )
+	    	{
+	    		msg.arg1 = 0;
+	    	}
+	    	else
+	    		msg.arg1 = result;
+    		m_handler.sendMessage(msg);
+	    }
+	}
+
+	public static int downloadFile(String sUrl) {
+		//	public static class download extends AsyncTask<String, Void, Void> {
+		//		protected Void doInBackground(String... sUrl) {
+		InputStream input = null;
+		OutputStream output = null;
+		HttpURLConnection connection = null;
+		String strDownloadFile;
+		//		File fTarget = new File(strDownloadFile);
+		File fTarget=null ;
+		String strImportedDB=null;
+		/*
+		ProgressDialog dialog = new ProgressDialog(	context );
+		dialog.setMessage("Connected to repository, downloading...");
+		dialog.setIndeterminate(true);
+		dialog.setCancelable(false);
+		dialog.show();
+		 */
+		try {
+//			fTarget = File.createTempFile( m_context.getFilesDir() + "/" + "tmpdnld", null);
+			File outputDir = m_context.getCacheDir(); // context being the Activity pointer
+			fTarget = File.createTempFile("tmpdnld", "", outputDir);
+//			fTarget = new File( m_context.getCacheDir() + "/" + "tmpdnld");
+			fTarget.deleteOnExit();
+			strDownloadFile = new String(fTarget.getAbsolutePath());// + "/" + fTarget.getName());
+
+			URL url = new URL(sUrl);
+			connection = (HttpURLConnection) url.openConnection();
+			connection.connect();
+
+			// expect HTTP 200 OK, so we don't mistakenly save error report
+			// instead of the file
+			if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+				return -1;//"Server returned HTTP " + connection.getResponseCode()+ " " + connection.getResponseMessage();
+			}
+
+			// this will be useful to display download percentage
+			// might be -1: server did not report the length
+			int fileLength = connection.getContentLength();
+
+			// download the file
+			input = connection.getInputStream();
+
+			output = new FileOutputStream(strDownloadFile);
+
+			byte data[] = new byte[4096];
+			long total = 0;
+			int count;
+			while ((count = input.read(data)) != -1) {
+				total += count;
+				output.write(data, 0, count);
+			}
+		} catch (Exception e) {
+			return -2;
+		} finally {
+			try {
+				if (output != null)
+					output.close();
+				if (input != null)
+					input.close();
+			} catch (IOException ignored) {
+			}
+
+			if (connection != null)
+				connection.disconnect();
+		}
+
+		if( false ) // don't zip for now
+		{
+			ZipInputStream zin=null;
+
+			try {
+				fTarget = File.createTempFile("tmpdb", null);
+				fTarget.deleteOnExit();
+				strImportedDB = fTarget.getAbsolutePath().substring(0, fTarget.getAbsolutePath().lastIndexOf("/"));
+
+				zin = new ZipInputStream(new FileInputStream(strDownloadFile));
+				ZipEntry ze = null;
+				while ((ze = zin.getNextEntry()) != null) {
+					strImportedDB = strImportedDB + "/" + ze.getName();
+					if (ze.isDirectory()) {
+						File unzipFile = new File(strImportedDB);
+						if(!unzipFile.isDirectory()) {
+							unzipFile.mkdirs();
+						}
+					}
+					else {
+						FileOutputStream fout = new FileOutputStream(strImportedDB, false);
+						try {
+							for (int c = zin.read(); c != -1; c = zin.read()) {
+								fout.write(c);
+							}
+							zin.closeEntry();
+						}
+						finally {
+							fout.close();
+						}
+					}
+				}
+				zin.close();
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		else
+			strImportedDB = strDownloadFile;
+
+		Get().execSQL("attach DATABASE '" + strImportedDB + "' as DNLD_TRACK_DB " );
+		Get().execSQL("insert into tracks select null,name, date, testmode, x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6, " +
+				"vx1,vy1,vx2,vy2,vx3,vy3, p2p, finishcount, image from DNLD_TRACK_DB.tracks");
+		Get().execSQL("detach DATABASE DNLD_TRACK_DB");
+
+		// Now keep the lowest ID-numbered track of a given name.  Downloaded tracks have higher numbers, so precedence given to user-generated of same name
+		Get().execSQL("delete from tracks where _id not in (select min(_id) from tracks group by name)");
+		
+		if( fTarget != null )
+		fTarget.delete();
+
+		return 0;
+	}
+
 	public synchronized static long CreateRaceIfNotExist(SQLiteDatabase db, String strRaceName, LapAccumulator.LapAccumulatorParams lapParams, boolean fTestMode, boolean fP2P, int iFinishCount)
 	{
 		if(db == null)
@@ -168,26 +349,111 @@ public class RaceDatabase extends BetterOpenHelper
 		}
 		return -1;
 	}
-	public synchronized static long CreateTrackIfNotExist(SQLiteDatabase db, String strTrackName, LapAccumulator.LapAccumulatorParams lapParams, boolean fTestMode, boolean fP2P, int iFinishCount, Bitmap bitTrackImage)
+	
+	public static Bitmap GetBitmapFromDatabase(SQLiteDatabase db, long lId, int width, int height)
+	{
+		Cursor cur = db.rawQuery("select image from tracks where _id = " + String.valueOf(lId), null);
+		if(cur != null)
+		{
+			while( cur.moveToFirst() ) 
+			{
+				byte[] asBytes = Base64.decode(cur.getBlob(0),Base64.DEFAULT);
+				
+				if( bImageMode ) 
+				{
+					Bitmap image = BitmapFactory.decodeByteArray(asBytes, 0, asBytes.length);
+					return image;
+				}
+				else
+				{
+					RaceData rd = GetTrackData(Get(), lId, -1);
+					LapAccumulatorParams param = rd.lapParams;
+					ByteArrayInputStream bin = new ByteArrayInputStream(asBytes);
+					DataInputStream din = new DataInputStream(bin);
+					LapAccumulator lap = null;
+					try {
+						lap = new LapAccumulator(param,new Point2D(din.readFloat(),din.readFloat()),0);
+						for (int i = 0; i < (asBytes.length-8)/8; i++) {
+							lap.AddPosition(new Point2D(din.readFloat(),din.readFloat()), 0, 0);
+						}
+						din.close();
+					}
+					catch (IOException e){
+						e.printStackTrace();
+					}
+					// We now have the points of the lap
+					Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+					if(bmp != null)
+					{
+						Canvas canvas = new Canvas(bmp);
+						//lap.DoDeferredLoad(null, 0, false);
+
+						Paint paintBlack = new Paint();
+						paintBlack.setARGB(0,20,20,20);
+						canvas.drawRect(0,0,width,height,paintBlack);
+
+						FloatRect rcInWorld = lap.GetBounds(false);
+
+						Paint paintLap = new Paint();
+						paintLap.setARGB(255, 25, 140, 225);
+						Paint paintSplits = new Paint();
+						paintSplits.setColor(Color.RED);
+						//paintLap.setStrokeCap(Cap.ROUND);
+						paintLap.setAntiAlias(true);
+//						paintLap.setStyle(Style.FILL_AND_STROKE);
+						Rect rcOnScreen;
+						 int iStrokeWidth = (int)Math.round(Math.min(width, height)/80);
+//						 iStrokeWidth = 0;
+						paintLap.setStrokeWidth(iStrokeWidth);
+						paintSplits.setStrokeWidth(iStrokeWidth);
+
+						rcOnScreen = new Rect(0,0,width-2*iStrokeWidth,height-2*iStrokeWidth);
+						
+						LapAccumulator.DrawLap(lap, false, rcInWorld, canvas, paintLap, paintSplits, rcOnScreen);
+					}
+					return bmp;
+				}
+			}
+		}
+		return null;
+	}
+
+	public synchronized static long CreateTrackIfNotExist(SQLiteDatabase db, String strTrackName, LapAccumulator.LapAccumulatorParams lapParams, boolean fTestMode, boolean fP2P, int iFinishCount, int iRaceId)
 	{
 		if(db == null)
 		{
 			Toast.makeText(null, "Wifilapper was unable to create a database.  Track will not be saved", Toast.LENGTH_LONG).show();
 			return -1;
 		}
+		
 
-		// Add the track database, if doesn't exist
-//		db.execSQL("drop table tracks"); // changing table format 
-		db.execSQL(CREATE_TRACK_SQL);
 		
 		if(strTrackName != null && strTrackName.length() > 0 && lapParams.IsValid(fP2P))
 		{
 			// blow away any tracks with the same name
-			db.execSQL("delete from tracks where name = " + "\"" + strTrackName + "\"");
-			
-			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-			bitTrackImage.compress(CompressFormat.PNG, 0, outputStream);
+			db.execSQL("delete from tracks where \"name\" = " + "\"" + strTrackName + "\"");
 
+			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+			if( bImageMode ) 
+			{
+				Bitmap bitTrackImage = GetRaceOutlineImage(db,iRaceId,400,400);
+				bitTrackImage.compress(CompressFormat.PNG, 0, outputStream);
+			}
+			else {
+				LapAccumulator bestLap = GetBestLap(db, lapParams, iRaceId );
+				bestLap.DoDeferredLoad(null, 0, false);
+				DataOutputStream dout = new DataOutputStream(outputStream);
+				try {
+					for (TimePoint2D pt : bestLap.GetPoints() ) {
+							dout.writeFloat(pt.pt.GetX());
+							dout.writeFloat(pt.pt.GetY());
+					}
+					dout.close();
+				}
+				catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 			ContentValues content = new ContentValues();
 			content.put("\"name\"", strTrackName);
 			content.put("\"date\"", "");
@@ -220,7 +486,9 @@ public class RaceDatabase extends BetterOpenHelper
 			content.put("p2p", fP2P ? 1 : 0);
 			content.put("finishcount", iFinishCount);
 
-			content.put("image", outputStream.toByteArray());
+			byte[] encodedBytes = Base64.encode(outputStream.toByteArray(),Base64.DEFAULT);
+			content.put("image", encodedBytes);
+//			content.put("image", outputStream.toByteArray());
 
 			try
 			{
@@ -266,6 +534,42 @@ public class RaceDatabase extends BetterOpenHelper
 		public long lStartTime; // in seconds since 1970
 		public long lLapId;
 		public long lRaceId;
+	}
+	public synchronized static RaceData GetTrackData(SQLiteDatabase db, long id, int iCarNumber)
+	{
+		Cursor cur = db.rawQuery("select x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,vx1,vy1,vx2,vy2,vx3,vy3,name,testmode,finishcount from tracks where _id = " + id, null);
+		if(cur.moveToFirst())
+		{
+//			cur.moveToFirst();
+			RaceData ret = new RaceData();
+			ret.strRaceName = cur.getString(18);
+			ret.fTestMode = cur.getInt(19) != 0;
+			final int iFinishCount = cur.getInt(20);
+			float rgSF[] = new float[12];
+			float rgSFDir[] = new float [6];
+			for(int x = 0; x < 12; x++)
+			{
+				rgSF[x] = (float)cur.getDouble(x);
+			}
+			for(int x = 0; x < 6; x++)
+			{
+				rgSFDir[x] = (float)cur.getDouble(x+12);
+			}
+			ret.lapParams.InitFromRaw(rgSF,rgSFDir, iCarNumber, iFinishCount);
+			
+			cur.close();
+			
+			cur = db.rawQuery("select min(laps.unixtime) as starttime,max(laps.unixtime) as endtime from laps where raceid = " + id,null);
+			if(cur != null)
+			{
+				cur.moveToFirst();
+				ret.unixTimeMsStart = cur.getLong(0)*1000;
+				ret.unixTimeMsEnd = cur.getLong(1)*1000;
+				cur.close();
+			}
+			return ret;
+		}
+		return null;
 	}
 	public synchronized static RaceData GetRaceData(SQLiteDatabase db, long id, int iCarNumber)
 	{
@@ -323,6 +627,13 @@ public class RaceDatabase extends BetterOpenHelper
 		
 		db.execSQL("delete from points where lapid not in (select _id from laps);"); // deletes all points that depend on nonexistent laps
 		db.execSQL("delete from data where channelid not in (select _id from channels);"); // deletes all data that depend on nonexistent channels
+	}
+	public synchronized static void DeleteAllTracks(SQLiteDatabase db)
+	{
+		if(db == null) return;
+
+		db.execSQL(	"drop table if exists tracks;");
+		db.execSQL(CREATE_TRACK_SQL);
 	}
 	public synchronized static void DeleteTestData(SQLiteDatabase db)
 	{
@@ -454,6 +765,20 @@ public class RaceDatabase extends BetterOpenHelper
 		}
 		db.endTransaction();
 	}
+	public synchronized static void RenameTrack(SQLiteDatabase db, int id, String strNewName)
+	{
+		try
+		{
+			db.beginTransaction();
+			db.execSQL("update tracks set name = '" + strNewName + "' where _id = '" + id + "'");
+			db.setTransactionSuccessful();
+		}
+		catch(SQLiteException e)
+		{
+			
+		}
+		db.endTransaction();
+	}
 	public synchronized static void DeleteRace(SQLiteDatabase db, int id)
 	{
 		try
@@ -464,6 +789,20 @@ public class RaceDatabase extends BetterOpenHelper
 			db.setTransactionSuccessful();
 			
 			RaceDatabase.DoOrphanCheck(db);
+		}
+		catch(SQLiteException e)
+		{
+			
+		}
+		db.endTransaction();
+	}
+	public synchronized static void DeleteTrack(SQLiteDatabase db, int id)
+	{
+		try
+		{
+			db.beginTransaction();
+			db.execSQL("delete from tracks where _id = '" + id + "'");
+			db.setTransactionSuccessful();
 		}
 		catch(SQLiteException e)
 		{
@@ -495,15 +834,85 @@ public class RaceDatabase extends BetterOpenHelper
 					
 					Paint paintLap = new Paint();
 					paintLap.setARGB(255, 25, 140, 225);
-					
+					Paint paintSplits = new Paint();
+					paintSplits.setColor(Color.RED);
+
+					final float fStrokeWidth = Math.min(width, height)/200;
+					paintLap.setStrokeWidth(fStrokeWidth);
+					paintSplits.setStrokeWidth(fStrokeWidth);
+					paintLap.setAntiAlias(true);
+
 					Rect rcOnScreen = new Rect(0,0,width,height);
-					LapAccumulator.DrawLap(lap, false, rcInWorld, canvas, paintLap, null, rcOnScreen);
+					LapAccumulator.DrawLap(lap, false, rcInWorld, canvas, paintLap, paintSplits, rcOnScreen);
 				}
 				return bmp;
 			}
 		}
 		return null;
 	}
+
+	public synchronized static RaceData GetClosestTrack(List <RaceData> rd, double longitude, double latitude)
+	{
+		RaceData rdTmp;
+		float rgDistance[] = new float[1];
+		int iMinIndex = -1;
+		float fMinDistance = 1e30f;
+
+		if( rd==null || rd.size() <= 0 )
+			return null;
+		
+		for(int ix = 0; ix < rd.size(); ix++)
+		{
+			rdTmp = rd.get(ix);
+	    	Location.distanceBetween(latitude, longitude, rdTmp.lapParams.lnStart.GetP1().GetY(), rdTmp.lapParams.lnStart.GetP1().GetX(), rgDistance);
+	    	if( rgDistance[0] < fMinDistance ) {
+	    		iMinIndex = ix;
+	    		fMinDistance = rgDistance[0];
+	    	}
+		}
+		if( iMinIndex >= 0 )
+			return rd.get(iMinIndex);
+		else
+			return null;
+	}
+
+	public synchronized static ArrayList<RaceData> GetTrackData(SQLiteDatabase db)
+	{
+		Cursor cur = db.rawQuery("select x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,vx1,vy1,vx2,vy2,vx3,vy3,name,testmode,finishcount,_id from tracks", null);
+		ArrayList<RaceData> ret = new ArrayList<RaceData>();
+		if(cur != null)
+		{
+			int iFinishCount;
+			float rgSF[] = new float[12];
+			float rgSFDir[] = new float [6];
+			if( !cur.moveToFirst() )
+				return null;
+			do {
+				RaceData tmp = new RaceData();
+
+				iFinishCount = cur.getInt(20);
+
+				for(int x = 0; x < 12; x++)
+				{
+					rgSF[x] = (float)cur.getDouble(x);
+				}
+				for(int x = 0; x < 6; x++)
+				{
+					rgSFDir[x] = (float)cur.getDouble(x+12);
+				}
+
+				tmp.lapParams.InitFromRaw(rgSF, rgSFDir, 0, iFinishCount);
+				tmp.strRaceName = cur.getString(18);
+				tmp.unixTimeMsStart = cur.getLong(21); // DB ID
+
+				ret.add(tmp);
+			} while( cur.moveToNext() );
+			cur.close();
+		}
+		return ret;
+	}
+
+
 	public synchronized static Cursor GetRaceList(SQLiteDatabase db)
 	{
 		try
@@ -521,7 +930,25 @@ public class RaceDatabase extends BetterOpenHelper
 		return null;
 	}
 	
-	private final static String CREATE_TRACK_SQL =  "create table if not exists tracks (	_id integer primary key asc autoincrement, " +
+	public synchronized static Cursor GetTrackList(SQLiteDatabase db)
+	{
+		try
+		{
+			Cursor cur = db.rawQuery("select _id,name from tracks", null);
+
+			return cur;
+		}
+		catch(SQLiteException e)
+		{
+			Log.w("sqldb",e.toString());
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	public final static String CREATE_TRACK_SQL =  "create table if not exists tracks (	" + 
+			"_id integer primary key asc autoincrement, " +
 			"\"name\" string, " +
 			"\"date\" string, " +
 			"\"testmode\" integer, " +
@@ -637,6 +1064,9 @@ public class RaceDatabase extends BetterOpenHelper
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion)
 	{
+//		ExecAndIgnoreException(db,"drop table if exists tracks"); // remove this later
+//		db.execSQL(CREATE_TRACK_SQL); // add the "tracks" table
+
 		if(oldVersion <= 18)
 		{
 			ExecAndIgnoreException(db,"drop table races");
@@ -672,6 +1102,13 @@ public class RaceDatabase extends BetterOpenHelper
 				db.execSQL(CREATE_EXTRA_SQL); // add the "extras" table
 				oldVersion = 23;
 			}
+			if(oldVersion == 23 && newVersion > 23)
+			{
+
+				db.execSQL(CREATE_TRACK_SQL); // add the "tracks" table
+				oldVersion = 24;
+			}
 		}
 	}
 }
+

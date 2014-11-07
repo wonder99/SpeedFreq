@@ -25,7 +25,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
+import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
@@ -45,6 +46,7 @@ import android.graphics.Paint.Style;
 import android.graphics.Region.Op;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -63,7 +65,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-
 import com.artsoft.wifilapper.IOIOManager.IOIOListener;
 import com.artsoft.wifilapper.LapAccumulator.DataChannel;
 import com.artsoft.wifilapper.LapSender.LapSenderListener;
@@ -79,7 +80,10 @@ implements
 	SensorEventListener,
 	MessageMan.MessageReceiver, 
 	OBDThread.OBDListener, IOIOListener, LapSenderListener
+
 {
+
+	OrientationEventListener myOrientationEventListener;
 
 	// For aggressive wifi scanning
 	Thread m_wifiScanThd;
@@ -193,23 +197,60 @@ implements
 	private static final int MSG_LOADING_PROGRESS = 52;
 	private static final int MSG_IOIO_BUTTON = 53;
 	
-	
 	private PendingIntent m_restartIntent;
 	
 	private static final int RESTART_NOTIFICATION_ID = 1;
 	
 	private static ApiDemos m_me;
 	
-    /** Called when the activity is first created. */
-    @Override
-    public void onCreate(Bundle savedInstanceState) 
-    {
-    	super.onCreate(savedInstanceState);
-    	synchronized(ApiDemos.class)
-    	{
-    		m_me = this;
-    	}
 
+	private void lockOrientation(int originalRotation, int naturalOppositeRotation) {
+	    int orientation = getResources().getConfiguration().orientation;
+	    if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+	        // Are we reverse?
+	        if (originalRotation == Surface.ROTATION_0 || originalRotation == naturalOppositeRotation) {
+	            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+	        } else {
+	            setReversePortrait();
+	        }
+	    } else {
+	        // Are we reverse?
+	        if (originalRotation == Surface.ROTATION_0 || originalRotation == naturalOppositeRotation) {
+	            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+	        } else {
+	            setReverseLandscape();
+	        }
+	    }
+	}
+
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+	private void setReversePortrait() {
+	    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT);
+	    } else {
+	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+	    }
+	}
+
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+	private void setReverseLandscape() {
+	    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
+	    } else {
+	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+	    }
+	}
+	/** Called when the activity is first created. */
+	@Override
+	public void onCreate(Bundle savedInstanceState) 
+	{
+		super.onCreate(savedInstanceState);
+
+		synchronized(ApiDemos.class)
+		{
+			m_me = this;
+		}
+    			
     	if( BuildConfig.DEBUG && WIFILOGGING ) {
     		try {
     			openLogFile("Wifi_log.txt");
@@ -220,7 +261,6 @@ implements
     	m_tmAppStartTime = 0;
 		
     	getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-    	
     	m_pHandler = new Handler(this);
 
     	Intent i = this.getIntent();
@@ -272,12 +312,22 @@ implements
     	if(m_strPrivacyPrefix == null) m_strPrivacyPrefix = Prefs.DEFAULT_PRIVACYPREFIX;
     	
     	if(m_strSpeedoStyle == null) m_strSpeedoStyle = LandingOptions.rgstrSpeedos[0];
-    	/*if(m_strSpeedoStyle.equals(LandingOptions.SPEEDO_LAPTIMER) ) 
-    		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
-    	else
-    		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);*/
-		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
 
+    	// if I'm stuck API8, there's no way to lock reverse landscape. Though this looks like
+    	// a good reference: http://stackoverflow.com/questions/6599770/screen-orientation-lock
+//		int orientation = getResources().getConfiguration().orientation;
+//		if (orientation == Configuration.ORIENTATION_PORTRAIT) 
+//			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+//		else
+//			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
+		int rotation = getWindowManager().getDefaultDisplay().getRotation();
+		lockOrientation(rotation, Surface.ROTATION_270);
+		// Ensure that the rotation hasn't changed
+		if (getWindowManager().getDefaultDisplay().getRotation() != rotation) {
+		    lockOrientation(rotation, Surface.ROTATION_90);
+		}
+    	
     	String strUnitSystem = i.getStringExtra(Prefs.IT_UNITS_STRING);
     	int rgSelectedPIDs[] = i.getIntArrayExtra(Prefs.IT_SELECTEDPIDS_ARRAY);
     	
@@ -301,13 +351,16 @@ implements
     	}
     	
 		// Lock the screen orientation, so it doesn't change during a race
-		if(getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-		    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-		    bPortraitDisplay = true;
-		} else {
-			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-			bPortraitDisplay = false;
-		}
+//    	Display display = getWindowManager().getDefaultDisplay();
+//    	
+//    	if ( display.getRotation() == Surface.ROTATION_0 ) {
+//		    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+//		    bPortraitDisplay = true;
+//		} else {
+//			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+//			bPortraitDisplay = false;
+//		}
+//	    setRequestedOrientation(getResources().getConfiguration().orientation);
 
 		// Set up aggressive wifi logging, if enabled
     	mainWifiObj = (WifiManager) getSystemService(Context.WIFI_SERVICE);
@@ -384,6 +437,7 @@ implements
     public static Intent BuildStartIntent(boolean fRequireWifi, boolean fUseIOIO, IOIOManager.PinParams rgAnalPins[], IOIOManager.PinParams rgPulsePins[], int iButtonPin, boolean fPointToPoint, int iStartMode, float flStartParam, int iStopMode, float flStopParam, List<Integer> lstSelectedPIDs, Context ctxApp, String strIP, String strSSID, LapAccumulator.LapAccumulatorParams lapParams, String strRaceName, String strPrivacy, boolean fAckSMS, boolean fUseAccel, boolean fUseAccelCorrection, int iFilterType, float flPitch, float flRoll, float[] flSensorOffset, boolean fTestMode, boolean bWifiScan, long idRace, long idModeSelected, String strBTGPS, String strBTOBD2, String strSpeedoStyle, String strUnitSystem)
     {
     	Intent myIntent = new Intent(ctxApp, ApiDemos.class);
+    	
     	myIntent.putExtra(Prefs.IT_REQUIRE_WIFI, fRequireWifi);
 		myIntent.putExtra(Prefs.IT_IP_STRING, strIP).putExtra("SSID", strSSID);
 		myIntent.putExtra(Prefs.IT_LAPPARAMS, lapParams);
@@ -1150,7 +1204,7 @@ implements
 	}
 
 	// location stuff
-    @Override
+	@Override
     public void onLocationChanged(Location location) 
     {
     	SetState(LocationManager.class, STATE.ON, "GPS Working (" + (int)(GetGPSRate()+0.5) + "hz)");
@@ -1281,37 +1335,45 @@ implements
     		{
     			m_myLaps = new LapAccumulator(m_lapParams, m_ptCurrent, iUnixTime, -1, (int)location.getTime(), location.getSpeed());
     		}
-	    	m_myLaps.AddPosition(m_ptCurrent, (int)location.getTime(), location.getSpeed());
-	    	if(m_myLaps.IsDoneLap())
-	    	{
-	    		TrackLastLap(m_myLaps, true, true);
+    		m_myLaps.AddPosition(m_ptCurrent, (int)location.getTime(), location.getSpeed());
+    		if(m_myLaps.IsDoneLap())
+    		{
+    			TrackLastLap(m_myLaps, true, true);
 
-	    		if(!m_fUseP2P) // if we're lapping, just start the next lap now
-	    		{
-	    			m_myLaps = new LapAccumulator(m_lapParams, m_myLaps.GetFinishPoint(), iUnixTime, -1, m_myLaps.GetLastCrossTime(), location.getSpeed());
-	    			m_myLaps.AddPosition(m_ptCurrent, (int)location.getTime(), location.getSpeed());
-	    		}
-	    		else // if we're point-to-point, then start worrying about getting back to the start line
-	    		{
-		    		SetState(State.MOVING_TO_STARTLINE);
-	    		}
-	    	}
-	    	else
-	    	{
-	    		if( m_myLaps != null && m_best != null && 
-	    				(m_myLaps.GetAgeInMilliseconds()/1000 > 2*m_best.GetLapTime() )  ||
-	    				m_myLaps.GetPositionCount() > iMaxPointsPerLap ) 
-	    		{
-		    		Log.d("Pruning","Due to slow lap or too many points in the lap.");
-	    			TrackLastLap(m_myLaps, true, false);
-	    			m_tmLastLap = 0; // This prevents a goofy 'last lap' display while moving to startline
-	    			SetState(State.MOVING_TO_STARTLINE);
-	    		}
-	    	}
-	    	m_currentView.invalidate();
+    			if(!m_fUseP2P) // if we're lapping, just start the next lap now
+    			{
+    				m_myLaps = new LapAccumulator(m_lapParams, m_myLaps.GetFinishPoint(), iUnixTime, -1, m_myLaps.GetLastCrossTime(), location.getSpeed());
+    				m_myLaps.AddPosition(m_ptCurrent, (int)location.getTime(), location.getSpeed());
+    			}
+    			else // if we're point-to-point, then start worrying about getting back to the start line
+    			{
+    				SetState(State.MOVING_TO_STARTLINE);
+    			}
+    		}
+    		else
+    		{
+    			if( m_myLaps != null && m_best != null && 
+    					(m_myLaps.GetAgeInMilliseconds()/1000 > 2*m_best.GetLapTime() )  ||
+    					m_myLaps.GetPositionCount() > iMaxPointsPerLap ) 
+    			{
+    				Log.d("Pruning","Due to slow lap or too many points in the lap.");
+    				TrackLastLap(m_myLaps, true, false);
+    				m_tmLastLap = 0; // This prevents a goofy 'last lap' display while moving to startline
+    				SetState(State.MOVING_TO_STARTLINE);
+    			}
+    		}
+    		m_currentView.invalidate();
     	}
     }
-    
+
+//	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
+//	public void DisableHWAcceleration(View view)
+//    {
+//    	// Disable HW acceleration for API11 and above, since this app doesn't work with it
+//    	if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) // api11
+//    		view.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+//    }
+//    
     public double GetGPSRate()
     {
     	// returns the rate in hz of the last (rgLastGPSGaps.length) GPS signals
@@ -1435,9 +1497,9 @@ implements
     		MoveToStartLineView vView = (MoveToStartLineView)vStartline.findViewById(R.id.movetostartline);
     		vView.DoInit(this);
     		m_currentView = vView;
-    		m_currentView.setOnClickListener(this);
+    		vStartline.setOnClickListener(this);
     		setContentView(vStartline);
-    		vView.requestLayout();
+    		vStartline.requestLayout();
     		m_myLaps = null;
     		break;
     	}
@@ -1473,9 +1535,8 @@ implements
     		View vLineDraw = View.inflate(this, R.layout.lapping_startfinishautodraw, null);
     		DeciderWaitingView vActualView = (DeciderWaitingView)vLineDraw.findViewById(R.id.linesetter);
     		vActualView.SetData(this);
-    		m_currentView = vLineDraw;
-    		m_currentView.setOnClickListener(this);
-    		m_currentView = vLineDraw;
+    		vLineDraw.setOnClickListener(this);
+    		m_currentView = vActualView;
     		setContentView(vLineDraw);
     		vLineDraw.requestLayout();
     		break;
@@ -1489,8 +1550,8 @@ implements
     		View vView = View.inflate(this, R.layout.lapping_laptimeview, null);
     		MapPaintView view = (MapPaintView)vView.findViewById(R.id.laptimeview);
     		view.SetData(this, m_strSpeedoStyle, m_eUnitSystem);
-    		m_currentView = vView;
-    		m_currentView.setOnClickListener(this);
+    		m_currentView = view;
+    		vView.setOnClickListener(this);
     		setContentView(vView);
     		vView.requestLayout();
     		break;
@@ -1501,7 +1562,6 @@ implements
     	m_statusBar.SetStateData(this);
     	
     	m_eState = eNewState;
-    	assert(m_currentView != null);
     	m_currentView.invalidate();
     }
     
@@ -2238,6 +2298,8 @@ class DeciderWaitingView extends View
 }
 class MapPaintView extends View
 {
+	OrientationEventListener myOrientationEventListener1 ;
+
 	Paint paintText;
 	Paint paintBigText;
 	ApiDemos myApp;
@@ -2271,6 +2333,12 @@ class MapPaintView extends View
 	private LapAccumulator lapBest;
 
 	int cPaintCounts = 0;
+	
+	public void ResetScreen()
+	{
+		fontInitialized = false;
+	}
+
 	public MapPaintView(Context context)
 	{
 		super(context);

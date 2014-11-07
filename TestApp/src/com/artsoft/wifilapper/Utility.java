@@ -77,9 +77,12 @@ public class Utility
 	{
 		// Note: since the SSID spinner is disabled if wifi is disabled, we know there will be non-null values for pInfo, lstNetworks.
 		WifiInfo pInfo = pWifi.getConnectionInfo();
-		if(pInfo != null && pInfo.getSSID() != null && !pInfo.getSSID().replace("\"", "").equalsIgnoreCase(strSSID))
+		if(pInfo != null)	
 		{
-			pWifi.disconnect();
+			// Disconnect if on the wrong network
+			if( pInfo != null && pInfo.getSSID()!= null && !pInfo.getSSID().replace("\"", "").equalsIgnoreCase(strSSID) )
+				pWifi.disconnect();
+			// check if not connected, or connected to the wrong network
 			List<WifiConfiguration> lstNetworks = pWifi.getConfiguredNetworks();
 			for(int x = 0;x < lstNetworks.size(); x++)
 			{

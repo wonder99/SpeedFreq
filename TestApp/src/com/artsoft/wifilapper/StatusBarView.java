@@ -29,6 +29,7 @@ import android.graphics.drawable.Drawable;
 import android.location.LocationManager;
 import android.util.AttributeSet;
 import android.widget.ImageButton;
+import android.widget.ImageView.ScaleType;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 import android.view.View;
@@ -107,10 +108,30 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 		
 		this.setOrientation(LinearLayout.HORIZONTAL);
 		
-		AddButton(LocationManager.class, R.drawable.satellite_on, R.drawable.satellite_off, R.drawable.satellite_troublegood, R.drawable.satellite_troublebad);
-		AddButton(OBDThread.class, R.drawable.obd2_on, R.drawable.obd2_off, R.drawable.obd2_troublegood, R.drawable.obd2_troublebad);
-		AddButton(LapSender.class, R.drawable.wifi_on, R.drawable.wifi_off, R.drawable.wifi_troublegood, R.drawable.wifi_troublebad);
-		AddButton(IOIOManager.class, R.drawable.ioio_on, R.drawable.ioio_off, R.drawable.ioio_troublegood, R.drawable.ioio_troublebad);
+//		AddButton(LocationManager.class, R.drawable.gps_gray,R.drawable.gps_gray,R.drawable.gps_gray,R.drawable.gps_gray);
+//		AddButton(OBDThread.class,       R.drawable.gps_white, R.drawable.gps_white,R.drawable.gps_white,R.drawable.gps_white);
+//		AddButton(LapSender.class,       R.drawable.gps_yellow, R.drawable.gps_yellow,R.drawable.gps_yellow,R.drawable.gps_yellow);
+//		AddButton(IOIOManager.class,     R.drawable.gps_red,R.drawable.gps_red,R.drawable.gps_red,R.drawable.gps_red);
+//		AddButton(LocationManager.class, R.drawable.ioio_gray,R.drawable.ioio_gray,R.drawable.ioio_gray,R.drawable.ioio_gray);
+//		AddButton(OBDThread.class,       R.drawable.ioio_white, R.drawable.ioio_white,R.drawable.ioio_white,R.drawable.ioio_white);
+//		AddButton(LapSender.class,       R.drawable.ioio_yellow, R.drawable.ioio_yellow,R.drawable.ioio_yellow,R.drawable.ioio_yellow);
+//		AddButton(IOIOManager.class,     R.drawable.ioio_red,R.drawable.ioio_red,R.drawable.ioio_red,R.drawable.ioio_red);
+//		AddButton(LocationManager.class, R.drawable.wifi_gray,R.drawable.wifi_gray,R.drawable.wifi_gray,R.drawable.wifi_gray);
+//		AddButton(OBDThread.class,       R.drawable.wifi_white, R.drawable.wifi_white,R.drawable.wifi_white,R.drawable.wifi_white);
+//		AddButton(LapSender.class,       R.drawable.wifi_yellow, R.drawable.wifi_yellow,R.drawable.wifi_yellow,R.drawable.wifi_yellow);
+//		AddButton(IOIOManager.class,     R.drawable.wifi_red,R.drawable.wifi_red,R.drawable.wifi_red,R.drawable.wifi_red);
+//		AddButton(LocationManager.class, R.drawable.obd_gray,R.drawable.obd_gray,R.drawable.obd_gray,R.drawable.obd_gray);
+//		AddButton(OBDThread.class,       R.drawable.obd_white, R.drawable.obd_white,R.drawable.obd_white,R.drawable.obd_white);
+//		AddButton(LapSender.class,       R.drawable.obd_yellow, R.drawable.obd_yellow,R.drawable.obd_yellow,R.drawable.obd_yellow);
+//		AddButton(IOIOManager.class,     R.drawable.obd_red,R.drawable.obd_red,R.drawable.obd_red,R.drawable.obd_red);
+//		AddButton(LocationManager.class, R.drawable.satellite_on, R.drawable.satellite_off, R.drawable.satellite_troublegood, R.drawable.satellite_troublebad);
+//		AddButton(OBDThread.class, R.drawable.obd2_on, R.drawable.obd2_off, R.drawable.obd2_troublegood, R.drawable.obd2_troublebad);
+//		AddButton(LapSender.class, R.drawable.gps_on, R.drawable.gps_off, R.drawable.gps_troublegood, R.drawable.gps_troublebad);
+//		AddButton(IOIOManager.class, R.drawable.ioio_on, R.drawable.ioio_off, R.drawable.ioio_troublegood, R.drawable.ioio_troublebad);
+		AddButton(LocationManager.class, R.drawable.gps_white, R.drawable.gps_gray, R.drawable.gps_yellow, R.drawable.gps_red);
+		AddButton(OBDThread.class, R.drawable.obd_white, R.drawable.obd_gray, R.drawable.obd_yellow, R.drawable.obd_red);
+		AddButton(LapSender.class, R.drawable.wifi_white, R.drawable.wifi_gray, R.drawable.wifi_yellow, R.drawable.wifi_red);
+		AddButton(IOIOManager.class, R.drawable.ioio_white, R.drawable.ioio_gray, R.drawable.ioio_yellow, R.drawable.ioio_red);
 	}
 	
 	private void AddButton(Class<?> c, int imgOn, int imgOff, int imgTroubleGood, int imgTroubleBad)
@@ -118,6 +139,13 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 		ImageButton btn = new ImageButton(getContext());
 		btn.setImageDrawable(getResources().getDrawable(imgOff));
 		btn.setBackgroundDrawable(null);
+		btn.setScaleType(ScaleType.CENTER_INSIDE);
+		btn.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT));
+		btn.setAdjustViewBounds(true);
+		final float fMinDim = Math.min(getResources().getDisplayMetrics().heightPixels,getResources().getDisplayMetrics().widthPixels);
+		final int iSize = Math.round(10f/48f*fMinDim); // match source size of 100 if dim=480
+		btn.setMaxHeight(iSize);
+		btn.setMaxWidth(iSize);
 		
 		mapButtons.put(c, new ButtonData(getResources(), imgOn, imgOff, imgTroubleGood, imgTroubleBad, btn));
 		

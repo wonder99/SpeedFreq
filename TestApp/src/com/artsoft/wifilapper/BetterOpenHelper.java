@@ -54,7 +54,7 @@ public abstract class BetterOpenHelper
 				
 			}
 		}
-		else if(m_db.needUpgrade(newestVersion))
+		else if(true || m_db.needUpgrade(newestVersion))
 		{
 			onUpgrade(m_db,m_db.getVersion(),newestVersion);
 			m_db.setVersion(newestVersion);

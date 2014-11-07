@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.artsoft.wifilappertab"
     android:versionCode="39"
-    android:versionName="1.39 Beta 10: Oct 10, 2014" xmlns:tools="http://schemas.android.com/tools">
+    android:versionName="1.39 Beta 10: Oct 19, 2014" xmlns:tools="http://schemas.android.com/tools">
 
     <supports-screens android:smallScreens="true" />
     <supports-screens android:normalScreens="true" />
@@ -14,9 +14,8 @@
 
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="8"
-        tools:ignore="OldTargetApi" />
-
+        android:targetSdkVersion="18" 
+        />
     
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -32,9 +31,10 @@
     <application
         android:allowBackup="true"
         android:icon="@drawable/icon"
-        android:label="@string/app_name" >
+        android:label="@string/app_name" 
+         >
         <activity
-            android:name="com.artsoft.wifilapper.LandingScreen"
+            android:name="com.artsoft.wifilapper.SpeedFreq"
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/app_name_tablet"
             android:launchMode="singleTask"
@@ -92,13 +92,14 @@
             android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
-            android:name="com.artsoft.wifilapper.LandingSetSplits"
-            android:label="@string/app_name"
+            android:name="com.artsoft.wifilapper.LandingTracks"
+            android:label="Track List"
             android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
             android:name="com.artsoft.wifilapper.LandingDBManage"
             android:label="@string/app_name"
+            android:configChanges="keyboard|keyboardHidden"
             android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
@@ -106,6 +107,7 @@
             android:label="@string/app_name"
             android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" />
+
         <activity
             android:name="com.artsoft.wifilapper.SummaryActivity"
             android:label="@string/app_name"

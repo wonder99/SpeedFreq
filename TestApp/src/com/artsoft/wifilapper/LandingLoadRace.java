@@ -29,7 +29,6 @@ import android.content.DialogInterface.OnDismissListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -41,9 +40,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -77,22 +76,26 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 	public void onPause()
 	{
 		super.onPause();
-		EditText txtIP = (EditText)findViewById(R.id.txtIP);
-		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
-
-    	SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
-    	final boolean fSSIDGood = (spnSSID.isEnabled() && spnSSID.getSelectedItem() != null);
-		ApiDemos.SaveSharedPrefs(settings, 
-				txtIP.getText().toString(), 
-				fSSIDGood ? spnSSID.getSelectedItem().toString() : null, 
-				null, 
-				null);
+//		EditText txtIP = (EditText)findViewById(R.id.txtIP);
+//		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
+//
+//    	SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+//    	final boolean fSSIDGood = (spnSSID.isEnabled() && spnSSID.getSelectedItem() != null);
+//		ApiDemos.SaveSharedPrefs(settings, 
+//				txtIP.getText().toString(), 
+//				fSSIDGood ? spnSSID.getSelectedItem().toString() : null, 
+//				null, 
+//				null);
 		
 		m_imgFactory.Shutdown();
 	}
 	private void DoUIInit()
 	{
-		m_imgFactory = new RaceImageFactory(m_handler, MSG_NEW_IMAGE);
+		// Hide keyboard by default
+		getWindow().setSoftInputMode(
+			      WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+
+		m_imgFactory = new RaceImageFactory(m_handler, MSG_NEW_IMAGE, false);
 		
 		ListView list = (ListView)findViewById(android.R.id.list);
 		
@@ -101,23 +104,24 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 	}
 	private void SetupSettingsView()
     {
-		Button btnIP = (Button)findViewById(R.id.btnAutoIP);
-		btnIP.setOnClickListener(this);
+//		Button btnIP = (Button)findViewById(R.id.btnAutoIP);
+//		btnIP.setOnClickListener(this);
+//		
+//		EditText txtIP = (EditText)findViewById(R.id.txtIP);
+//		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
+//    	
+//		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+//		String strIP = settings.getString(Prefs.PREF_IP_STRING,Prefs.DEFAULT_IP_STRING);
+//		String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);
+//		
+//    	SetupSSIDSpinner(spnSSID, strSSID);
+//		txtIP.setText(strIP);
+//		
+//
+//		boolean fRequireWifi = settings.getBoolean(Prefs.PREF_REQUIRE_WIFI, Prefs.DEFAULT_REQUIRE_WIFI);
+//		View vRowSSID = findViewById(R.id.rowSSID);
+//		vRowSSID.setVisibility(fRequireWifi ? View.VISIBLE : View.GONE);
 		
-		EditText txtIP = (EditText)findViewById(R.id.txtIP);
-		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
-    	
-		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
-		String strIP = settings.getString(Prefs.PREF_IP_STRING,Prefs.DEFAULT_IP_STRING);
-		String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);
-		
-    	SetupSSIDSpinner(spnSSID, strSSID);
-		txtIP.setText(strIP);
-		
-
-		boolean fRequireWifi = settings.getBoolean(Prefs.PREF_REQUIRE_WIFI, Prefs.DEFAULT_REQUIRE_WIFI);
-		View vRowSSID = findViewById(R.id.rowSSID);
-		vRowSSID.setVisibility(fRequireWifi ? View.VISIBLE : View.GONE);
     }
 	
 	private static class ListRaceData
@@ -203,7 +207,8 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 	        	txtLapTime.setText("Best Lap: " + Utility.FormatSeconds(myobject.laptime));
 	        	txtLapCount.setText("Laps: " + myobject.cLaps);
 	        	txtDate.setText(Utility.GetDateStringFromUnixTime(myobject.unixStartTimeSeconds*1000));
-	        	img.setImageBitmap(m_imgFactory.GetImage(myobject.id, false));
+	        	int size = Math.min(parent.getWidth(),parent.getHeight())/4;
+	        	img.setImageBitmap(m_imgFactory.GetImage(myobject.id, size,size,false));
 	        }
 
 	        return v;
@@ -356,12 +361,10 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 		{
 			r.lapParams.iCarNumber = iCarNumber;
 			r.lapParams.iSecondaryCarNumber = (int)(Math.random() * 100000.0);
-			EditText txtIP = (EditText)findViewById(R.id.txtIP);
-			Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
 			
-			String strIP = txtIP.getText().toString();
-			String strSSID = (spnSSID.isEnabled() && spnSSID.getSelectedItem() != null) ? spnSSID.getSelectedItem().toString() : "";
-			
+			String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);
+			String strIP = settings.getString(Prefs.PREF_IP_STRING,Prefs.DEFAULT_IP_STRING);
+
     		String strSpeedoStyle = settings.getString(Prefs.PREF_SPEEDOSTYLE_STRING, Prefs.DEFAULT_SPEEDOSTYLE_STRING);
     		Prefs.UNIT_SYSTEM eUnitSystem = Prefs.UNIT_SYSTEM.valueOf(settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString()));
 			String strBTGPS = settings.getString(Prefs.PREF_BTGPSNAME_STRING, Prefs.DEFAULT_GPS_STRING);
@@ -438,8 +441,8 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 				{
 					ListRaceData lrd = rd.GetData();
 					RaceData rd3 = RaceDatabase.GetRaceData(RaceDatabase.Get(), lrd.GetId(), -1);
-					
-					RaceDatabase.CreateTrackIfNotExist(RaceDatabase.Get(), rd.GetResultText(), rd3.lapParams, rd3.fTestMode,false, rd3.lapParams.iFinishCount,RaceDatabase.GetRaceOutlineImage(RaceDatabase.Get(),lrd.GetId(),100,100));
+					RaceDatabase.CreateTrackIfNotExist(RaceDatabase.Get(), rd.GetResultText(), rd3.lapParams, rd3.fTestMode,false, rd3.lapParams.iFinishCount,lrd.GetId());
+					//, RaceDatabase.GetRaceOutlineImage(RaceDatabase.Get(),lrd.GetId(),200,200));
 				}
 			}
 		}
@@ -447,25 +450,25 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 	@Override
 	protected void SetIPString(String strIP) 
 	{
-		// re-save our settings.
-		// this actually occurs before onResume, so we can't just update the textbox
-		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
-		
-		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
-    	final boolean fSSIDGood = (spnSSID.isEnabled() && spnSSID.getSelectedItem() != null);
-		ApiDemos.SaveSharedPrefs(settings, 
-				strIP, 
-				fSSIDGood ? spnSSID.getSelectedItem().toString() : null, 
-				null, // no GPS changes here
-				null);
+//		// re-save our settings.
+//		// this actually occurs before onResume, so we can't just update the textbox
+//		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
+//		
+//		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+//    	final boolean fSSIDGood = (spnSSID.isEnabled() && spnSSID.getSelectedItem() != null);
+//		ApiDemos.SaveSharedPrefs(settings, 
+//				strIP, 
+//				fSSIDGood ? spnSSID.getSelectedItem().toString() : null, 
+//				null, // no GPS changes here
+//				null);
 	}
 	@Override
 	public void onClick(View arg0) 
 	{
-		if(arg0.getId() == R.id.btnAutoIP)
-		{
-			ShowAutoIPActivity();
-		}
+//		if(arg0.getId() == R.id.btnAutoIP)
+//		{
+//			ShowAutoIPActivity();
+//		}
 	}
 	@Override
 	public boolean handleMessage(Message arg0) 

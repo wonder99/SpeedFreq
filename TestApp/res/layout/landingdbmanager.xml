@@ -1,33 +1,63 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/LinearLayout1"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:orientation="horizontal" android:baselineAligned="false">
-    
+    android:baselineAligned="false"
+    android:orientation="vertical" >
+
     <!-- list of found wflp files on sd card -->
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical"
-    android:layout_weight="1" >
-    	<TextView android:text="Choose a database to import.  Your existing DB will be replaced, so it's recommend you save it first on the right" android:id="@+id/TextView02" android:layout_width="fill_parent" android:layout_height="wrap_content"></TextView>
-    	<ListView
-	        android:id="@android:id/list"
-	        android:layout_width="fill_parent"
-	        android:layout_height="fill_parent" >
-    	</ListView>
-    </LinearLayout>
-    
-    
+
+
+         <TextView
+        android:id="@+id/tvDBTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="Race Databases"
+        android:textSize="25sp" />
+         
+        <TextView
+            android:id="@+id/TextView22"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Save filename" />
+
+        <EditText
+            android:id="@+id/edtFilename"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:text="laps" >
+
+            <requestFocus />
+        </EditText>
+
+        <TextView
+            android:id="@+id/txtSavePath"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnSaveDB"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Save" />
+
+        <TextView
+            android:id="@+id/TextView02"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Choose a database to import.  Your existing DB will be replaced, so it&apos;s recommend you save it first on the right" />
+
+        <ListView
+            android:id="@android:id/list"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="1" >
+        </ListView>
+
+
     <!-- export filename and save button -->
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical" 
-    android:layout_weight="1">
-    	<TextView android:text="Save filename" android:id="@+id/TextView22" android:layout_width="fill_parent" android:layout_height="wrap_content"></TextView>
-		<EditText android:text="laps" android:id="@+id/edtFilename" android:layout_width="fill_parent" android:layout_height="wrap_content" android:inputType="text"></EditText>
-		<TextView android:text="" android:id="@+id/txtSavePath" android:layout_width="fill_parent" android:layout_height="wrap_content"></TextView>
-		<Button android:text="Save" android:id="@+id/btnSaveDB" android:layout_width="fill_parent" android:layout_height="wrap_content"></Button>
-    </LinearLayout>
+
 </LinearLayout>
-    

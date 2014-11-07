@@ -414,7 +414,7 @@ public class LapSender
 			
 			// second: check if we're already connected to the desired network
 			WifiInfo pInfo = pWifi.getConnectionInfo();
-			if(pInfo != null)
+			if(pInfo != null && pInfo.getSSID() != null )
 			{
 				String strCurrentSSID = pInfo.getSSID().replace("\"", "");	// will have leading and trailing "
 				if(strCurrentSSID != null)
@@ -437,7 +437,6 @@ public class LapSender
 					else // SSID is not what's expected
 					{
 						pWifi.disconnect();
-						throw new AssertionError("Somehow the SSID didn't match");
 					}
 				}
 				else // note: (strCurrentSSID == null)

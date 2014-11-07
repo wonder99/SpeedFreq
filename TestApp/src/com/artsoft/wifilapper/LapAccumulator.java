@@ -170,7 +170,10 @@ public class LapAccumulator
 		{
 			 m_lstPositions.add(new TimePoint2D(ptStart, iStartTime, dVelocity, m_dCumulativeDistance, 0));
 		}
-		m_iLapsToGo = m_lapParams.iFinishCount;
+		if( m_lapParams != null )
+			m_iLapsToGo = m_lapParams.iFinishCount;
+		else
+			m_iLapsToGo = 1;
 	}
 	public int GetFinishesNeeded()
 	{
@@ -663,7 +666,7 @@ public class LapAccumulator
 	}
 	public List<LineSeg> GetSplitPoints(boolean fStartOnly)
 	{
-		if(!m_lapParams.IsValid(!fStartOnly)) return null;
+		//if(!m_lapParams.IsValid(!fStartOnly)) return null;
 		
 		List<LineSeg> lstLines = new ArrayList<LineSeg>();
 		if(!fStartOnly)
@@ -815,6 +818,8 @@ public class LapAccumulator
 		Point2D ptTopRight = new Point2D(rcInWorld.right, rcInWorld.top);
 		Point2D ptBotRight = new Point2D(rcInWorld.right, rcInWorld.bottom);
 		
+		// Pad the boundary by 1 pixel, to ensure no clipping on edges
+		rcOnScreen.inset(1,1);
 		
 		final double dWidth = rcInWorld.right - rcInWorld.left;
 		final double dHeight = rcInWorld.bottom - rcInWorld.top;
@@ -857,10 +862,16 @@ public class LapAccumulator
 			TimePoint2D ptLast = null;
 			float rgflPts[] = new float[4 * 2];
 			
-			int cSkipRate = 1;
-			
-			for(int ix = 0; ix < lap.m_lstPositions.size(); ix+=cSkipRate)
+			// skip some points, depending on the resolution we're drawing
+			int cSkipRate = 1 + 1*(int)Math.round(lap.m_lstPositions.size()/Math.max(iTargetWidth, iTargetHeight));
+//			cSkipRate = 1;
+			// let the loop go past, if we're skipping, so that we're sure to complete the loop
+			for(int ix = 0; ix < lap.m_lstPositions.size()+cSkipRate-1; ix+=cSkipRate)
 			{
+				// fix the index, for the last segment, when we're skipping
+				if( ix >= lap.m_lstPositions.size() )
+					ix = lap.m_lstPositions.size() - 1;
+				
 				TimePoint2D pt = lap.m_lstPositions.get(ix);
 				if(ptLast != null)
 				{
@@ -894,30 +905,35 @@ public class LapAccumulator
 			
 			if(lap.m_lstPositions.size() >= 2) // making sure we don't crash...
 			{
-				canvas.drawRect(rgflPts[6]-5,rgflPts[7]-5, rgflPts[6]+5,rgflPts[7]+5, paintLap);
-	
-				List<LineSeg> lstSF = lap.GetSplitPoints(false);
+				List<LineSeg> lstSF = lap.GetSplitPoints(true);	// just give me the start line
 				if(lstSF != null && paintSplits != null)
 				{
 					for(int ix = 0; ix < lstSF.size(); ix++)
 					{
 						LineSeg ln = lstSF.get(ix);
-						float x1 = (float)((ln.GetP1().GetX() - rcInWorld.left) / dWidth) * iTargetWidth;
-						float x2 = (float)((ln.GetP2().GetX() - rcInWorld.left) / dWidth) * iTargetWidth;
-						float y1 = (float)((ln.GetP1().GetY() - rcInWorld.top) / dHeight) * iTargetHeight;
-						float y2 = (float)((ln.GetP2().GetY() - rcInWorld.top) / dHeight) * iTargetHeight;
-						x1 += rcOnScreen.left;
-						x2 += rcOnScreen.left;
-						y1 += rcOnScreen.top;
-						y2 += rcOnScreen.top;
-						y1 = (rcOnScreen.bottom - y1) + rcOnScreen.top;
-						y2 = (rcOnScreen.bottom - y2) + rcOnScreen.top;
-						
-						//x1 = rcOnScreen.right - x1 + rcOnScreen.left;
-						//x2 = rcOnScreen.right - x2 + rcOnScreen.left;
-						
-						canvas.drawLine(x1, y1, x2, y2, paintSplits);
+						if( ln != null ) {
+							float x1 = (float)((ln.GetP1().GetX() - rcInWorld.left) / dWidth) * iTargetWidth;
+							float x2 = (float)((ln.GetP2().GetX() - rcInWorld.left) / dWidth) * iTargetWidth;
+							float y1 = (float)((ln.GetP1().GetY() - rcInWorld.top) / dHeight) * iTargetHeight;
+							float y2 = (float)((ln.GetP2().GetY() - rcInWorld.top) / dHeight) * iTargetHeight;
+							x1 += rcOnScreen.left;
+							x2 += rcOnScreen.left;
+							y1 += rcOnScreen.top;
+							y2 += rcOnScreen.top;
+							y1 = (rcOnScreen.bottom - y1) + rcOnScreen.top;
+							y2 = (rcOnScreen.bottom - y2) + rcOnScreen.top;
+
+							//x1 = rcOnScreen.right - x1 + rcOnScreen.left;
+							//x2 = rcOnScreen.right - x2 + rcOnScreen.left;
+
+							canvas.drawLine(x1, y1, x2, y2, paintSplits);
+						}
 					}
+				}
+				else
+				{
+					final float strokeWidth = (paintLap.getStrokeWidth() > 0) ? paintLap.getStrokeWidth()*4 : 5;
+					canvas.drawRect(rgflPts[6]-strokeWidth,rgflPts[7]-strokeWidth, rgflPts[6]+strokeWidth,rgflPts[7]+strokeWidth, paintLap);
 				}
 			}
 		}

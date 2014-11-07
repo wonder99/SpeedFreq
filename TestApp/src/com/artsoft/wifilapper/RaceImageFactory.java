@@ -30,13 +30,15 @@ public class RaceImageFactory
 	private Handler m_handler; // used to report to our owner when things happen (new images, etc)
 	private RaceLoader m_thd;
 	private int m_ixMessage; // what message we should send to the handler when new images are available
-	public RaceImageFactory(Handler handler, int ixMessage)
+	private boolean bIsATrack;
+	public RaceImageFactory(Handler handler, int ixMessage, boolean bIsATrack)
 	{
 		m_thd = new RaceLoader();
 		m_thd.start();
 		m_map = new HashMap<Long,Bitmap>();
 		m_handler = handler;
 		m_ixMessage = ixMessage;
+		this.bIsATrack = bIsATrack;
 	}
 	public synchronized void Shutdown()
 	{
@@ -54,28 +56,28 @@ public class RaceImageFactory
 	{
 		if(m_map != null)
 		{
-			m_map.put(new Long(lRaceId), bmp);
+			m_map.put(Long.valueOf(lRaceId), bmp);
 			m_handler.sendEmptyMessage(m_ixMessage);
 		}
 	}
-	public Bitmap GetImage(long lRaceId, boolean fRequestOnWorker)
+	public Bitmap GetImage(long lRaceId, int width, int height, boolean fRequestOnWorker)
 	{
 		synchronized(this)
 		{
-			if(m_map != null && m_map.containsKey(new Long(lRaceId)))
+			if(m_map != null && m_map.containsKey(Long.valueOf(lRaceId)))
 			{
-				return m_map.get(new Long(lRaceId));
+				return m_map.get(Long.valueOf(lRaceId));
 			}
 		}
 		// if we got here, we don't currently have this race's image cached.  Return null for now and fire an update request
 		if(!fRequestOnWorker)
 		{
-			ThdLoadImage(lRaceId);
+			ThdLoadImage(lRaceId, width, height);
 		}
 		return null;
 	}
 	
-	private void ThdLoadImage(long lRaceId)
+	private void ThdLoadImage(long lRaceId, int width, int height)
 	{
 		RaceLoader thd = null;
 		synchronized(this)
@@ -85,22 +87,32 @@ public class RaceImageFactory
 		
 		if(thd != null)
 		{
-			thd.AddTarget(lRaceId);
+			thd.AddTarget(lRaceId, width, height);
 		}
 	}
 	
 	private class RaceLoader extends Thread implements Runnable
 	{
-		private List<Long> lstRequests;
+		private class Request {
+			long lRequest;
+			int width;
+			int height;
+			public Request(long req, int w, int h) {
+				lRequest = req;
+				width = w;
+				height = h;
+			}
+		}
+		private List<Request> lstRequests;
 		private boolean m_fContinue;
 		public RaceLoader()
 		{
-			lstRequests = new ArrayList<Long>();
+			lstRequests = new ArrayList<Request>();
 			m_fContinue = true;
 		}
-		public synchronized void AddTarget(long lRaceId)
+		public synchronized void AddTarget(long lRaceId, int width, int height)
 		{
-			lstRequests.add(new Long(lRaceId));
+			lstRequests.add(new Request(lRaceId,width,height));
 			notify();
 		}
 		public synchronized void Shutdown()
@@ -115,7 +127,7 @@ public class RaceImageFactory
 				// check for requests
 				try 
 				{
-					Long lRaceId = null;
+					Request rThisRqst=null;
 					synchronized(this)
 					{
 						wait();
@@ -128,22 +140,31 @@ public class RaceImageFactory
 						{
 							if(lstRequests.size() > 0)
 							{
-								lRaceId = lstRequests.get(0);
+								rThisRqst = lstRequests.get(0);
 								lstRequests.remove(0);
 							}
 							else
 							{
 								break;
 							}
-							if(RaceImageFactory.this.GetImage(lRaceId.longValue(), true) != null)
+							if(RaceImageFactory.this.GetImage(rThisRqst.lRequest, rThisRqst.width, rThisRqst.height, true) != null)
 							{
 								continue; // we already have this image, no need to re-render it.  go to the next
 							}
 						}
-						if(lRaceId != null)
+						if(rThisRqst != null)
 						{
-							Bitmap bmp = RaceDatabase.GetRaceOutlineImage(RaceDatabase.Get(), lRaceId, 100, 100);
-							RaceImageFactory.this.SetImage(lRaceId.longValue(), bmp);
+							if( bIsATrack )
+							{
+								Bitmap bmp = RaceDatabase.GetBitmapFromDatabase(RaceDatabase.Get(), rThisRqst.lRequest, rThisRqst.width, rThisRqst.height);
+								RaceImageFactory.this.SetImage(rThisRqst.lRequest, bmp);
+							}
+							else
+							{
+								Bitmap bmp = RaceDatabase.GetRaceOutlineImage(RaceDatabase.Get(), rThisRqst.lRequest, rThisRqst.width, rThisRqst.height);
+								RaceImageFactory.this.SetImage(rThisRqst.lRequest, bmp);
+							}
+								
 						}
 					}
 				} 

@@ -1,275 +1,302 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/svOptions"
     android:layout_width="fill_parent"
     android:layout_height="match_parent" >
 
-<LinearLayout 
-    android:orientation="vertical"
+<LinearLayout
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    >
+    android:orientation="vertical" >
 
-<CheckBox android:text="Test Mode" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/chkTestMode"></CheckBox>
-<CheckBox android:text="Use cellular data instead of wifi" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/chkCellular"></CheckBox>
-<!-- bluetooth gps spinner -->
-
-<CheckBox
-    android:id="@+id/chkScan"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="Aggressively scan wifi" />
-
-<TableLayout
-    android:id="@+id/tableLayout1"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content" >
-
-    <TableRow
-        android:id="@+id/tableRow0"
+    
+    <TextView
+        android:id="@+id/tvOptionsTitle"
         android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" >
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="Options"
+        android:textSize="25sp" />
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
 
         <TextView
-            android:id="@+id/lblCarNumber"
+            android:id="@+id/tvSSID"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_weight="1"
-            android:text="Car Number" >
-        </TextView>
+            android:text="Wifi SSID" />
+
+        <Spinner
+            android:id="@+id/spnSSID"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/TextView81"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Pitside IP Address" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
 
         <EditText
-            android:id="@+id/edtCarNumber"
+            android:id="@+id/txtIP"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:inputType="numberSigned" >
-
-            <requestFocus />
-        </EditText>
-    </TableRow>
-
-    <TableRow
-        android:id="@+id/tableRow10"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" >
-
-        <TextView
-            android:id="@+id/lblUseAccel"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="fill_parent"
             android:layout_gravity="center_vertical"
             android:layout_weight="1"
-            android:text="Use Accelerometer" >
-        </TextView>
+            android:ems="10"
+            android:hint="input IP address here"
+            android:inputType="text"
+            android:text="192.168.1.100" />
 
         <Button
-            android:id="@+id/btnConfigureAccel"
+            android:id="@+id/btnAutoIP2"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Configure Accelerometer" >
-        </Button>
-    </TableRow>
+            android:text="Auto find IPs"
+            android:textSize="@dimen/font_size_very_small" />
 
-    <TableRow
-        android:id="@+id/tableRow1"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" >
+    </LinearLayout>
 
-        <TextView
-            android:id="@+id/lblUseExternalGPS"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Use External GPS" >
-        </TextView>
-
-        <Button
-            android:id="@+id/btnConfigureGPS"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Configure GPS" >
-
-        </Button>
-    </TableRow>
-
-    <TableRow
-        android:id="@+id/tableRow2"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" >
-
-        <TextView
-            android:id="@+id/lblUseExternalOBD2"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Use OBD2 logging" >
-        </TextView>
-
-        <Button
-            android:id="@+id/btnConfigureOBD2"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Configure OBD2" >
-
-        </Button>
-    </TableRow>
-
-    <TableRow
-        android:id="@+id/tableRow3"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" >
-
-        <TextView
-            android:id="@+id/lblUseIOIO"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Use IOIO breakout" >
-        </TextView>
-
-        <Button
-            android:id="@+id/btnConfigureIOIO"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Configure IOIO" >
-
-        </Button>
-    </TableRow>
-
-    <TableRow
-        android:id="@+id/tableRow13"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" >
-
-        <TextView
-            android:id="@+id/lblP2P"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Point-to-point" >
-        </TextView>
-
-        <Button
-            android:id="@+id/btnConfigureP2P"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Configure Point-to-point" >
-
-        </Button>
-    </TableRow>
-
-    <TableRow
-        android:id="@+id/tableRow4"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" >
-
-        <TextView
-            android:id="@+id/TextView02"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Pit and driver communication" >
-        </TextView>
-
-        <Button
-            android:id="@+id/btnConfigureComms"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Configure Communications" >
-        </Button>
-    </TableRow>
-
-    <TableRow
-        android:id="@+id/tableRow14"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1" >
-
-        <TextView
-            android:id="@+id/TextView12"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Speedometer style" >
-        </TextView>
-
-        <Spinner
-            android:id="@+id/spnDisplayMode"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" >
-        </Spinner>
-    </TableRow>
-
-    <TableRow
-        android:id="@+id/tableRow24"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_gravity="center_vertical"
-        android:layout_weight="1" >
-
-        <TextView
-            android:id="@+id/TextView22"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:text="Preferred Units" >
-        </TextView>
-
-        <Spinner
-            android:id="@+id/spnUnits"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" >
-        </Spinner>
-    </TableRow>
-</TableLayout>
-
-<!-- SD card stuff -->
-
-<RadioGroup
-    android:id="@+id/grpDBLocation"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="center_horizontal" >
-
-    <RadioButton
-        android:id="@+id/chkDBInternal"
+    <CheckBox
+        android:id="@+id/chkTestMode"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:checked="true"
-        android:text="DB on internal memory" />
-    <RadioButton
-        android:id="@+id/chkDBExternal"
+        android:text="Test Mode" >
+    </CheckBox>
+    <!-- bluetooth gps spinner -->
+
+    <CheckBox
+        android:id="@+id/chkScan"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="DB on SD card" />
-</RadioGroup>
+        android:text="Aggressively scan wifi" />
 
+    <TableLayout
+        android:id="@+id/tableLayout1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <TableRow
+            android:id="@+id/tableRow0"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+
+            <TextView
+                android:id="@+id/lblCarNumber"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Car Number" >
+            </TextView>
+
+            <EditText
+                android:id="@+id/edtCarNumber"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:inputType="numberSigned" >
+
+                <requestFocus />
+            </EditText>
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow10"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+
+            <TextView
+                android:id="@+id/lblUseAccel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Use Accelerometer" >
+            </TextView>
+
+            <Button
+                android:id="@+id/btnConfigureAccel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Configure Accelerometer" >
+            </Button>
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow1"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+
+            <TextView
+                android:id="@+id/lblUseExternalGPS"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Use External GPS" >
+            </TextView>
+
+            <Button
+                android:id="@+id/btnConfigureGPS"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Configure GPS" >
+            </Button>
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow2"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+
+            <TextView
+                android:id="@+id/lblUseExternalOBD2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Use OBD2 logging" >
+            </TextView>
+
+            <Button
+                android:id="@+id/btnConfigureOBD2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Configure OBD2" >
+            </Button>
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow3"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+
+            <TextView
+                android:id="@+id/lblUseIOIO"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Use IOIO breakout" >
+            </TextView>
+
+            <Button
+                android:id="@+id/btnConfigureIOIO"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Configure IOIO" >
+            </Button>
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow13"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow4"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow14"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+
+            <TextView
+                android:id="@+id/TextView12"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Speedometer style" >
+            </TextView>
+
+            <Spinner
+                android:id="@+id/spnDisplayMode"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" >
+            </Spinner>
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow24"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1" >
+
+            <TextView
+                android:id="@+id/TextView22"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Preferred Units" >
+            </TextView>
+
+            <Spinner
+                android:id="@+id/spnUnits"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" >
+            </Spinner>
+        </TableRow>
+    </TableLayout>
+
+    <!-- SD card stuff -->
+
+    <RadioGroup
+        android:id="@+id/grpDBLocation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:orientation="vertical" >
+
+        <RadioButton
+            android:id="@+id/chkDBInternal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Internal DB" />
+
+        <RadioButton
+            android:id="@+id/chkDBExternal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="External DB" />
+    </RadioGroup>
 </LinearLayout>
+
 </ScrollView>

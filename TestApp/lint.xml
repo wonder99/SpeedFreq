@@ -7,16 +7,21 @@
         <ignore path="res/layout-land/configureobd2.xml" />
         <ignore path="res/layout-land/landingnewrace.xml" />
         <ignore path="res/layout-land/landingoptions.xml" />
+        <ignore path="res/layout-land/speedfreq.xml" />
         <ignore path="res/layout/configureaccel.xml" />
         <ignore path="res/layout/configurecomms.xml" />
         <ignore path="res/layout/configureioio.xml" />
         <ignore path="res/layout/configureioiofilter.xml" />
         <ignore path="res/layout/configureobd2.xml" />
+        <ignore path="res/layout/enabling_wifi.xml" />
         <ignore path="res/layout/landingdbmanager.xml" />
         <ignore path="res/layout/landingloadrace.xml" />
         <ignore path="res/layout/landingloadrace_item.xml" />
         <ignore path="res/layout/landingnewrace.xml" />
         <ignore path="res/layout/landingoptions.xml" />
+        <ignore path="res/layout/newlapview.xml" />
+        <ignore path="res/layout/speedfreq.xml" />
+        <ignore path="res/menu/raceoptions.xml" />
     </issue>
     <issue id="MissingPrefix" severity="ignore" />
     <issue id="UseSparseArrays">

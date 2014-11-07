@@ -38,6 +38,7 @@ import android.view.KeyEvent;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.View.OnClickListener;
 import android.view.View.OnKeyListener;
 import android.widget.AdapterView;
@@ -59,6 +60,8 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 	public void onCreate(Bundle bun)
 	{
 		super.onCreate(bun);
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
 	}
 	
 	@Override
@@ -98,6 +101,9 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 	
 	private void FirstTimeSetup()
 	{
+		getWindow().setSoftInputMode(
+			      WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+
 		{ // db export side
 			EditText edtFilename = (EditText)findViewById(R.id.edtFilename);
 			Button btnSave = (Button)findViewById(R.id.btnSaveDB);
@@ -285,7 +291,8 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 		while(true)
 		{
 			int cbRead = in.read(rgBuf,0,rgBuf.length);
-			out.write(rgBuf,0,cbRead);
+			if( cbRead > 0 )
+				out.write(rgBuf,0,cbRead);
 			
 			if(cbRead < rgBuf.length)
 			{
