@@ -35,6 +35,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.wifi.WifiManager;
@@ -119,6 +120,11 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 		
 		ivTrack = (ImageView) findViewById(R.id.imTrack);
 		tvTrackName = (TextView) findViewById(R.id.tvTrackName);
+
+        // Check the 'in progress' cookie
+		boolean bAutoRestart = settings.getBoolean(Prefs.PREF_RACE_IN_PROGRESS, false);
+		if( bAutoRestart )
+			StartRace(); // Restart the race, since shutdown was ungraceful
 
 	}
 
@@ -236,92 +242,90 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 		}
     }
 
-	@Override
+    public void StartRace() 
+    {
+    	EditText edtRaceName = (EditText)findViewById(R.id.edtRaceName);
+    	String strRaceName = edtRaceName.getText().toString();
+
+    	Prefs.UNIT_SYSTEM eUnitSystem;
+
+    	SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+    	String strIP = settings.getString(Prefs.PREF_IP_STRING,Prefs.DEFAULT_IP_STRING);
+    	String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);
+    	String strSpeedoStyle = settings.getString(Prefs.PREF_SPEEDOSTYLE_STRING, Prefs.DEFAULT_SPEEDOSTYLE_STRING);
+    	boolean fTestMode = settings.getBoolean(Prefs.PREF_TESTMODE_BOOL, Prefs.DEFAULT_TESTMODE_BOOL);
+    	boolean bWifiScan = settings.getBoolean(Prefs.PREF_WIFI_SCAN_BOOL, Prefs.DEFAULT_WIFI_SCAN_BOOL);
+    	String strUnitSystem = settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString());
+    	String strBTGPS = settings.getString(Prefs.PREF_BTGPSNAME_STRING, Prefs.DEFAULT_GPS_STRING);
+    	String strBTOBD2 = settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING);
+    	boolean fUseIOIO = settings.getBoolean(Prefs.PREF_USEIOIO_BOOLEAN, Prefs.DEFAULT_USEIOIO_BOOLEAN);
+    	boolean fUseAccel = settings.getBoolean(Prefs.PREF_USEACCEL_BOOLEAN, Prefs.DEFAULT_USEACCEL);
+    	boolean fUseAccelCorrection = settings.getBoolean(Prefs.PREF_ACCEL_CORRECTION, Prefs.DEFAULT_ACCEL_CORRECTION);
+    	float flPitch = settings.getFloat(Prefs.PREF_ACCEL_CORRECTION_PITCH, Prefs.DEFAULT_ACCEL_CORRECTION_PITCH);
+    	float flRoll  = settings.getFloat(Prefs.PREF_ACCEL_CORRECTION_ROLL, Prefs.DEFAULT_ACCEL_CORRECTION_ROLL);
+    	float[] flSensorOffset = new float[3];
+    	flSensorOffset[1]  = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_X, Prefs.DEFAULT_ACCEL_OFFSET_X);
+    	flSensorOffset[2]  = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Y, Prefs.DEFAULT_ACCEL_OFFSET_Y);
+    	flSensorOffset[0]  = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Z, Prefs.DEFAULT_ACCEL_OFFSET_Z);
+    	int iFilterType = settings.getInt(Prefs.PREF_ACCEL_FILTER, Prefs.DEFAULT_ACCEL_FILTER);
+    	boolean fAckSMS = settings.getBoolean(Prefs.PREF_ACKSMS_BOOLEAN, Prefs.DEFAULT_ACKSMS);
+    	String strPrivacy = settings.getString(Prefs.PREF_PRIVACYPREFIX_STRING, Prefs.DEFAULT_PRIVACYPREFIX);
+    	int iButtonPin = settings.getInt(Prefs.PREF_IOIOBUTTONPIN, Prefs.DEFAULT_IOIOBUTTONPIN);
+
+    	boolean fUseP2P = false;//rgMode.getCheckedRadioButtonId() == R.id.rbPointToPoint;
+    	final int iStartMode = settings.getInt(Prefs.PREF_P2P_STARTMODE, Prefs.DEFAULT_P2P_STARTMODE);
+    	final float flStartParam = settings.getFloat(Prefs.PREF_P2P_STARTPARAM, Prefs.DEFAULT_P2P_STARTPARAM);
+    	final int iStopMode = settings.getInt(Prefs.PREF_P2P_STOPMODE, Prefs.DEFAULT_P2P_STOPMODE);
+    	final float flStopParam = settings.getFloat(Prefs.PREF_P2P_STOPPARAM, Prefs.DEFAULT_P2P_STOPPARAM);
+    	final boolean fRequireWifi = settings.getBoolean(Prefs.PREF_REQUIRE_WIFI, Prefs.DEFAULT_REQUIRE_WIFI);
+
+    	final int iFinishCount = 1;//Utility.ParseInt(edtFinishCount.getText().toString(), 1);
+
+    	eUnitSystem = Prefs.UNIT_SYSTEM.valueOf(strUnitSystem);
+
+    	ApiDemos.SaveSharedPrefs(settings, null, null, null, strRaceName);
+
+
+    	List<Integer> lstSelectedPIDs = new ArrayList<Integer>();
+    	Prefs.LoadOBD2PIDs(settings, lstSelectedPIDs);
+
+    	IOIOManager.PinParams rgAnalPins[] = Prefs.LoadIOIOAnalPins(settings);
+    	IOIOManager.PinParams rgPulsePins[] = Prefs.LoadIOIOPulsePins(settings);
+
+    	LapAccumulator.LapAccumulatorParams lapParams = new LapAccumulator.LapAccumulatorParams();
+    	lapParams.iCarNumber = settings.getInt(Prefs.PREF_CARNUMBER, Prefs.DEFAULT_CARNUMBER);
+    	lapParams.iSecondaryCarNumber = (int)(Math.random() * 100000.0); 
+    	lapParams.iFinishCount = iFinishCount;
+
+    	Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins,rgPulsePins, iButtonPin, fUseP2P, iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,strSSID, lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, flSensorOffset, fTestMode, bWifiScan, -1, -1, strBTGPS, strBTOBD2, strSpeedoStyle, eUnitSystem.toString());
+    	if(fTestMode)
+    	{
+    		// they're about to start a run in test mode.  Test mode sucks for real users, so warn them
+    		AlertDialog ad = new AlertDialog.Builder(new ContextThemeWrapper(this, android.R.style.Theme_Dialog)).create();
+    		ad.setMessage("Test mode is currently selected.  GPS reception will be disabled.  Are you sure?");
+    		ad.setButton(AlertDialog.BUTTON_POSITIVE,"Yes", this);
+    		ad.setButton(AlertDialog.BUTTON_NEGATIVE,"No/Cancel", this);
+    		m_startIntent = i;
+    		m_dlgAlert = ad;
+    		ad.show();
+    	}
+    	else
+    	{
+    		// Leave a cookie, so that this race can be restarted upon a crash
+    		Editor edit = settings.edit();
+    		edit = edit.putBoolean(Prefs.PREF_RACE_IN_PROGRESS, true);
+    		edit.commit();
+
+    		startActivity(i);
+    	}
+	}
+
+    @Override
 	public void onClick(View v) 
 	{
 		if(v.getId() == R.id.btnStartRace)
     	{
-    		EditText edtRaceName = (EditText)findViewById(R.id.edtRaceName);
-    		String strRaceName = edtRaceName.getText().toString();
-
-    		Prefs.UNIT_SYSTEM eUnitSystem;
-    		
-    		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
-    		String strIP = settings.getString(Prefs.PREF_IP_STRING,Prefs.DEFAULT_IP_STRING);
-    		String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);
-    		String strSpeedoStyle = settings.getString(Prefs.PREF_SPEEDOSTYLE_STRING, Prefs.DEFAULT_SPEEDOSTYLE_STRING);
-    		boolean fTestMode = settings.getBoolean(Prefs.PREF_TESTMODE_BOOL, Prefs.DEFAULT_TESTMODE_BOOL);
-    		boolean bWifiScan = settings.getBoolean(Prefs.PREF_WIFI_SCAN_BOOL, Prefs.DEFAULT_WIFI_SCAN_BOOL);
-    		String strUnitSystem = settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString());
-			String strBTGPS = settings.getString(Prefs.PREF_BTGPSNAME_STRING, Prefs.DEFAULT_GPS_STRING);
-			String strBTOBD2 = settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING);
-    		boolean fUseIOIO = settings.getBoolean(Prefs.PREF_USEIOIO_BOOLEAN, Prefs.DEFAULT_USEIOIO_BOOLEAN);
-    		boolean fUseAccel = settings.getBoolean(Prefs.PREF_USEACCEL_BOOLEAN, Prefs.DEFAULT_USEACCEL);
-    		boolean fUseAccelCorrection = settings.getBoolean(Prefs.PREF_ACCEL_CORRECTION, Prefs.DEFAULT_ACCEL_CORRECTION);
-        	float flPitch = settings.getFloat(Prefs.PREF_ACCEL_CORRECTION_PITCH, Prefs.DEFAULT_ACCEL_CORRECTION_PITCH);
-        	float flRoll  = settings.getFloat(Prefs.PREF_ACCEL_CORRECTION_ROLL, Prefs.DEFAULT_ACCEL_CORRECTION_ROLL);
-        	float[] flSensorOffset = new float[3];
-        	flSensorOffset[1]  = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_X, Prefs.DEFAULT_ACCEL_OFFSET_X);
-        	flSensorOffset[2]  = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Y, Prefs.DEFAULT_ACCEL_OFFSET_Y);
-        	flSensorOffset[0]  = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Z, Prefs.DEFAULT_ACCEL_OFFSET_Z);
-        	int iFilterType = settings.getInt(Prefs.PREF_ACCEL_FILTER, Prefs.DEFAULT_ACCEL_FILTER);
-    		boolean fAckSMS = settings.getBoolean(Prefs.PREF_ACKSMS_BOOLEAN, Prefs.DEFAULT_ACKSMS);
-    		String strPrivacy = settings.getString(Prefs.PREF_PRIVACYPREFIX_STRING, Prefs.DEFAULT_PRIVACYPREFIX);
-    		int iButtonPin = settings.getInt(Prefs.PREF_IOIOBUTTONPIN, Prefs.DEFAULT_IOIOBUTTONPIN);
-    		
-    		boolean fUseP2P = false;//rgMode.getCheckedRadioButtonId() == R.id.rbPointToPoint;
-    		final int iStartMode = settings.getInt(Prefs.PREF_P2P_STARTMODE, Prefs.DEFAULT_P2P_STARTMODE);
-    		final float flStartParam = settings.getFloat(Prefs.PREF_P2P_STARTPARAM, Prefs.DEFAULT_P2P_STARTPARAM);
-    		final int iStopMode = settings.getInt(Prefs.PREF_P2P_STOPMODE, Prefs.DEFAULT_P2P_STOPMODE);
-    		final float flStopParam = settings.getFloat(Prefs.PREF_P2P_STOPPARAM, Prefs.DEFAULT_P2P_STOPPARAM);
-    		final boolean fRequireWifi = settings.getBoolean(Prefs.PREF_REQUIRE_WIFI, Prefs.DEFAULT_REQUIRE_WIFI);
-    		
-    		final int iFinishCount = 1;//Utility.ParseInt(edtFinishCount.getText().toString(), 1);
-    		
-    		eUnitSystem = Prefs.UNIT_SYSTEM.valueOf(strUnitSystem);
-    		
-    		ApiDemos.SaveSharedPrefs(settings, null, null, null, strRaceName);
-
-
-    		List<Integer> lstSelectedPIDs = new ArrayList<Integer>();
-    		Prefs.LoadOBD2PIDs(settings, lstSelectedPIDs);
-    		
-    		IOIOManager.PinParams rgAnalPins[] = Prefs.LoadIOIOAnalPins(settings);
-    		IOIOManager.PinParams rgPulsePins[] = Prefs.LoadIOIOPulsePins(settings);
-    		
-    		LapAccumulator.LapAccumulatorParams lapParams = new LapAccumulator.LapAccumulatorParams();
-    		lapParams.iCarNumber = settings.getInt(Prefs.PREF_CARNUMBER, Prefs.DEFAULT_CARNUMBER);
-    		lapParams.iSecondaryCarNumber = (int)(Math.random() * 100000.0); 
-    		lapParams.iFinishCount = iFinishCount;
-    		
-    		Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins,rgPulsePins, iButtonPin, fUseP2P, iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,strSSID, lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, flSensorOffset, fTestMode, bWifiScan, -1, -1, strBTGPS, strBTOBD2, strSpeedoStyle, eUnitSystem.toString());
-    		if(fTestMode)
-    		{
-    			// they're about to start a run in test mode.  Test mode sucks for real users, so warn them
-    			AlertDialog ad = new AlertDialog.Builder(new ContextThemeWrapper(this, android.R.style.Theme_Dialog)).create();
-    			ad.setMessage("Test mode is currently selected.  GPS reception will be disabled.  Are you sure?");
-    			ad.setButton(AlertDialog.BUTTON_POSITIVE,"Yes", this);
-    			ad.setButton(AlertDialog.BUTTON_NEGATIVE,"No/Cancel", this);
-    			m_startIntent = i;
-    			m_dlgAlert = ad;
-    			ad.show();
-//    			
-//                //Ask the user if they want to quit
-//                AlertDialog ad = new AlertDialog.Builder(this)
-//                .setIcon(android.R.drawable.ic_dialog_alert)
-//                .setTitle(R.string.quit)
-//                .setMessage(R.string.really_quit)
-//                .setPositiveButton(R.string.yes, this)
-//                .setNegativeButton(R.string.no, null).show();
-//    			m_startIntent = i;
-//    			m_dlgAlert = ad;
-
-                
-    		}
-    		else
-    		{
-    			startActivity(i);
-    		}
+			StartRace();
     	}
 		else if(v.getId() == R.id.btnRaces)
 		{

@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -65,6 +66,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+
 import com.artsoft.wifilapper.IOIOManager.IOIOListener;
 import com.artsoft.wifilapper.LapAccumulator.DataChannel;
 import com.artsoft.wifilapper.LapSender.LapSenderListener;
@@ -638,6 +640,7 @@ implements
 		{
 			locMan.removeUpdates(this);
 		}
+
 		finish();
     }
     
@@ -806,8 +809,14 @@ implements
                 @Override
                 public void onClick(DialogInterface dialog, int which) 
                 {
-                    //Stop the activity
-                    ApiDemos.this.ShutdownLappingMode();    
+                    // Stop the activity
+                    ApiDemos.this.ShutdownLappingMode();
+
+                    // Clear the 'in progress' cookie, since it's a graceful shutdown
+                    SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+            		Editor edit = settings.edit();
+            		edit = edit.putBoolean(Prefs.PREF_RACE_IN_PROGRESS, false);
+            		edit.commit();
                 }
 
             }).setNegativeButton(R.string.no, null).show();

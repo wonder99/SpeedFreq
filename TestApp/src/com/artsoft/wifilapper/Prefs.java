@@ -70,6 +70,8 @@ public class Prefs
 	public static String PREF_CARNUMBER = "carnumber";
 	public static String PREF_REQUIRE_WIFI = "reqwifi";
 	public static String PREF_TRACK_ID = "track"; 
+	public static String PREF_RACE_IN_PROGRESS = "raceinprogress"; 
+	
 	
 	// the strings we use in for defaults when a SharedPreference isn't available
 	public static String DEFAULT_IP_STRING = "192.168.1.100";
