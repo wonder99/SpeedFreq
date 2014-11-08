@@ -69,9 +69,8 @@
     <RadioGroup
         android:id="@+id/rgCorrectionType"
         android:layout_width="fill_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginRight="10dp"
-        android:layout_weight="0"
         android:gravity="right"
         android:orientation="horizontal"
         android:paddingBottom="10dp" >
