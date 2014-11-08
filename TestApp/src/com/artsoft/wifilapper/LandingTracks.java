@@ -66,6 +66,9 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	private Handler m_handler;
 	private static final int MSG_NEW_IMAGE = 151;
 	private static final int MSG_DOWNLOAD_COMPLETE = 252;
+	private static final int TRACK_START_NEW = -111;
+	private static final int TRACK_DOWNLOAD = -112;
+	private static final int TRACK_UPLOAD = -113;
 	private ListView list;
 	
 	private ProgressDialog barProgressDialog;
@@ -163,19 +166,19 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	    		TextView txtName = (TextView)v.findViewById(R.id.txtRaceName);
 
 	    		switch( myobject.id ) {
-	    		case -111:
+	    		case TRACK_START_NEW:
 	    			txtName.setGravity(Gravity.CENTER);
 	    			txtName.setPadding(0, 15, 0, 15);
 	    			txtName.setText("Start a new track");
 	    			img.setImageBitmap(null);
 	    			break;
-	    		case -112:
+	    		case TRACK_DOWNLOAD:
 	    			txtName.setGravity(Gravity.CENTER);
 	    			txtName.setPadding(0, 15, 0, 15);
 	    			txtName.setText("Download Tracks");
 	    			img.setImageBitmap(null);
 	    			break;
-	    		case -113:
+	    		case TRACK_UPLOAD:
 	    			txtName.setGravity(Gravity.CENTER);
 	    			txtName.setPadding(0, 15, 0, 15);
 	    			txtName.setText("Upload all tracks");
@@ -207,7 +210,7 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 		List<ListTrackData> lstTrackData = new ArrayList<ListTrackData>();
 		
 		// This will be for the 'define new track'
-		lstTrackData.add(new ListTrackData("dummy_entry", 0, -111, 0,0,false,0));
+		lstTrackData.add(new ListTrackData("dummy_entry", 0, TRACK_START_NEW, 0,0,false,0));
 
 		while(cursor.moveToNext())
 		{
@@ -219,9 +222,9 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 		cursor.close();
 		
 		// This will be for the 'download tracks'
-		lstTrackData.add(new ListTrackData("dummy_entry", 0, -112, 0,0,false,0));
+		lstTrackData.add(new ListTrackData("dummy_entry", 0, TRACK_DOWNLOAD, 0,0,false,0));
 		// This will be for the 'upload all tracks'
-		lstTrackData.add(new ListTrackData("dummy_entry", 0, -113, 0,0,false,0));
+		lstTrackData.add(new ListTrackData("dummy_entry", 0, TRACK_UPLOAD, 0,0,false,0));
 		
 		ArrayAdapter<ListTrackData> adapter = new LoadRaceAdapter(this, lstTrackData);
 		
@@ -388,12 +391,17 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	@Override
 	protected void onListItemClick(ListView l, View v, int position, long id)
 	{
-		if( position == l.getCount()-2 )
-			downloadTracks();
-		else if( position == l.getCount()-1 )
-    		sendByEmail(true,-1);
-		else
+		ListTrackData myObject = (ListTrackData) l.getItemAtPosition(position);
+
+		switch( myObject.id )
 		{
+		case TRACK_DOWNLOAD:
+			downloadTracks();
+			break;
+		case TRACK_UPLOAD:
+			sendByEmail(true,-1);
+			break;
+		default:
 			// Get pointer to selected Track Data
 			ListTrackData lrd = (ListTrackData)l.getItemAtPosition(position);
 
@@ -404,6 +412,7 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 			finish();
 		}
 	}
+
 
 	@Override
     public boolean onCreateOptionsMenu(Menu menu) 
