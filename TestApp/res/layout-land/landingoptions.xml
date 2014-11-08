@@ -58,19 +58,37 @@
 
     </LinearLayout>
 
-    <CheckBox
-        android:id="@+id/chkTestMode"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Test Mode" >
-    </CheckBox>
-    <!-- bluetooth gps spinner -->
+      <LinearLayout
+          android:id="@+id/lyCheckboxes"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_gravity="center_horizontal"
+          android:orientation="horizontal" >
 
-    <CheckBox
-        android:id="@+id/chkScan"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Aggressively scan wifi" />
+            <CheckBox
+                android:id="@+id/chkTestMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginRight="20dp"
+                android:text="Test Mode" />
+
+            <CheckBox
+                android:id="@+id/chkScan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginRight="20dp"
+                android:text="Aggressive Wifi Scan" />
+
+            <CheckBox
+                android:id="@+id/chkAutoRestart"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="Auto Restart After Crash" />
+
+        </LinearLayout>
 
     <TableLayout
         android:id="@+id/tableLayout1"

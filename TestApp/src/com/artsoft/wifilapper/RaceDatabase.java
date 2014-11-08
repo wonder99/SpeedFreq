@@ -81,7 +81,7 @@ public class RaceDatabase extends BetterOpenHelper
 	// 20->21: adding "point-to-point" member in races table
 	// 23->24: adding tracks table
 	private static final int m_iVersion = 24;
-	private static final String DATABASE_NAME_INTERNAL = "races";
+	private static final String DATABASE_NAME_INTERNAL = "sfraces";
 	private static       String strDBFileName;
 	public static final String KEY_RACENAME = "name";
 	public static final String KEY_LAPCOUNT = "lapcount";

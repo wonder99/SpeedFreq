@@ -39,6 +39,7 @@ public class Prefs
 	public static String PREF_SPEEDOSTYLE_STRING = "Speedostyle";
 	public static String PREF_TESTMODE_BOOL = "TestMode";
 	public static String PREF_WIFI_SCAN_BOOL = "WifiScan";
+	public static String PREF_AUTO_RESTART_BOOL = "AutoRestart";
 	public static String PREF_IP_STRING = "IP"; // stores the target IP of their pitside laptop
 	public static String PREF_SSID_STRING = "SSID"; // stores the ssid of the wifi network they use
 	public static String PREF_BTGPSNAME_STRING = "btgps"; // stores the bluetooth name of their preferred btgps unit

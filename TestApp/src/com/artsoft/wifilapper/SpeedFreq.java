@@ -121,11 +121,6 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 		ivTrack = (ImageView) findViewById(R.id.imTrack);
 		tvTrackName = (TextView) findViewById(R.id.tvTrackName);
 
-        // Check the 'in progress' cookie
-		boolean bAutoRestart = settings.getBoolean(Prefs.PREF_RACE_IN_PROGRESS, false);
-		if( bAutoRestart )
-			StartRace(); // Restart the race, since shutdown was ungraceful
-
 	}
 
 	@Override
@@ -146,6 +141,13 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 	    }
 		rdTracks = RaceDatabase.GetTrackData(RaceDatabase.Get());
     	SetupSettingsView();
+
+    	// Check the 'in progress' cookie
+		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+		boolean bAutoRestart = settings.getBoolean(Prefs.PREF_AUTO_RESTART_BOOL, false);
+		boolean bRaceInProgress = settings.getBoolean(Prefs.PREF_RACE_IN_PROGRESS, false);
+		if( bAutoRestart && bRaceInProgress )
+			StartRace(); // Restart the race, since shutdown was ungraceful
 	}
 	@Override
 	public void onPause()
@@ -311,11 +313,17 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
     	}
     	else
     	{
-    		// Leave a cookie, so that this race can be restarted upon a crash
-    		Editor edit = settings.edit();
-    		edit = edit.putBoolean(Prefs.PREF_RACE_IN_PROGRESS, true);
-    		edit.commit();
-
+			Editor edit = settings.edit();
+    		boolean bAutoRestart = settings.getBoolean(Prefs.PREF_AUTO_RESTART_BOOL,false);
+    		if( bAutoRestart ) {
+    			// Leave a cookie, so that this race can be restarted upon a crash
+    			edit = edit.putBoolean(Prefs.PREF_RACE_IN_PROGRESS, true);
+    		}
+    		else {
+    			// clear out the in-progress flag if not using it
+    			edit = edit.putBoolean(Prefs.PREF_RACE_IN_PROGRESS, false);
+    		}
+			edit.commit();
     		startActivity(i);
     	}
 	}

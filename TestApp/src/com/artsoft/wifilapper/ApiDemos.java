@@ -300,6 +300,7 @@ implements
     	m_lRaceId = i.getLongExtra(Prefs.IT_RACEID_LONG, -1);
     	m_fTestMode = i.getBooleanExtra(Prefs.IT_TESTMODE_BOOL, false);
     	m_bWifiScan = i.getBooleanExtra(Prefs.IT_WIFI_SCAN_BOOL, false);
+    	
     	m_strSpeedoStyle = i.getStringExtra(Prefs.IT_SPEEDOSTYLE_STRING);
     	m_fAcknowledgeBySMS = i.getBooleanExtra(Prefs.IT_ACKSMS_BOOLEAN, true);
     	m_strPrivacyPrefix = i.getStringExtra(Prefs.IT_PRIVACYPREFIX_STRING);

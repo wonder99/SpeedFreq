@@ -87,6 +87,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		
 		CheckBox chkTestMode = (CheckBox)findViewById(R.id.chkTestMode);
 		CheckBox chkScan = (CheckBox)findViewById(R.id.chkScan);
+		CheckBox chkRestart = (CheckBox)findViewById(R.id.chkAutoRestart);
 		Spinner spnSpeedo = (Spinner)findViewById(R.id.spnDisplayMode);
 		Spinner spnUnits = (Spinner)findViewById(R.id.spnUnits);
 		RadioButton chkInternal = (RadioButton)findViewById(R.id.chkDBInternal);
@@ -97,6 +98,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		String strSpeedoStyle = spnSpeedo.getSelectedItem().toString();
 		boolean fTestMode = chkTestMode.isChecked();
 		boolean bWifiScan = chkScan.isChecked();
+		boolean bAutoRestart = chkRestart.isChecked();
 		Prefs.UNIT_SYSTEM eUnits = Prefs.UNIT_SYSTEM.valueOf(spnUnits.getSelectedItem().toString());
 		boolean fInternal = chkInternal.isChecked();
 		boolean fRequireWifi = true;//!chkCellular.isChecked();
@@ -123,6 +125,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		
 		edit.putBoolean(Prefs.PREF_TESTMODE_BOOL, fTestMode)
 		  .putBoolean(Prefs.PREF_WIFI_SCAN_BOOL, bWifiScan)
+		  .putBoolean(Prefs.PREF_AUTO_RESTART_BOOL, bAutoRestart)
 		  .putString(Prefs.PREF_SPEEDOSTYLE_STRING, strSpeedoStyle)
 		  .putString(Prefs.PREF_UNITS_STRING, eUnits.toString())
 		  .putBoolean(Prefs.PREF_DBLOCATION_BOOL, fInternal)
@@ -353,6 +356,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		
 		CheckBox chkTestMode = (CheckBox)findViewById(R.id.chkTestMode);
 		CheckBox chkScan = (CheckBox)findViewById(R.id.chkScan);
+		CheckBox chkRestart = (CheckBox)findViewById(R.id.chkAutoRestart);
 		Spinner spnSpeedo = (Spinner)findViewById(R.id.spnDisplayMode);
 		Spinner spnUnits = (Spinner)findViewById(R.id.spnUnits);
 		RadioButton chkInternal = (RadioButton)findViewById(R.id.chkDBInternal);
@@ -377,6 +381,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		String strSpeedoStyle = settings.getString(Prefs.PREF_SPEEDOSTYLE_STRING, rgstrSpeedos[0]);
 		boolean fTestMode = settings.getBoolean(Prefs.PREF_TESTMODE_BOOL, Prefs.DEFAULT_TESTMODE_BOOL);
 		boolean bWifiScan = settings.getBoolean(Prefs.PREF_WIFI_SCAN_BOOL, Prefs.DEFAULT_WIFI_SCAN_BOOL);
+		boolean bAutoRestart = settings.getBoolean(Prefs.PREF_AUTO_RESTART_BOOL, false);
 		Prefs.UNIT_SYSTEM eUnits = Prefs.UNIT_SYSTEM.valueOf(settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString()));
 		boolean fInternalDB = settings.getBoolean(Prefs.PREF_DBLOCATION_BOOL, Prefs.DEFAULT_DBLOCATION_BOOL);
 		String strBTGPS = settings.getString(Prefs.PREF_BTGPSNAME_STRING,Prefs.DEFAULT_GPS_STRING);
@@ -442,6 +447,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		SetupUnitSpinner(spnUnits, eUnits);
 		chkTestMode.setChecked(fTestMode);
 		chkScan.setChecked(bWifiScan);
+		chkRestart.setChecked(bAutoRestart);
 		
 		spnSpeedo.setOnItemSelectedListener(this);
 		spnUnits.setOnItemSelectedListener(this);
