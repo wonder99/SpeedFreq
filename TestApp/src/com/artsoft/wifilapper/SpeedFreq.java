@@ -40,6 +40,7 @@ import android.location.LocationManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.View.OnClickListener;
@@ -297,7 +298,7 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
     		if(fTestMode)
     		{
     			// they're about to start a run in test mode.  Test mode sucks for real users, so warn them
-    			AlertDialog ad = new AlertDialog.Builder(this).create();
+    			AlertDialog ad = new AlertDialog.Builder(new ContextThemeWrapper(this, android.R.style.Theme_Dialog)).create();
     			ad.setMessage("Test mode is currently selected.  GPS reception will be disabled.  Are you sure?");
     			ad.setButton(AlertDialog.BUTTON_POSITIVE,"Yes", this);
     			ad.setButton(AlertDialog.BUTTON_NEGATIVE,"No/Cancel", this);

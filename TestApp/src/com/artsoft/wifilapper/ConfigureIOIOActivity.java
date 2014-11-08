@@ -122,6 +122,8 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 		txtCurrentFilter2.invalidate();
 	
 	    SeekBar seek = (SeekBar)findViewById(R.id.seekSampleRate);
+	    seek.setProgress(seek.getMax()/2);
+	    onProgressChanged(seek,0,true);
 		CheckBox chk = (CheckBox)findViewById(R.id.chkIOIO);
 		CheckBox chkClicker = (CheckBox)findViewById(R.id.chkClicker);
 		Button btnAdd = (Button)findViewById(R.id.btnAdd);

@@ -797,7 +797,7 @@ implements
         if(keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_HOME) 
         {
             //Ask the user if they want to quit
-            new AlertDialog.Builder(this)
+            new AlertDialog.Builder(new ContextThemeWrapper(this, android.R.style.Theme_Dialog))
             .setIcon(android.R.drawable.ic_dialog_alert)
             .setTitle(R.string.quit)
             .setMessage(R.string.really_quit)

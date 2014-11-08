@@ -34,6 +34,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.text.TextUtils;
 import android.view.ContextMenu;
+import android.view.ContextThemeWrapper;
 import android.view.KeyEvent;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -375,7 +376,7 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 				File fPicked = new File(strFilename);
 				if(fPicked.exists())
 				{
-					AlertDialog ad = new AlertDialog.Builder(this).create();
+					AlertDialog ad = new AlertDialog.Builder(new ContextThemeWrapper(this, android.R.style.Theme_Dialog)).create();
 	    			ad.setMessage("You are about to overwrite all your recorded race sessions.  Data will be lost.  Make sure to back them up using the save button (right side) first.");
 	    			ad.setButton(AlertDialog.BUTTON_POSITIVE,"Ok", this);
 	    			ad.setButton(AlertDialog.BUTTON_NEGATIVE,"Cancel", this);

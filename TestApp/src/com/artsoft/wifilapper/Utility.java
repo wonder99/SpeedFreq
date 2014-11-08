@@ -36,6 +36,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.View.MeasureSpec;
 import android.view.ViewGroup;
@@ -46,7 +47,7 @@ public class Utility
 {
 	public static void ShowAlert(Context ctx, String strText)
 	{
-		AlertDialog ad = new AlertDialog.Builder(ctx).create();  
+		AlertDialog ad = new AlertDialog.Builder(new ContextThemeWrapper(ctx, android.R.style.Theme_Dialog)).create();  
 		ad.setCancelable(false); // This blocks the 'BACK' button  
 		ad.setMessage(strText);  
 		ad.setButton("OK", new DialogInterface.OnClickListener() {  

@@ -18,12 +18,14 @@ package com.artsoft.wifilapper;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -167,7 +169,7 @@ public class LandingNewRace extends LandingRaceBase implements OnClickListener, 
     		if(fTestMode)
     		{
     			// they're about to start a run in test mode.  Test mode sucks for real users, so warn them
-    			AlertDialog ad = new AlertDialog.Builder(this).create();
+    			AlertDialog ad = new AlertDialog.Builder(new ContextThemeWrapper(this, android.R.style.Theme_Dialog)).create();
     			ad.setMessage("Test mode is currently selected.  GPS reception will be disabled.  Are you sure?");
     			ad.setButton(AlertDialog.BUTTON_POSITIVE,"Yes", this);
     			ad.setButton(AlertDialog.BUTTON_NEGATIVE,"No/Cancel", this);

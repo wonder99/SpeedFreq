@@ -10,44 +10,48 @@
         android:layout_weight="1"
         android:orientation="vertical" >
 
-        <TableRow
-            android:id="@+id/tableRow3"
+        <RelativeLayout
+            android:id="@+id/RelativeLayout1"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1.1" >
 
-            <TextView
-                android:id="@+id/txtIPLabel"
+            <Button
+                android:id="@+id/btnAutoIP"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
                 android:lines="1"
-                android:singleLine="true"
-                android:text="Pitside IP: "
-                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Find IP"
                 android:textSize="@dimen/font_size_very_small" />
 
             <TextView
                 android:id="@+id/txtIP"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
+                android:layout_centerVertical="true"
+                android:layout_toRightOf="@+id/txtIPLabel"
                 android:lines="1"
                 android:singleLine="true"
                 android:text="192.168.1.100"
                 android:textAppearance="?android:attr/textAppearanceLarge"
-                android:textSize="@dimen/font_size_very_small" />
+                android:textSize="@dimen/font_size_very_small"
+                android:textStyle="bold" />
 
-            <Button
-                android:id="@+id/btnAutoIP"
-                android:layout_width="fill_parent"
+            <TextView
+                android:id="@+id/txtIPLabel"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
                 android:lines="1"
-                android:text="Find IP"
+                android:singleLine="true"
+                android:text="Pitside IP: "
+                android:textAppearance="?android:attr/textAppearanceLarge"
                 android:textSize="@dimen/font_size_very_small" />
 
-        </TableRow>
+        </RelativeLayout>
 
         <TableRow
             android:id="@+id/tableRow5"
@@ -63,7 +67,6 @@
                 android:text="SSID: txtSSID"
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:textSize="@dimen/font_size_very_small" />
-
         </TableRow>
 
         <TableRow
@@ -94,9 +97,7 @@
                 android:lines="1"
                 android:text="edtRaceName"
                 android:textSize="@dimen/font_size_very_small" />
-
         </TableRow>
-
     </LinearLayout>
 
     <LinearLayout
@@ -182,7 +183,6 @@
                     android:fitsSystemWindows="false"
                     android:text="Races"
                     android:textSize="@dimen/font_size_smaller" />
-
             </TableRow>
 
             <TableRow
@@ -211,10 +211,8 @@
                     android:layout_weight="1"
                     android:text="Options"
                     android:textSize="@dimen/font_size_smaller" />
-
             </TableRow>
         </LinearLayout>
-
     </LinearLayout>
 
 </LinearLayout>
