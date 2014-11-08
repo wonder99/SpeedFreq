@@ -162,6 +162,10 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 		Iterator<Entry<Class,ButtonData>> i = mapButtons.entrySet().iterator();
 		while(i.hasNext())
 		{
+			// Some code to force out-of-memory crash, for debug purposes
+//			byte[] dummyArray = new byte[100000000];
+//			dummyArray[10330094] = 0;
+
 			Entry<Class,ButtonData> e = i.next();
 			if(e.getValue().btn == v)
 			{
