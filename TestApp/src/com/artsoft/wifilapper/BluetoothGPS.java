@@ -300,7 +300,7 @@ public class BluetoothGPS
 			return strLastLeftover;
 		}
 
-		@TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
+		@TargetApi(Build.VERSION_CODES.GINGERBREAD_MR1)
 		public void run()
 		{
 			Thread.currentThread().setName("BT GPS thread");
@@ -318,7 +318,7 @@ public class BluetoothGPS
 				bs = null;
 				fDeviceGood = false;
 				
-				// This first try is quite successful on most phones I tried
+				// Attempt 1: This first try is quite successful on most phones I tried
 				try
 				{
 					Method m = m_dev.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
@@ -332,7 +332,7 @@ public class BluetoothGPS
 				catch (IllegalAccessException e) { e.printStackTrace();} 
 				catch (InvocationTargetException e) {	e.printStackTrace();}
 				
-				// The secure connection should only be tried on devices that don't want insecure
+				// Attempt 2: The secure connection should only be tried on devices that don't want insecure
 				if (!fDeviceGood && !bBtInsecure )
 				{
 					try {
@@ -346,7 +346,7 @@ public class BluetoothGPS
 					catch (InterruptedException e) {}
 				}
 
-				// We can try insecure connections on android versions >=10
+				// Attempt 3: We can try insecure connections on android versions >=10
 				if (!fDeviceGood && bBtInsecure && Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD_MR1)
 				{
 					try
