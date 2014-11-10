@@ -738,7 +738,10 @@ implements
 	    	if(strBTGPS.length() > 0)
 	    	{
 	    		// use our custom BT parser
-	    		m_btgps = new BluetoothGPS(strBTGPS, this);
+                SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+        		boolean bBtInsecure = settings.getBoolean(Prefs.PREF_BTINSECURE_BOOL, Prefs.DEFAULT_BTINSECURE_BOOL);
+
+	    		m_btgps = new BluetoothGPS(strBTGPS, this, bBtInsecure);
 	    		fGPSSetup = m_btgps != null && m_btgps.IsValid();
 	    	}
 	    	if(m_btgps == null || !m_btgps.IsValid())

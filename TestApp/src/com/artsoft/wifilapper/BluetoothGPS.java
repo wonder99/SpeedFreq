@@ -18,34 +18,40 @@ package com.artsoft.wifilapper;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Calendar;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Vector;
 
+import android.annotation.TargetApi;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
+import android.widget.Toast;
 
-public class BluetoothGPS 
+public class BluetoothGPS
 {
 	public static final String NO_VTG_FOUND = "com.artsoft.BluetoothGPS.NoVTG";
 	
 	DeviceRecvThread m_thd;
-	public BluetoothGPS(BluetoothDevice dev, LocationListener listener)
+	boolean bBtInsecure = false;
+	
+	public BluetoothGPS(String strDeviceName, LocationListener listener, boolean bBtInsecure)
 	{
-		m_thd = new DeviceRecvThread(dev, listener);
-		m_thd.start();
-	}
-	public BluetoothGPS(String strDeviceName, LocationListener listener)
-	{
+		this.bBtInsecure = bBtInsecure;
 		BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
 		if(ba.isEnabled())
 		{
@@ -57,7 +63,7 @@ public class BluetoothGPS
 				if(strDeviceName.equals(bd.getName()))
 				{
 					// found our device
-					m_thd = new DeviceRecvThread(bd, listener);
+					m_thd = new DeviceRecvThread(bd, listener, bBtInsecure);
 					m_thd.start();
 					break;
 				}
@@ -98,11 +104,12 @@ public class BluetoothGPS
 		double dLastLong = 361;
 		long lLastTime = -1;
 		float dLastSpeed = 0;
+		boolean bBtInsecure = false;
 		
-		public DeviceRecvThread(BluetoothDevice dev, LocationListener listener)
+		public DeviceRecvThread(BluetoothDevice dev, LocationListener listener, boolean bBtInsecure)
 		{
 			m_lstLocs = new Vector<Location>();
-			
+			this.bBtInsecure = bBtInsecure;
 			m_dev = dev;
 			m_listener = listener;
 			m_handler = new Handler(this);
@@ -147,95 +154,50 @@ public class BluetoothGPS
 			}
 			return false;
 		}
-		
+
 		private String ParseAndSendNMEA(String strNMEA)
 		{
-			String strLastLeftover = "";
-			int ixCur = strNMEA.indexOf("$GPGGA");
+			final String strMatch = new String("$GPRMC");
+			String strLastLeftover = strNMEA.substring(strNMEA.length()-Math.min(strNMEA.length(),strMatch.length()));
+			int ixCur = strNMEA.indexOf(strMatch);
 			while(ixCur != -1)
 			{
 				int ixNext = strNMEA.indexOf("$", ixCur+1);
-				int ixVTG = strNMEA.indexOf("$GPVTG",ixCur+1); // finds the next command
-				//int ixVTG = -1;
-				int ixNextAfterVTG = strNMEA.indexOf("$",ixVTG+1);
-				if(ixNextAfterVTG == -1) ixNextAfterVTG = strNMEA.length();
-				
 				if(ixNext == -1)
 				{
 					strLastLeftover = strNMEA.substring(ixCur,strNMEA.length());
 					break;
 				}
-				else if(ixVTG == -1)
-				{
-					// we found a GPGGA, but failed to find a GPVTG.  This means the user isn't  getting accurate velocity readings.
-					// what we're going to do is fail for 10 seconds in case one is coming, and then switch to "no VTG mode"
-					long tmNow = System.currentTimeMillis();
-					if(!fNoVTGMode && (tmNow - this.tmLastVTGSeen < 10000))
-					{
-						// we're still waiting for that damn VTG to show up.
-						break;
-					}
-					else
-					{
-						// it's been at least 10 seconds, or we're already in no-VTG mode.  From now on (until we see a VTG), we're operating in no-VTG mode
-						if(tmNow - tmLastVTGSeen > 10000)
-						{
-							// 10 seconds since our last warning to the user about the hazards of no-VTG mode.
-							m_handler.sendEmptyMessage(MSG_NOVTG);
-							tmLastVTGSeen = tmNow + 100000; // we want the warning to repeat, but not too frequently
-						}
-						fNoVTGMode = true;
-					}
-				}
-				else
-				{
-					tmLastVTGSeen = System.currentTimeMillis();
-					fNoVTGMode = false;
-				}
 				strLastLeftover = "";
-				String strGGACommand = strNMEA.substring(ixCur,ixNext);
-				String strGGABits[] = strGGACommand.split(",");
-				String strVTGCommand = null;
-				String strVTGBits[] = null;
-				if(!fNoVTGMode)
-				{
-					strVTGCommand = strNMEA.substring(ixVTG,ixNextAfterVTG);
-					strVTGBits = strVTGCommand.split(",");
-				}
-				
-				
-				if(strGGABits.length >= 6 && ValidateNMEA(strGGACommand) && (fNoVTGMode || (ValidateNMEA(strVTGCommand) && strVTGBits.length >= 8)))
+				String strRMCCommand = strNMEA.substring(ixCur,ixNext);
+				String strRMCBits[] = strRMCCommand.split(",");
+
+				if(strRMCBits.length >= 6 && ValidateNMEA(strRMCCommand))
 				{
 					/*
-					1    = UTC of Position (hhmmss.mmmm)
-					2    = Latitude
-					3    = N or S
-					4    = Longitude
-					5    = E or W
-					6    = GPS quality indicator (0=invalid; 1=GPS fix; 2=Diff. GPS fix)
-					7    = Number of satellites in use [not those in view]
-					8    = Horizontal dilution of position
-					9    = Antenna altitude above/below mean sea level (geoid)
-					10   = Meters  (Antenna height unit)
-					11   = Geoidal separation (Diff. between WGS-84 earth ellipsoid and
-					       mean sea level.  -=geoid is below WGS-84 ellipsoid)
-					12   = Meters  (Units of geoidal separation)
-					13   = Age in seconds since last update from diff. reference station
-					14   = Diff. reference station ID#
-					15   = Checksum
-					*/
-					String strUTC = strGGABits[1];
-					String strLat = strGGABits[2];
-					String strNS = strGGABits[3];
-					String strLong = strGGABits[4];
-					String strEW = strGGABits[5];
-					
-					String strSpeed = null;
-					if(!fNoVTGMode)
-					{
-						strSpeed = strVTGBits[7];
-					}
-					
+					1) Time (UTC)
+ 					2) Status, V = Navigation receiver warning
+ 					3) Latitude
+  					4) N or S
+  					5) Longitude
+  					6) E or W
+ 					7) Speed over ground, knots
+  					8) Track made good, degrees true
+ 					9) Date, ddmmyy
+ 					10) Magnetic Variation, degrees
+ 					11) E or W
+ 					12) Checksum
+					 */
+
+					String strUTC = strRMCBits[1];
+					String strLat = strRMCBits[3];
+					String strNS = strRMCBits[4];
+					String strLong = strRMCBits[5];
+					String strEW = strRMCBits[6];
+					String strSpeed = strRMCBits[7];
+
+					Log.d("bt",strUTC+","+strLat+","+strNS+","+strLong+","+strEW+","+strSpeed);
+
 					if(strUTC.length() > 0 && strLat.length() > 0 && strLong.length() > 0 && strNS.length() >= 1 && strEW.length() >= 1)
 					{
 						try
@@ -243,31 +205,31 @@ public class BluetoothGPS
 							int iLatBase = Integer.parseInt(strLat.substring(0,2));
 							int iLatFraction = Integer.parseInt(strLat.substring(2,4));
 							double dLatFinal = Double.parseDouble(strLat.substring(4,strLat.length()));
-							
+
 							int iLongBase = Integer.parseInt(strLong.substring(0,3));
 							int iLongFraction = Integer.parseInt(strLong.substring(3,5));
 							double dLongFinal = Double.parseDouble(strLong.substring(5,strLong.length()));
-							
+
 							double dLat = iLatBase + ((double)iLatFraction+dLatFinal)/60.0;
 							double dLong = iLongBase + ((double)iLongFraction+dLongFinal)/60.0;
-							
+
 							if(strNS.charAt(0) == 'S') dLat = -dLat;
 							if(strEW.charAt(0) == 'W') dLong = -dLong;
-							
+
 							String strMinutes = strUTC.substring(2,4);
 							String strSeconds = strUTC.substring(4,strUTC.length());
 							int cMinutes = Integer.parseInt(strMinutes);
 							double cSeconds = Double.parseDouble(strSeconds);
 							int cMs = (int)((cSeconds - (int)cSeconds) * 1000);
-							
+
 							Calendar cal = Calendar.getInstance();
 							cal.setTimeInMillis(System.currentTimeMillis());
 							cal.set(Calendar.MINUTE, cMinutes);
 							cal.set(Calendar.SECOND, (int)cSeconds);
 							cal.set(Calendar.MILLISECOND, cMs);
-							
+
 							long lTime = cal.getTimeInMillis();
-							
+
 							float dSpeed = 0;
 							if(fNoVTGMode)
 							{
@@ -306,7 +268,7 @@ public class BluetoothGPS
 							dLastLat = dLat;
 							dLastLong = dLong;
 							dLastSpeed = dSpeed;
-							
+
 							Location l = new Location("ArtBT");
 							l.setLatitude(dLat);
 							l.setLongitude(dLong);
@@ -325,48 +287,99 @@ public class BluetoothGPS
 							break;
 						}
 					}
-					ixCur = strNMEA.indexOf("$GPGGA",ixCur+1);
+
+					ixCur = strNMEA.indexOf(strMatch,ixCur+1);
 				}
 				else
 				{
 					break;
 				}
 
-				strLastLeftover = "";
+				strLastLeftover = strNMEA.substring(strNMEA.length()-Math.min(strNMEA.length(),strMatch.length()));
 			}
 			return strLastLeftover;
 		}
+
+		@TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
 		public void run()
 		{
 			Thread.currentThread().setName("BT GPS thread");
+			byte rgBuffer[] = new byte[2000];
+			InputStream in = null;
+			OutputStream out = null;
+			BluetoothSocket bs = null;
+			boolean fDeviceGood = false;
 			while(!m_shutdown)
 			{
-				InputStream in = null;
-				BluetoothSocket bs = null;
-				boolean fDeviceGood = true; // assume it's good to begin with...
+				UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+							
+				in = null;
+				out = null;
+				bs = null;
+				fDeviceGood = false;
+				
+				// This first try is quite successful on most phones I tried
 				try
 				{
-					bs = m_dev.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+					Method m = m_dev.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
+			        bs = (BluetoothSocket) m.invoke(m_dev, 1);
 					bs.connect();
-					in = bs.getInputStream();
 					fDeviceGood = true; // if we got this far without an exception, the device is good
 				}
-				catch(IOException e)
+				catch(IOException e){Log.w("bt", "Failed hidden secure attempt");} 
+				catch (IllegalArgumentException e) { e.printStackTrace();} 
+				catch (NoSuchMethodException e) {e.printStackTrace();} 
+				catch (IllegalAccessException e) { e.printStackTrace();} 
+				catch (InvocationTargetException e) {	e.printStackTrace();}
+				
+				// The secure connection should only be tried on devices that don't want insecure
+				if (!fDeviceGood && !bBtInsecure )
 				{
-					m_handler.sendEmptyMessage(MSG_NOGPSDEVICE);
-					fDeviceGood = false;
+					try {
+						bs.close();
+						Thread.sleep(250);
+						bs = m_dev.createRfcommSocketToServiceRecord(uuid);
+						bs.connect();
+						fDeviceGood = true; // if we got this far without an exception, the device is good
+					} 
+					catch (IOException e) {Log.w("bt", "Failed secure attempt");} 
+					catch (InterruptedException e) {}
 				}
+
+				// We can try insecure connections on android versions >=10
+				if (!fDeviceGood && bBtInsecure && Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD_MR1)
+				{
+					try
+					{
+						bs.close();
+						Thread.sleep(250);
+						bs = m_dev.createInsecureRfcommSocketToServiceRecord(uuid);
+						bs.connect();
+						fDeviceGood = true; // if we got this far without an exception, the device is good
+					}
+				catch (IOException e){Log.w("bt", "Failed insecure attempt");} 
+				catch (InterruptedException e) {} 
+				}
+
+				if( fDeviceGood )
+				{
+					try {
+						in = bs.getInputStream();
+						out = bs.getOutputStream();
+					} catch (IOException e) {Log.w("bt", "Failed creating input/output streams");}
+
+					Log.w("bt", "Success");
+				}
+				else
+					m_handler.sendEmptyMessage(MSG_NOGPSDEVICE);
+
+
 				String strLastLeftover = "";
-				tmLastVTGSeen = System.currentTimeMillis();
+				int cbRead = 0;
+				String strValid = "";
+				String strToParse = "";
 				while(fDeviceGood && !m_shutdown)
 				{
-					
-					// 1. read buffer
-					// 2. convert to string
-					// 3. find last GPGGA
-					// 4. decode and send
-					int cbRead = 0;
-					byte rgBuffer[] = new byte[10000];
 					try 
 					{
 						cbRead = in.read(rgBuffer,0,rgBuffer.length);
@@ -379,20 +392,27 @@ public class BluetoothGPS
 					}
 					if(cbRead > 0)
 					{
-						String str = strLastLeftover + new String(rgBuffer);
-						strLastLeftover = ParseAndSendNMEA(str);
+						// Append the current buffer to the leftovers, and reparse
+						strValid = new String(rgBuffer);
+						strValid = strValid.substring(0, cbRead);
+						strToParse = strLastLeftover + strValid;
+						strLastLeftover = ParseAndSendNMEA(strToParse);
 					}
 				}
 				if(in != null)
 				{
 					try{in.close(); } catch(IOException e2) {}
 				}
+				if(out != null)
+				{
+					try{out.close(); } catch(IOException e2) {}
+				}
 				if(bs != null)
 				{
 					try{bs.close(); } catch(IOException e2) {}
 				}
 				
-				try{Thread.sleep(1000);} catch(Exception e) {} // give the lost device some time to re-acquire
+				try{Thread.sleep(250);} catch(Exception e) {} // give the lost device some time to re-acquire
 			}
 		}
 		private boolean fLostGPS = true;

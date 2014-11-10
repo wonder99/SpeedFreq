@@ -40,6 +40,7 @@ public class Prefs
 	public static String PREF_TESTMODE_BOOL = "TestMode";
 	public static String PREF_WIFI_SCAN_BOOL = "WifiScan";
 	public static String PREF_AUTO_RESTART_BOOL = "AutoRestart";
+	public static String PREF_BTINSECURE_BOOL = "BTInsecure";
 	public static String PREF_IP_STRING = "IP"; // stores the target IP of their pitside laptop
 	public static String PREF_SSID_STRING = "SSID"; // stores the ssid of the wifi network they use
 	public static String PREF_BTGPSNAME_STRING = "btgps"; // stores the bluetooth name of their preferred btgps unit
@@ -83,6 +84,7 @@ public class Prefs
 	public static String DEFAULT_SPEEDOSTYLE_STRING = LandingOptions.rgstrSpeedos[0];
 	public static boolean DEFAULT_TESTMODE_BOOL = false;
 	public static boolean DEFAULT_WIFI_SCAN_BOOL = true;
+	public static boolean DEFAULT_BTINSECURE_BOOL = false;
 	public static Prefs.UNIT_SYSTEM DEFAULT_UNITS_STRING = Prefs.UNIT_SYSTEM.MPH;
 	public static boolean DEFAULT_DBLOCATION_BOOL = true; // whether the DB is on internal storage
 	public static boolean DEFAULT_USEIOIO_BOOLEAN = false;
