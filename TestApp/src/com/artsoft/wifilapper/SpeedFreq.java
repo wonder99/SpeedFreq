@@ -41,6 +41,7 @@ import android.location.LocationManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.WindowManager;
@@ -127,7 +128,11 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 	public void onResume()
 	{
 		super.onResume();
-	    locMan = (LocationManager)getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+		getWindow().setSoftInputMode(
+			      WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+		
+		locMan = (LocationManager)getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+
 	    if(locMan != null && locMan.isProviderEnabled(LocationManager.GPS_PROVIDER))
 	    {
 	    	try
@@ -187,7 +192,8 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 		m_btnStartRace = (Button)findViewById(R.id.btnStartRace);
     	m_btnStartRace.setOnClickListener(this);
     	m_btnStartRace.setText("Start Race");
-    	m_btnStartRace.setTextSize(25*getResources().getDisplayMetrics().density);//TypedValue.COMPLEX_UNIT_PX,m_btnStartRace.getHeight());
+//    	m_btnStartRace.setTextSize(25*getResources().getDisplayMetrics().density);//TypedValue.COMPLEX_UNIT_PX,m_btnStartRace.getHeight());
+//    	m_btnStartRace.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 90);
     	
     	Button btnRaces = (Button)findViewById(R.id.btnRaces);
     	btnRaces.setOnClickListener(this);
@@ -211,25 +217,24 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 		iSelectedTrack = settings.getInt(Prefs.PREF_TRACK_ID, Prefs.DEFAULT_TRACK_ID_INT);
 		if( rdTracks != null && iSelectedTrack >= 0 ) 
 		{
-			int height=getWindowManager().getDefaultDisplay().getHeight();
-			int width =getWindowManager().getDefaultDisplay().getWidth();
 			int size;
 			
-			// Just force it, and let android scale it
-			size=400;
+			size=Math.round(Math.min(getResources().getDisplayMetrics().widthPixels,getResources().getDisplayMetrics().heightPixels) *.48f);
 			ivTrack.setImageBitmap(RaceDatabase.GetBitmapFromDatabase(RaceDatabase.Get(), iSelectedTrack,
 					size,size));
+			ivTrack.setScaleType(ScaleType.CENTER);
 
 			RaceData rd = RaceDatabase.GetTrackData(RaceDatabase.Get(), iSelectedTrack, 0);
 			if( rd != null )
-				tvTrackName.setText("Selected Track:\n" + rd.strRaceName);
+				tvTrackName.setText("Selected Track: " + rd.strRaceName);
 			
 		}
 		else 
 		{
-			tvTrackName.setText("A new S/F will be set");
+			tvTrackName.setText("A new Start/Finish will be set");
 			iSelectedTrack = -1;
-			ivTrack.setImageResource(R.drawable.iconbig);
+			ivTrack.setImageResource(R.drawable.speedfreq);
+			ivTrack.setScaleType(ScaleType.CENTER_INSIDE);
 		}
 		ivTrack.setOnClickListener(this);
 		tvTrackName.setOnClickListener(this);
@@ -347,18 +352,7 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 		{
 			startActivity(new Intent().setClass(this, LandingOptions.class));
 		}
-		else if(v.getId() == R.id.btnTracks)
-		{
-			startActivity(new Intent().setClass(this, LandingTracks.class));
-//			iSelectedTrack = -1;
-//			ivTrack.setImageResource(R.drawable.iconbig);
-////			ivTrack.setScaleType(ScaleType.CENTER_INSIDE);
-//
-//			tvTrackName.setText("A new S/F will be set");
-//			SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
-//			settings.edit().putInt(Prefs.PREF_TRACK_ID, iSelectedTrack).commit();
-		}
-		else if(v.getId() == R.id.imTrack || v.getId() == R.id.tvTrackName)
+		else if(v.getId() == R.id.imTrack || v.getId() == R.id.btnTracks)
 		{
 			startActivity(new Intent().setClass(this, LandingTracks.class));
 		}

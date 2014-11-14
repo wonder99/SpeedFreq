@@ -1,7 +1,7 @@
 
     <resources>
-		<!-- Nexus 7, 10 10.1" -->
+		<!-- Petr's tablet, Nexus 7, 10 10.1" -->
         <dimen name="font_size">95sp</dimen>
-        <dimen name="font_size_smaller">50sp</dimen>
-        <dimen name="font_size_very_small">35sp</dimen>
+        <dimen name="font_size_smaller">55sp</dimen>
+        <dimen name="font_size_very_small">25sp</dimen>
     </resources>

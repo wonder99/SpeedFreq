@@ -19,20 +19,26 @@ package com.artsoft.wifilapper;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.media.SoundPool;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.view.ContextThemeWrapper;
+import android.view.Surface;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -104,14 +110,19 @@ public class ConfigureAccelerometerActivity extends Activity implements
 	@Override
 	public void onCreate(Bundle extras) {
 		super.onCreate(extras);
+
+		int rotation = getWindowManager().getDefaultDisplay().getRotation();
+		lockOrientation(rotation, Surface.ROTATION_270);
+		// Ensure that the rotation hasn't changed
+		if (getWindowManager().getDefaultDisplay().getRotation() != rotation) {
+		    lockOrientation(rotation, Surface.ROTATION_90);
+		}
+		
 		setContentView(R.layout.configureaccel);
 
 		bCalibrating = false;
 		bOrienting = false;
 				
-		soundPool = new SoundPool(1, AudioManager.STREAM_MUSIC, 0);
-		soundId = soundPool.load(this,R.raw.short_1khz,1);
-		
 		flPitch = 0;
 		flRoll = 0;
 
@@ -167,8 +178,10 @@ public class ConfigureAccelerometerActivity extends Activity implements
 		m_handler = new Handler(this);
 	}
 
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
 	@Override
 	public void onPause() {
+		Debug.startMethodTracing();
 		super.onPause();
 		
 		if( soundPool != null ) {
@@ -195,12 +208,25 @@ public class ConfigureAccelerometerActivity extends Activity implements
 			edit.putFloat(Prefs.PREF_ACCEL_OFFSET_Y, flSensorOffset[2]);
 			edit.putFloat(Prefs.PREF_ACCEL_OFFSET_Z, flSensorOffset[0]);
 		}
-		edit.commit();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+			edit.apply();
+		else
+			edit.commit();
+		Debug.stopMethodTracing();
+
 	}
 
 	@Override
 	public void onResume() {
 		super.onResume();
+
+		soundPool = new SoundPool(1, AudioManager.STREAM_MUSIC, 0);
+		if( BuildConfig.DEBUG && soundPool == null )
+			throw new AssertionError("Soundpoool creation failed!");
+		
+		soundId = soundPool.load(this,R.raw.short_1khz,1);
+
+		timer = new Timer();
 
 		SharedPreferences settings = this.getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
 
@@ -343,6 +369,43 @@ public class ConfigureAccelerometerActivity extends Activity implements
 			}
 		}
 	}
+	private void lockOrientation(int originalRotation, int naturalOppositeRotation) {
+	    int orientation = getResources().getConfiguration().orientation;
+	    if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+	        // Are we reverse?
+	        if (originalRotation == Surface.ROTATION_0 || originalRotation == naturalOppositeRotation) {
+	            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+	        } else {
+	            setReversePortrait();
+	        }
+	    } else {
+	        // Are we reverse?
+	        if (originalRotation == Surface.ROTATION_0 || originalRotation == naturalOppositeRotation) {
+	            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+	        } else {
+	            setReverseLandscape();
+	        }
+	    }
+	}
+
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+	private void setReversePortrait() {
+	    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT);
+	    } else {
+	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+	    }
+	}
+
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+	private void setReverseLandscape() {
+	    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
+	    } else {
+	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+	    }
+	}
+
 
 	public void updatePitchAndRollSliders(float pitch, float roll) {
 		skRoll.setProgress((int)Math.round(roll * 100f / 180f + 50f));

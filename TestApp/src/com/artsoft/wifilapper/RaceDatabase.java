@@ -104,7 +104,7 @@ public class RaceDatabase extends BetterOpenHelper
 	{
 		return CreateOnPath(ctx, strBasePath + "/" + DATABASE_NAME_INTERNAL);
 	}
-	public static boolean CreateExternal(Context ctx)
+	public static String GetExternalDir(Context ctx)
 	{
 		// First, see if removable storage can be used
 		String strPath = null;
@@ -124,8 +124,16 @@ public class RaceDatabase extends BetterOpenHelper
 	    if( strPath == null )
 	    	strPath = Environment.getExternalStorageDirectory().toString();
 	    
+	    if( BuildConfig.DEBUG && strPath == null )
+	    	throw new AssertionError("Can't find any external storage!");
+	    
+	    return strPath;
+	}
+
+	public static boolean CreateExternal(Context ctx)
+	{
 	    // Create the directory if it doesn't exist
-	    strPath = strPath + "/wifilapper";
+	    String strPath = GetExternalDir(ctx) + "/speedfreq";
 	    File fileTest = new File(strPath);
 	    if ( !fileTest.isDirectory() )
 	    	fileTest.mkdir();
@@ -149,7 +157,10 @@ public class RaceDatabase extends BetterOpenHelper
 	}
 	public synchronized static SQLiteDatabase Get()
 	{
-		return g_raceDB.getWritableDatabase();
+		if( g_raceDB != null )
+			return g_raceDB.getWritableDatabase();
+		else 
+			return null;
 	}
 	public static class download extends AsyncTask<Handler, Void, Integer> {
 		Handler m_handler=null;
@@ -407,7 +418,8 @@ public class RaceDatabase extends BetterOpenHelper
 						paintLap.setStrokeWidth(iStrokeWidth);
 						paintSplits.setStrokeWidth(iStrokeWidth);
 
-						rcOnScreen = new Rect(0,0,width-2*iStrokeWidth,height-2*iStrokeWidth);
+						rcOnScreen = new Rect(0,0,width,height);
+						rcOnScreen.inset(iStrokeWidth,iStrokeWidth);
 						
 						LapAccumulator.DrawLap(lap, false, rcInWorld, canvas, paintLap, paintSplits, rcOnScreen);
 					}

@@ -24,6 +24,7 @@
         <ignore path="res/menu/raceoptions.xml" />
     </issue>
     <issue id="MissingPrefix" severity="ignore" />
+    <issue id="RtlHardcoded" severity="ignore" />
     <issue id="UseSparseArrays">
         <ignore path="src/com/artsoft/wifilapper/ApiDemos.java" />
     </issue>

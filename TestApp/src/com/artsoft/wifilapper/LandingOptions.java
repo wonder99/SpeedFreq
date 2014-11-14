@@ -16,12 +16,15 @@
 
 package com.artsoft.wifilapper;
 
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.annotation.TargetApi;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.StatFs;
 import android.util.Log;
@@ -147,7 +150,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 			lstStrings.add(rgstrSpeedos[x]);
 		}
 		
-		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, lstStrings);
+		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.list_item, lstStrings);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spn.setAdapter(adapter);
         if(ixDefault >= 0) spn.setSelection(ixDefault,true);
@@ -163,8 +166,9 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 			lstStrings.add(Prefs.UNIT_SYSTEM.values()[x].toString());
 		}
 		
-		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, lstStrings);
+		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.list_item, lstStrings);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        
         spn.setAdapter(adapter);
         if(ixDefault >= 0) spn.setSelection(ixDefault,true);
         spn.invalidate();
@@ -344,6 +348,8 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 			return "Not using accelerometer";
 		}
 	}
+	@SuppressWarnings("deprecation")
+	@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2) //  API 18
 	private void UpdateUI()
 	{
 		// Hide keyboard by default
@@ -421,11 +427,20 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		
 		chkAccel.setText(MakeAccelText(settings));
 		StatFs sfs = null;
-    	int iMBAvailable=0;
+    	float fMBAvailable=0;
 
     	sfs = new StatFs(android.os.Environment.getDataDirectory().getPath());
-    	iMBAvailable = (int)Math.round(sfs.getBlockSize() * sfs.getAvailableBlocks() / 1024f / 1024f);
-    	chkInternal.setText("Internal DB (" + String.valueOf(iMBAvailable) + "MB free)");
+    	if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
+    		fMBAvailable = Math.round(sfs.getBlockSizeLong() * sfs.getAvailableBlocksLong() / 1024l / 1024l);
+    	else // OK to use deprecated API under this conditional
+    		fMBAvailable = Math.round(sfs.getBlockSize() * sfs.getAvailableBlocks() / 1024f / 1024f);
+    	
+    	String strAvail;
+    	if( fMBAvailable > 1024f ) 
+    		strAvail = String.valueOf(Math.round(fMBAvailable/102.4f)/10f) + " GB free)";
+    	else
+    		strAvail = String.valueOf(Math.round(fMBAvailable*10)/10f) + " MB free)";
+    	chkInternal.setText("Internal DB (" + strAvail);
 		
 		if(!isSdPresent())
 		{
@@ -437,10 +452,18 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		}
 		else
 		{
-			sfs = new StatFs(RaceDatabase.Get().getPath());
-	    	iMBAvailable = Math.round(sfs.getBlockSize() * sfs.getAvailableBlocks() / 1024f / 1024f);
+			sfs = new StatFs(RaceDatabase.GetExternalDir(this));
+	    	if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
+	    		fMBAvailable = (int)Math.round(sfs.getBlockSizeLong() * sfs.getAvailableBlocksLong() / 1024l / 1024l);
+	    	else
+	    		fMBAvailable = Math.round(sfs.getBlockSize() * sfs.getAvailableBlocks() / 1024f / 1024f);
 			chkExternal.setEnabled(true);
-			chkExternal.setText("External DB (" + String.valueOf(iMBAvailable) + "MB free)");
+
+	    	if( fMBAvailable > 1024f ) 
+	    		strAvail = String.valueOf(Math.round(fMBAvailable/102.4f)/10f) + " GB free)";
+	    	else
+	    		strAvail = String.valueOf(Math.round(fMBAvailable*10)/10f) + " MB free)";
+			chkExternal.setText("External DB (" + strAvail);
 		}		
 		
 		if(fInternalDB) chkInternal.setChecked(true);
@@ -454,6 +477,10 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		chkScan.setChecked(bWifiScan);
 		chkRestart.setChecked(bAutoRestart);
 		chkBtInsecure.setChecked(bBtInsecure);
+
+		// Disable the checkbox if android version is too old to use it
+		if( Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD_MR1 )
+			chkBtInsecure.setEnabled(false);
 		
 		spnSpeedo.setOnItemSelectedListener(this);
 		spnUnits.setOnItemSelectedListener(this);

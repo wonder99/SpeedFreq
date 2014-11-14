@@ -156,7 +156,7 @@ public class Utility
 	{
 		final int cxPermitted = rcScreen.width();
 		final int cyPermitted = rcScreen.height();
-		float fFontHigh = 522;
+		float fFontHigh = 700;
 		float fFontLow = 10;
 		boolean fTooBig = true;
 

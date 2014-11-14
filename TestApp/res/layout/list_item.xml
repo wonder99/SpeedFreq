@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+  <CheckedTextView xmlns:android="http://schemas.android.com/apk/res/android"
+      android:layout_width="fill_parent"
+      android:layout_height="wrap_content"
+      android:gravity="left|center_vertical"
+      android:singleLine="true"
+      android:textColor="#000"
+      android:textSize="@dimen/font_size_very_small" />
 
-  <CheckedTextView xmlns:android="http://schemas.android.com/apk/res/android" 
-        android:gravity="left|center_vertical"
-    android:singleLine="true"
-    android:textSize="20sp"
-    android:layout_width="fill_parent"
-    android:layout_height="?android:attr/listPreferredItemHeight"
-     /> 
+ 

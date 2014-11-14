@@ -205,7 +205,6 @@ implements
 	
 	private static ApiDemos m_me;
 	
-
 	private void lockOrientation(int originalRotation, int naturalOppositeRotation) {
 	    int orientation = getResources().getConfiguration().orientation;
 	    if (orientation == Configuration.ORIENTATION_PORTRAIT) {
@@ -224,6 +223,8 @@ implements
 	        }
 	    }
 	}
+
+
 
 	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
 	private void setReversePortrait() {
@@ -297,6 +298,9 @@ implements
     	
     	final boolean fUseAccel = i.getBooleanExtra(Prefs.IT_USEACCEL_BOOLEAN, Prefs.DEFAULT_USEACCEL);
     	m_strRaceName = i.getStringExtra(Prefs.IT_RACENAME_STRING);
+    	if( m_strRaceName == null || m_strRaceName.length() == 0  )
+    		m_strRaceName = "noname";
+    	
     	m_lRaceId = i.getLongExtra(Prefs.IT_RACEID_LONG, -1);
     	m_fTestMode = i.getBooleanExtra(Prefs.IT_TESTMODE_BOOL, false);
     	m_bWifiScan = i.getBooleanExtra(Prefs.IT_WIFI_SCAN_BOOL, false);
@@ -488,6 +492,7 @@ implements
     @Override
     public void onDestroy()
     {
+    	// need this if they hit the home key
     	super.onDestroy();
     	synchronized(ApiDemos.class)
     	{
@@ -499,7 +504,13 @@ implements
     public void onPause()
     {
     	super.onPause();
-    	
+    	synchronized(ApiDemos.class)
+    	{
+    		m_me = null;
+    	}
+    	ShutdownLappingMode();
+
+    	/*    	
     	Notification notification = new Notification(R.drawable.icon, "Wifilapper is still recording data", System.currentTimeMillis());
     	// we need to put up a little notification at the top to tell them we're still running.
     	// we need to set a bunch of persisted settings so that the next LandingScreen activity knows to hop to this 
@@ -518,10 +529,7 @@ implements
 		mNotificationManager.notify(RESTART_NOTIFICATION_ID, notification);
 		
 		m_restartIntent = intentBack;
-    }
-	public void onResume()
-    {
-    	super.onResume();
+		*/
     }
     
     public static ApiDemos Get()
@@ -612,12 +620,12 @@ implements
 	    {
 	    	sensorMan.unregisterListener(this);
 	    }
-	    if(m_restartIntent != null)
-	    {
-	    	m_restartIntent.cancel();
-	    }
-		NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-		mNotificationManager.cancel(RESTART_NOTIFICATION_ID);
+//	    if(m_restartIntent != null)
+//	    {
+//	    	m_restartIntent.cancel();
+//	    }
+//		NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+//		mNotificationManager.cancel(RESTART_NOTIFICATION_ID);
 		if(m_obd != null)
 		{
 			m_obd.Shutdown();

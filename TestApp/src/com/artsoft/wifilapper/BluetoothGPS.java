@@ -32,6 +32,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -160,6 +161,7 @@ public class BluetoothGPS
 			final String strMatch = new String("$GPRMC");
 			String strLastLeftover = strNMEA.substring(strNMEA.length()-Math.min(strNMEA.length(),strMatch.length()));
 			int ixCur = strNMEA.indexOf(strMatch);
+			Log.w("bt2","Len="+String.valueOf(strNMEA.length()) + "," + strNMEA);
 			while(ixCur != -1)
 			{
 				int ixNext = strNMEA.indexOf("$", ixCur+1);
@@ -172,7 +174,7 @@ public class BluetoothGPS
 				String strRMCCommand = strNMEA.substring(ixCur,ixNext);
 				String strRMCBits[] = strRMCCommand.split(",");
 
-				if(strRMCBits.length >= 6 && ValidateNMEA(strRMCCommand))
+				if(strRMCBits.length >= 7 && ValidateNMEA(strRMCCommand))
 				{
 					/*
 					1) Time (UTC)
@@ -196,7 +198,7 @@ public class BluetoothGPS
 					String strEW = strRMCBits[6];
 					String strSpeed = strRMCBits[7];
 
-					Log.d("bt",strUTC+","+strLat+","+strNS+","+strLong+","+strEW+","+strSpeed);
+					Log.d("bt",strUTC+", "+strLat+","+strNS+", "+strLong+","+strEW+", "+strSpeed+" kts");
 
 					if(strUTC.length() > 0 && strLat.length() > 0 && strLong.length() > 0 && strNS.length() >= 1 && strEW.length() >= 1)
 					{
@@ -262,7 +264,7 @@ public class BluetoothGPS
 							}
 							else
 							{
-								dSpeed = (float)Double.parseDouble(strSpeed);
+								dSpeed = (float)Double.parseDouble(strSpeed) * 1.852f; // convert from knots
 							}
 							lLastTime = lTime;
 							dLastLat = dLat;
@@ -304,7 +306,7 @@ public class BluetoothGPS
 		public void run()
 		{
 			Thread.currentThread().setName("BT GPS thread");
-			byte rgBuffer[] = new byte[2000];
+			byte rgBuffer[] = new byte[10000];
 			InputStream in = null;
 			OutputStream out = null;
 			BluetoothSocket bs = null;
@@ -393,10 +395,19 @@ public class BluetoothGPS
 					if(cbRead > 0)
 					{
 						// Append the current buffer to the leftovers, and reparse
-						strValid = new String(rgBuffer);
-						strValid = strValid.substring(0, cbRead);
-						strToParse = strLastLeftover + strValid;
-						strLastLeftover = ParseAndSendNMEA(strToParse);
+					    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+					    	byte[] bRead = java.util.Arrays.copyOfRange(rgBuffer, 0,cbRead);
+					    	strToParse = strLastLeftover + new String(bRead);
+					    }
+					    else {
+					    	// less efficient, but copyOfRange came in API 9
+					    	strToParse = new String(rgBuffer);
+					    	strToParse = strLastLeftover + strToParse.substring(0,cbRead);
+					    }
+						if( strToParse.length() < 40 ) 
+							strLastLeftover = strToParse; // skip parsing if we're too short
+						else 
+							strLastLeftover = ParseAndSendNMEA(strToParse);
 					}
 				}
 				if(in != null)
@@ -409,7 +420,8 @@ public class BluetoothGPS
 				}
 				if(bs != null)
 				{
-					try{bs.close(); } catch(IOException e2) {}
+					try{ bs.close(); } 
+					catch(IOException e2) {}
 				}
 				
 				try{Thread.sleep(250);} catch(Exception e) {} // give the lost device some time to re-acquire

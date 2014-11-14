@@ -26,6 +26,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
@@ -40,6 +41,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.view.ContextMenu;
@@ -69,7 +71,11 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	private static final int TRACK_START_NEW = -111;
 	private static final int TRACK_DOWNLOAD = -112;
 	private static final int TRACK_UPLOAD = -113;
+	private static final int MSG_EMAIL_COMPLETE = -114;
 	private ListView list;
+	String strUploadDB;
+
+	File FileToSend=null;
 	
 	private ProgressDialog barProgressDialog;
 	RaceDatabase.download myDnld=null;
@@ -79,6 +85,9 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	{
 		super.onCreate(savedInstanceState);
 		m_handler = new Handler(this);
+//		strUploadDB = getCacheDir().toString() + "/upload.tracks";
+		strUploadDB = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString() + "/upload.tracks";
+
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		setContentView(R.layout.landingtracks);
 	}
@@ -96,6 +105,14 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 		super.onDestroy();
 		m_imgFactory.Shutdown();
 		m_imgFactory = null;
+
+		if( FileToSend != null) {
+			File JournalFile = new File(FileToSend.getPath()+"-journal");
+			if( FileToSend.exists() ) 
+				FileToSend.delete();
+			if( JournalFile.exists() )
+				JournalFile.delete();
+		}
 		
 		// check if selected track is still in list, return -1 if not
 		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
@@ -277,13 +294,12 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	public boolean sendByEmail(boolean bZipIt, int iTrackID)
 	{
 		// Create a new DB, and copy the tracks table over to it
-		String strTrackDB = RaceDatabase.getPath() + ".tracks";
-		final File delFile = new File(strTrackDB);
+		final File delFile = new File(strUploadDB);
 		if( delFile.exists() )
 			delFile.delete();
 			
 		SQLiteDatabase m_dbTrack;
-		m_dbTrack = SQLiteDatabase.openDatabase(strTrackDB, null, SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.CREATE_IF_NECESSARY);
+		m_dbTrack = SQLiteDatabase.openDatabase(strUploadDB, null, SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.CREATE_IF_NECESSARY);
 		m_dbTrack.execSQL("drop table if exists tracks");
 		m_dbTrack.execSQL("attach DATABASE '" + RaceDatabase.getPath() + "' as FULL_DB " );
 		m_dbTrack.execSQL("create table tracks as select * from FULL_DB.tracks");
@@ -303,17 +319,18 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 		}
 		m_dbTrack.close();
 		
-		File FileToSend=null;
+		FileToSend = null;
+
 		if( false && bZipIt )	// this does take a little longer
 		{
 			// Zip up the file, for emailing
 			byte[] buffer = new byte[1024];
 			try{
-				FileOutputStream fos = new FileOutputStream(strTrackDB + ".zip");
+				FileOutputStream fos = new FileOutputStream(strUploadDB + ".zip");
 				ZipOutputStream zos = new ZipOutputStream(fos);
 				ZipEntry ze= new ZipEntry("track_db");
 				zos.putNextEntry(ze);
-				FileInputStream zipin = new FileInputStream(strTrackDB);
+				FileInputStream zipin = new FileInputStream(strUploadDB);
 
 				int ziplen;
 				while ((ziplen = zipin.read(buffer)) > 0) {
@@ -325,18 +342,18 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 				
 				//remember close it
 				zos.close();
-				FileToSend = new File(strTrackDB + ".zip");
+				FileToSend = new File(strUploadDB + ".zip");
 			}
 			catch(IOException ex)
 			{
 				if( BuildConfig.DEBUG )
 					ex.printStackTrace();
-				FileToSend = new File(strTrackDB); // fall back to unzipped
+				FileToSend = new File(strUploadDB); // fall back to unzipped
 			}
 		}
 		else
 		{
-			FileToSend = new File(strTrackDB);				
+			FileToSend = new File(strUploadDB);				
 		}
 
 		if( FileToSend != null && FileToSend.isFile() && FileToSend.canRead() )
@@ -352,12 +369,27 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 			shareIntent.setType("application/zip");	// This is OK even if we don't zip it
 	
 			startActivity(Intent.createChooser(shareIntent, "Email Tracks.."));
+//			startActivityForResult(Intent.createChooser(shareIntent, "Email Tracks.."),MSG_EMAIL_COMPLETE);
 			return true;
 		}
 		else 
 			return false;
 	}
-
+/*
+  	@Override
+ 
+	public void onActivityResult(int reqCode, int resCode, Intent data)
+	{
+		if(reqCode == MSG_EMAIL_COMPLETE)
+		{
+			File JournalFile = new File(FileToSend.getPath()+"-journal");
+			FileToSend.delete();
+			if( JournalFile.exists())
+				JournalFile.delete();
+		}
+	}
+	
+	*/
 	@Override
 	public void onDismiss(DialogInterface arg0) 
 	{

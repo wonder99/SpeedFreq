@@ -27,7 +27,8 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
-                android:text="Wifi SSID" />
+                android:text="Wifi SSID"
+                android:textSize="@dimen/font_size_very_small" />
 
             <Spinner
                 android:id="@+id/spnSSID"
@@ -40,7 +41,8 @@
             android:id="@+id/TextView81"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pitside IP Address" />
+            android:text="Pitside IP Address"
+            android:textSize="@dimen/font_size_very_small" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -55,7 +57,8 @@
                 android:ems="10"
                 android:hint="input IP address here"
                 android:inputType="text"
-                android:text="192.168.1.100" />
+                android:text="192.168.1.100"
+                android:textSize="@dimen/font_size_very_small" />
 
             <Button
                 android:id="@+id/btnAutoIP2"
@@ -77,25 +80,29 @@
                 android:id="@+id/chkTestMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Test Mode" />
+                android:text="Test Mode"
+                android:textSize="@dimen/font_size_very_small" />
 
             <CheckBox
                 android:id="@+id/chkScan"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Aggressive Wifi Scan" />
+                android:text="Aggressive Wifi Scan"
+                android:textSize="@dimen/font_size_very_small" />
 
             <CheckBox
                 android:id="@+id/chkAutoRestart"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Auto Restart After Crash" />
+                android:text="Auto Restart After Crash"
+                android:textSize="@dimen/font_size_very_small" />
 
             <CheckBox
                 android:id="@+id/chkBtInsecure"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Insecure Bluetooth GPS" />
+                android:text="Insecure Bluetooth GPS"
+                android:textSize="@dimen/font_size_very_small" />
 
         </LinearLayout>
 
@@ -118,7 +125,9 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Car Number" >
+                    android:text="Car Number"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </TextView>
 
                 <EditText
@@ -144,7 +153,9 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Use Accelerometer" >
+                    android:text="Use Accelerometer"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </TextView>
 
                 <Button
@@ -152,7 +163,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Configure Accelerometer" >
+                    android:text="Configure Accelerometer"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </Button>
             </TableRow>
 
@@ -168,16 +181,19 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Use External GPS" >
+                    android:text="Use External GPS"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </TextView>
 
                 <Button
                     android:id="@+id/btnConfigureGPS"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Configure GPS" >
+                    android:text="Configure GPS"
+                    android:textSize="@dimen/font_size_very_small" >
 
                 </Button>
             </TableRow>
@@ -194,7 +210,9 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Use OBD2 logging" >
+                    android:text="Use OBD2 logging"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </TextView>
 
                 <Button
@@ -203,7 +221,9 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Configure OBD2" >
+                    android:text="Configure OBD2"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </Button>
             </TableRow>
 
@@ -219,7 +239,9 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Use IOIO breakout" >
+                    android:text="Use IOIO breakout"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </TextView>
 
                 <Button
@@ -228,7 +250,9 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Configure IOIO" >
+                    android:text="Configure IOIO"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </Button>
             </TableRow>
 
@@ -258,7 +282,9 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Speedometer style" >
+                    android:text="Speedometer style"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </TextView>
 
                 <Spinner
@@ -282,7 +308,9 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Preferred Units" >
+                    android:text="Preferred Units"
+                    android:textSize="@dimen/font_size_very_small" >
+
                 </TextView>
 
                 <Spinner
@@ -308,13 +336,16 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
-                android:text="Internal DB" />
+                android:text="Internal DB"
+                android:textSize="@dimen/font_size_very_small" />
 
             <RadioButton
                 android:id="@+id/chkDBExternal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="External DB" />
+                android:text="External DB"
+                android:textSize="@dimen/font_size_very_small" />
+
         </RadioGroup>
     </LinearLayout>
 

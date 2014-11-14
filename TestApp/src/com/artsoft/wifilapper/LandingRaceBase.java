@@ -199,7 +199,7 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
     			lstSSIDs.add(strDefault);
     			ixDefault = 0;
     		}
-    		ArrayAdapter<String> adapter = new ArrayAdapter<String> (this, android.R.layout.simple_spinner_item, lstSSIDs);
+    		ArrayAdapter<String> adapter = new ArrayAdapter<String> (this, R.layout.list_item, lstSSIDs);
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             spn.setAdapter(adapter);
 	        if(ixDefault >= 0) 
