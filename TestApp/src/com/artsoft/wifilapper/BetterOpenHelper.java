@@ -16,6 +16,8 @@
 
 package com.artsoft.wifilapper;
 
+import java.io.File;
+
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabase.CursorFactory;
@@ -29,13 +31,16 @@ public abstract class BetterOpenHelper
 		{
 			m_db.close();
 		}
-		try
-		{
-			m_db = SQLiteDatabase.openDatabase(strPath, factory, SQLiteDatabase.OPEN_READWRITE);
-		}
-		catch(Exception e)
-		{
-			// file probably doesn't exist
+		File fDB = new File(strPath);
+		if(fDB.exists()) {
+			try
+			{
+				m_db = SQLiteDatabase.openDatabase(strPath, factory, SQLiteDatabase.OPEN_READWRITE);
+			}
+			catch(Exception e)
+			{
+				// File exists, but is corrupt or not a database, m_db is null
+			}
 		}
 		if(m_db == null)
 		{
