@@ -82,7 +82,7 @@ public class ConfigureAccelerometerActivity extends Activity implements
 	// Variables
 	private float flPitch;
 	private float flRoll;
-	private float [] flSensorOffset = new float[3];
+	private float [] flSensorOffset;
 	private boolean bMaskRadio1;
 	private boolean bCalibrating;
 	private boolean bOrienting;
@@ -181,7 +181,6 @@ public class ConfigureAccelerometerActivity extends Activity implements
 	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
 	@Override
 	public void onPause() {
-		Debug.startMethodTracing();
 		super.onPause();
 		
 		if( soundPool != null ) {
@@ -212,7 +211,6 @@ public class ConfigureAccelerometerActivity extends Activity implements
 			edit.apply();
 		else
 			edit.commit();
-		Debug.stopMethodTracing();
 
 	}
 
@@ -245,10 +243,15 @@ public class ConfigureAccelerometerActivity extends Activity implements
 		chkEnableCorrection.setChecked(settings.getBoolean(Prefs.PREF_ACCEL_CORRECTION,Prefs.DEFAULT_ACCEL_CORRECTION));
 		processChkEnableCorrection();
 
-		flSensorOffset[1] = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_X, Prefs.DEFAULT_ACCEL_OFFSET_X);
-		flSensorOffset[2] = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Y, Prefs.DEFAULT_ACCEL_OFFSET_Y);
-		flSensorOffset[0] = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Z, Prefs.DEFAULT_ACCEL_OFFSET_Z);
-		
+		if(settings.getFloat(Prefs.PREF_ACCEL_OFFSET_X, Prefs.DEFAULT_ACCEL_OFFSET_X) == Prefs.DEFAULT_ACCEL_OFFSET_X)
+			flSensorOffset = null;
+		else {
+			if( flSensorOffset == null )
+				flSensorOffset = new float[3];
+			flSensorOffset[1] = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_X, Prefs.DEFAULT_ACCEL_OFFSET_X);
+			flSensorOffset[2] = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Y, Prefs.DEFAULT_ACCEL_OFFSET_Y);
+			flSensorOffset[0] = settings.getFloat(Prefs.PREF_ACCEL_OFFSET_Z, Prefs.DEFAULT_ACCEL_OFFSET_Z);
+		}
 		processCalibration();
 	}
 	@Override
@@ -522,11 +525,9 @@ public class ConfigureAccelerometerActivity extends Activity implements
 	}
 	
 	public void processCalibration() {
-		//if( flSensorOffset[0]==0 && flSensorOffset[1]==0 && flSensorOffset[2]==0 ) { 
-		if( flSensorOffset==null ) {
-			lblInstructions.setText(R.string.strReadyToCal);
-			btnCalibrateSensor.setText("Calibrate");
-
+		if( flSensorOffset==null && gravity == null) {
+			lblInstructions.setText("Press Initialize to begin calibration process");
+			btnCalibrateSensor.setText("Initialize");
 		} else {
 			lblInstructions.setText(R.string.strResetCal);
 			btnCalibrateSensor.setText("Reset");
