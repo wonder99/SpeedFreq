@@ -17,14 +17,29 @@
 package com.artsoft.wifilapper;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
+import android.annotation.TargetApi;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabase.CursorFactory;
+import android.os.Build;
+import android.view.ContextThemeWrapper;
+import android.widget.Toast;
 
 public abstract class BetterOpenHelper 
 {
 	SQLiteDatabase m_db;
+
 	public BetterOpenHelper(Context context, String strPath, CursorFactory factory,int newestVersion)
 	{
 		if(m_db != null)
@@ -44,7 +59,36 @@ public abstract class BetterOpenHelper
 		}
 		if(m_db == null)
 		{
-			// DB must not exist, so let's create it
+			// DB must not exist, so let's see if we can migrate
+			String strImportPath = RaceDatabase.GetExternalDir(context);
+			strImportPath = strImportPath + "/wifilapper/races";
+			File fImportDB = new File(strImportPath);
+			if( fImportDB.canRead() ) {
+				Toast.makeText(context, "Importing wifilapper database from "+strImportPath, Toast.LENGTH_LONG).show();
+				InputStream in;
+				OutputStream out;
+				try {
+					in = new FileInputStream(strImportPath);
+					out = new FileOutputStream(strPath);
+
+					// Copy the bits from instream to outstream
+					byte[] buf = new byte[1024];
+					int len;
+					while ((len = in.read(buf)) > 0) {
+						out.write(buf, 0, len);
+					}
+					in.close();
+					out.close();
+				} catch (FileNotFoundException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				m_db = SQLiteDatabase.openDatabase(strPath, factory, SQLiteDatabase.OPEN_READWRITE);
+			}
+		}
+		if( m_db == null ) // still don't have one
+		{				// OK, let's create a fresh DB
 			try
 			{
 				m_db = SQLiteDatabase.openOrCreateDatabase(strPath, factory);
@@ -54,17 +98,15 @@ public abstract class BetterOpenHelper
 					m_db.setVersion(newestVersion);
 				}
 			}
-			catch(Exception e)
-			{
-				
-			}
+			catch(Exception e){}
 		}
-		else if(true || m_db.needUpgrade(newestVersion))
+		else if(m_db.needUpgrade(newestVersion))
 		{
 			onUpgrade(m_db,m_db.getVersion(),newestVersion);
 			m_db.setVersion(newestVersion);
 		}
 	}
+
 	public synchronized SQLiteDatabase getWritableDatabase()
 	{
 		return m_db;
