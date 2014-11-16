@@ -18,6 +18,7 @@ package com.artsoft.wifilapper;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -43,8 +44,10 @@ public class ConfigureGPSActivity extends Activity implements OnCheckedChangeLis
 		
 		Spinner spn = (Spinner)findViewById(R.id.spnGPS);
 		CheckBox chk = (CheckBox)findViewById(R.id.chkGPS);
-		
+		CheckBox chkBtInsecure = (CheckBox)findViewById(R.id.chkBtInsecure);
+
 		String strDefault = settings.getString(Prefs.PREF_BTGPSNAME_STRING, "");
+		boolean bBtInsecure = settings.getBoolean(Prefs.PREF_BTINSECURE_BOOL, false);
 		
 		boolean fGPS = strDefault != null && strDefault.length() > 0;
 		
@@ -52,6 +55,12 @@ public class ConfigureGPSActivity extends Activity implements OnCheckedChangeLis
 		chk.setChecked(fGPS);
 		chk.setOnCheckedChangeListener(this);
 		spn.setEnabled(fGPS);
+		chkBtInsecure.setChecked(bBtInsecure);
+
+		// Disable the checkbox if android version is too old to use it
+		if( Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD_MR1 )
+			chkBtInsecure.setEnabled(false);
+
 	}
 	
 	@Override
@@ -62,7 +71,9 @@ public class ConfigureGPSActivity extends Activity implements OnCheckedChangeLis
 		SharedPreferences settings = this.getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
 		Spinner spn = (Spinner)findViewById(R.id.spnGPS);
 		CheckBox chk = (CheckBox)findViewById(R.id.chkGPS);
-		
+		CheckBox chkBtInsecure = (CheckBox)findViewById(R.id.chkBtInsecure);
+		boolean bBtInsecure = chkBtInsecure.isChecked();
+
 		String strValue = "";
 		Object selected = spn.getSelectedItem();
 		if(selected != null)
@@ -70,7 +81,10 @@ public class ConfigureGPSActivity extends Activity implements OnCheckedChangeLis
 			strValue = selected.toString();
 		}
 		
-		settings.edit().putString(Prefs.PREF_BTGPSNAME_STRING, chk.isChecked() ? strValue : "").commit();
+		settings.edit().putString(Prefs.PREF_BTGPSNAME_STRING, chk.isChecked() ? strValue : "")
+		  .putBoolean(Prefs.PREF_BTINSECURE_BOOL, bBtInsecure)
+		  .commit();
+
 	}
 
 	@Override
