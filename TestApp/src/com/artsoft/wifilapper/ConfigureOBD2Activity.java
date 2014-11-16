@@ -18,13 +18,13 @@ package com.artsoft.wifilapper;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import com.artsoft.wifilapper.OBDThread.PIDParameter;
 import com.artsoft.wifilapper.OBDThread.PIDSupportListener;
-
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -100,6 +100,7 @@ public class ConfigureOBD2Activity extends Activity implements OnCheckedChangeLi
 		return edit;
 	}
 	
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
 	@Override
 	public void onPause()
 	{
@@ -120,7 +121,10 @@ public class ConfigureOBD2Activity extends Activity implements OnCheckedChangeLi
 		SharedPreferences.Editor edit = settings.edit();
 		edit = edit.putString(Prefs.PREF_BTOBD2NAME_STRING, chk.isChecked() ? strValue : "");
 		edit = SaveOBD2PIDs(edit, lstOBD2PIDs);
-		edit.commit();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+			edit.apply();
+		else
+			edit.commit();
 	}
 
 	@Override
