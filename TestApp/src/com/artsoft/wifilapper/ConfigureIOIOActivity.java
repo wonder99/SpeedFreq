@@ -268,7 +268,7 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 		}
 		
 		TableRow tr = new TableRow(this);
-		tr.setLayoutParams(new TableRow.LayoutParams(LayoutParams.FILL_PARENT,LayoutParams.WRAP_CONTENT));
+		tr.setLayoutParams(new TableRow.LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT));
 		tr.addView(txtName);
 		tr.addView(txtPin);
 		tr.addView(txtRate);
