@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mcmahon.speedfreq"
-    android:versionCode="39"
-    android:versionName="Nov 7, 2014" xmlns:tools="http://schemas.android.com/tools">
+    android:versionCode="1"
+    android:versionName="Beta: Nov 15, 2014" xmlns:tools="http://schemas.android.com/tools">
 
     <supports-screens android:smallScreens="true" />
     <supports-screens android:normalScreens="true" />
@@ -14,7 +14,7 @@
 
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="18" 
+        android:targetSdkVersion="20" 
         />
     
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
