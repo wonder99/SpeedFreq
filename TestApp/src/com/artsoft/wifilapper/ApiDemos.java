@@ -33,6 +33,7 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
 import android.graphics.Matrix;
 import android.graphics.Paint;
@@ -77,6 +78,7 @@ implements
 
 {
 
+	boolean bTrialMode;
 	OrientationEventListener myOrientationEventListener;
 
 	// For aggressive wifi scanning
@@ -368,12 +370,14 @@ implements
 //		if( m_bWifiScan )
 //			m_wifiScanThd.start();
 //		
+    	bTrialMode = true;
     	try
     	{
 	    	ActivityInfo info = getPackageManager().getActivityInfo(getComponentName(), PackageManager.GET_META_DATA);
 	    	Bundle bundle = info.metaData;
 	    	String apikey = bundle.getString("appmode");
 	    	m_fSupportSMS = !apikey.equals("tablet");
+	    	bTrialMode = !apikey.equals("FullVersion");
     	}
     	catch(Exception e)
     	{
@@ -388,8 +392,8 @@ implements
     // Support logging to a file
     static BufferedWriter bLogFile=null;
     private void openLogFile(String filename) throws IOException {
-    		String savePath = Environment.getExternalStorageDirectory().getPath()+"/WifiLapperCrashes/";
-            bLogFile = new BufferedWriter(new FileWriter(savePath + "/" + filename));
+    		String savePath = Prefs.GetCrashDir();
+            bLogFile = new BufferedWriter(new FileWriter(savePath + filename));
             bLogFile.write("Start of Log\n");
     }
     private void appendToLog(String strAppend) throws IOException {
@@ -1360,6 +1364,8 @@ implements
     		if(m_myLaps.IsDoneLap())
     		{
     			TrackLastLap(m_myLaps, true, true);
+    			if( bTrialMode )
+    				((MapPaintView) m_currentView).ToggleWatermark();
 
     			if(!m_fUseP2P) // if we're lapping, just start the next lap now
     			{
@@ -1387,14 +1393,6 @@ implements
     	}
     }
 
-//	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
-//	public void DisableHWAcceleration(View view)
-//    {
-//    	// Disable HW acceleration for API11 and above, since this app doesn't work with it
-//    	if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) // api11
-//    		view.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-//    }
-//    
     public double GetGPSRate()
     {
     	// returns the rate in hz of the last (rgLastGPSGaps.length) GPS signals
@@ -2351,15 +2349,26 @@ class MapPaintView extends View
 	private Rect rcLowerValue;
 	private Rect rcLowerLabel;
 	
+	private Rect rcTrial;
+	private Path pathTrial;
+	private Paint pTrial;
+	
 	private LapAccumulator lap;
 	private LapAccumulator lapLast;
 	private LapAccumulator lapBest;
+	
+	private boolean bWatermark;
 
 	int cPaintCounts = 0;
 	
 	public void ResetScreen()
 	{
 		fontInitialized = false;
+	}
+
+	public void ToggleWatermark()
+	{
+		bWatermark = !bWatermark;
 	}
 
 	public MapPaintView(Context context)
@@ -2402,6 +2411,7 @@ class MapPaintView extends View
 		rcBestLabel = new Rect();
 		rcMain = new Rect();
 		rcSecondary = new Rect();
+		
 		p = new Paint();
 		pDelta = new Paint();
 		pRect = new Paint();
@@ -2412,6 +2422,7 @@ class MapPaintView extends View
 		rcLowerValue= new Rect();
 		rcLowerLabel= new Rect();
 
+		bWatermark = false;
 
 	}
 	private void DrawSpeedDistance(Canvas canvas, Rect rcOnScreen, LapAccumulator lap, LapAccumulator lapBest)
@@ -2695,27 +2706,6 @@ class MapPaintView extends View
 					fontSize[2] = p.getTextSize();
 					rcFontBounds[2] = rcResult;
 				}
-				
-//				String str = new String();
-//				str = String.valueOf(num.format(f));
-//				float flMeas = p.measureText(str);
-//				float fAscent = p.ascent();
-//				float fDescent = p.descent();
-//				float fSpacing = p.getFontSpacing();
-//				
-//				Rect bds = new Rect();
-//				p.getTextBounds(str,0,str.length(),bds);
-//				Log.d("font", 
-//						String.valueOf(p.getTextSize()) + ", " +
-//						String.valueOf(flMeas) + ", " +
-//						String.valueOf(fAscent) + ", " +
-//						String.valueOf(fDescent) + ", " +
-//						String.valueOf(fSpacing) + ", " +
-//						bds.toString() + "," +
-//						String.valueOf(bds.width()) + ", " +
-//						String.valueOf(bds.height()) 
-//						);
-				
 			}
 			rcFontBounds[2] = Utility.Justify(rcFontBounds[2], rcUpperValue, Utility.BOXJUSTIFY.CENTER_CENTER);
 			
@@ -2746,7 +2736,31 @@ class MapPaintView extends View
 				rcFontBounds[3] = Utility.Justify(rcFontBounds[3], rcUpperLabel, Utility.BOXJUSTIFY.CENTER_CENTER);
 				rcFontBounds[4] = Utility.Justify(rcFontBounds[4], rcLowerValue, Utility.BOXJUSTIFY.CENTER_CENTER);
 				rcFontBounds[5] = Utility.Justify(rcFontBounds[5], rcUpperValue, Utility.BOXJUSTIFY.CENTER_CENTER);
-				rcFontBounds[6] = Utility.Justify(rcFontBounds[6], rcLowerLabel, Utility.BOXJUSTIFY.CENTER_CENTER);			}
+				rcFontBounds[6] = Utility.Justify(rcFontBounds[6], rcLowerLabel, Utility.BOXJUSTIFY.CENTER_CENTER);			
+			}
+			
+			// Trial watermark
+			pTrial = new Paint();
+			pTrial.setTypeface(Typeface.DEFAULT_BOLD);
+			pTrial.setColor(Color.MAGENTA);
+
+			rcTrial = new Rect(rcAll);
+			rcTrial.inset(rcTrial.width()/8, rcTrial.height()/8);
+
+			pathTrial = new Path();
+			pathTrial.moveTo(rcTrial.left, rcTrial.bottom);
+			pathTrial.lineTo(rcTrial.right, rcTrial.top);
+
+			if( rcTrial.width() > rcTrial.height() ) {
+				pathTrial.offset(0, rcTrial.height()/4);
+			}
+			else {
+				rcTrial = new Rect(rcTrial.top,rcTrial.left,rcTrial.bottom,rcTrial.right);
+				pathTrial.offset(rcTrial.width()/6,0);
+			}
+
+			Utility.GetNeededFontSize("Trial!", pTrial, rcTrial);
+
 			fontInitialized = true; 
 		}
 
@@ -2790,7 +2804,7 @@ class MapPaintView extends View
 		}
 		else // First lap, or best lap has been reset
 		{
-			p.setColor(Color.WHITE); // reset to white
+//			p.setColor(Color.WHITE); // reset to white
 
 			final String strLapTime = buildLapTime(flThisTime);
 			Utility.DrawFontInBoxFinal(canvas, strLapTime, fontSize[5], p, rcFontBounds[5], Utility.TEXTJUSTIFY.CENTER);
@@ -2800,6 +2814,10 @@ class MapPaintView extends View
 		p.setColor(Color.WHITE); // Best lap in white
 		Utility.DrawFontInBoxFinal(canvas, strBest, fontSize[4], p, rcFontBounds[4], Utility.TEXTJUSTIFY.CENTER);
 		Utility.DrawFontInBoxFinal(canvas, "Best", fontSize[6], p, rcFontBounds[6],Utility.TEXTJUSTIFY.CENTER);
+		
+		// Trial watermark
+		if( bWatermark )
+			canvas.drawTextOnPath("Trial!", pathTrial, 0,0, pTrial);
 	
 	}
 	
@@ -2821,7 +2839,6 @@ class MapPaintView extends View
 		canvas.setMatrix(myMatrix);
 		//canvas.scale(1.5f,1.5f);
 		canvas.clipRect(getLeft(),getTop(),getRight(),getBottom(),Op.REPLACE);
-		
 		String strMsg = myApp.GetMessage();
 		
 		rcAll.set(getLeft(),getTop(),getRight(), getBottom());
