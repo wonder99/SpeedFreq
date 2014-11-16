@@ -133,7 +133,7 @@ public class RaceDatabase extends BetterOpenHelper
 	public static boolean CreateExternal(Context ctx)
 	{
 	    // Create the directory if it doesn't exist
-	    String strPath = GetExternalDir(ctx) + "/speedfreq";
+	    String strPath = GetExternalDir(ctx) + "/SpeedFreq";
 	    File fileTest = new File(strPath);
 	    if ( !fileTest.isDirectory() )
 	    	fileTest.mkdir();
