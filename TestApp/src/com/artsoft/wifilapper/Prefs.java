@@ -18,9 +18,10 @@ package com.artsoft.wifilapper;
 
 import java.text.NumberFormat;
 import java.util.List;
-
+import android.annotation.TargetApi;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.os.Build;
 
 public class Prefs 
 {
@@ -339,6 +340,7 @@ public class Prefs
 	{
 		return LoadPins(settings,"pulse");
 	}
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
 	public static void SaveSharedPrefs(SharedPreferences prefs, String strIP, String strSSID, String strGPS, String strRaceName)
 	{
 		Editor edit = prefs.edit();
@@ -346,6 +348,9 @@ public class Prefs
 		if(strGPS != null) edit = edit.putString(Prefs.PREF_BTGPSNAME_STRING, strGPS);
 		if(strSSID != null) edit = edit.putString(Prefs.PREF_SSID_STRING, strSSID);
 		if(strRaceName != null) edit = edit.putString(Prefs.PREF_RACENAME_STRING,strRaceName);
-		edit.commit();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+			edit.apply();
+		else
+			edit.commit();
 	}
 }
