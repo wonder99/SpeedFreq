@@ -8,6 +8,8 @@
         <ignore path="res/layout-land/landingnewrace.xml" />
         <ignore path="res/layout-land/landingoptions.xml" />
         <ignore path="res/layout-land/speedfreq.xml" />
+        <ignore path="res/layout-sw600dp-land/speedfreq.xml" />
+        <ignore path="res/layout-sw600dp/speedfreq.xml" />
         <ignore path="res/layout/configureaccel.xml" />
         <ignore path="res/layout/configurecomms.xml" />
         <ignore path="res/layout/configureioio.xml" />
