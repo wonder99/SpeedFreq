@@ -279,7 +279,7 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
 		    		}
 		    	}
 		    	
-		        ArrayAdapter<BTListItem> adapter = new ArrayAdapter<BTListItem>(ctx, android.R.layout.simple_spinner_item, lstDevices);
+		        ArrayAdapter<BTListItem> adapter = new ArrayAdapter<BTListItem>(ctx, R.layout.list_item, lstDevices);
 		        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		        spn.setAdapter(adapter);
 		        if(ixDefault >= 0) spn.setSelection(ixDefault);
