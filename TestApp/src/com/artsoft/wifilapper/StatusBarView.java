@@ -117,7 +117,7 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 //		AddButton(LapSender.class,       R.drawable.ioio_yellow, R.drawable.ioio_yellow,R.drawable.ioio_yellow,R.drawable.ioio_yellow);
 //		AddButton(IOIOManager.class,     R.drawable.ioio_red,R.drawable.ioio_red,R.drawable.ioio_red,R.drawable.ioio_red);
 //		AddButton(LocationManager.class, R.drawable.wifi_gray,R.drawable.wifi_gray,R.drawable.wifi_gray,R.drawable.wifi_gray);
-//		AddButton(OBDThread.class,       R.drawable.wifi_white, R.drawable.wifi_white,R.drawable.wifi_white,R.drawable.wifi_white);
+//		AddButton(OBDThread.class,       R.drawable.wifi_green, R.drawable.wifi_green,R.drawable.wifi_green,R.drawable.wifi_green);
 //		AddButton(LapSender.class,       R.drawable.wifi_yellow, R.drawable.wifi_yellow,R.drawable.wifi_yellow,R.drawable.wifi_yellow);
 //		AddButton(IOIOManager.class,     R.drawable.wifi_red,R.drawable.wifi_red,R.drawable.wifi_red,R.drawable.wifi_red);
 //		AddButton(LocationManager.class, R.drawable.obd_gray,R.drawable.obd_gray,R.drawable.obd_gray,R.drawable.obd_gray);
@@ -128,10 +128,11 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 //		AddButton(OBDThread.class, R.drawable.obd2_on, R.drawable.obd2_off, R.drawable.obd2_troublegood, R.drawable.obd2_troublebad);
 //		AddButton(LapSender.class, R.drawable.gps_on, R.drawable.gps_off, R.drawable.gps_troublegood, R.drawable.gps_troublebad);
 //		AddButton(IOIOManager.class, R.drawable.ioio_on, R.drawable.ioio_off, R.drawable.ioio_troublegood, R.drawable.ioio_troublebad);
-		AddButton(LocationManager.class, R.drawable.gps_white, R.drawable.gps_gray, R.drawable.gps_yellow, R.drawable.gps_red);
-		AddButton(OBDThread.class, R.drawable.obd_white, R.drawable.obd_gray, R.drawable.obd_yellow, R.drawable.obd_red);
-		AddButton(LapSender.class, R.drawable.wifi_white, R.drawable.wifi_gray, R.drawable.wifi_yellow, R.drawable.wifi_red);
-		AddButton(IOIOManager.class, R.drawable.ioio_white, R.drawable.ioio_gray, R.drawable.ioio_yellow, R.drawable.ioio_red);
+
+		AddButton(LocationManager.class, R.drawable.gps_green, R.drawable.gps_gray, R.drawable.gps_yellow, R.drawable.gps_red);
+		AddButton(OBDThread.class, R.drawable.obd_green, R.drawable.obd_gray, R.drawable.obd_yellow, R.drawable.obd_red);
+		AddButton(LapSender.class, R.drawable.wifi_green, R.drawable.wifi_gray, R.drawable.wifi_yellow, R.drawable.wifi_red);
+		AddButton(IOIOManager.class, R.drawable.ioio_green, R.drawable.ioio_gray, R.drawable.ioio_yellow, R.drawable.ioio_red);
 	}
 	
 	private void AddButton(Class<?> c, int imgOn, int imgOff, int imgTroubleGood, int imgTroubleBad)
