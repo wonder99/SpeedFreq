@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="2dp"
+        android:layout_marginRight="2dp"
+        android:orientation="vertical"
+        android:paddingBottom="5dp" >
+
+        <RelativeLayout
+            android:id="@+id/RelativeLayout1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.1" >
+
+            <Button
+                android:id="@+id/btnAutoIP"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:lines="1"
+                android:text="Find IP"
+                android:textSize="@dimen/font_size_very_small" />
+
+            <TextView
+                android:id="@+id/txtIP"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_toRightOf="@+id/txtIPLabel"
+                android:lines="1"
+                android:singleLine="true"
+                android:text="192.168.1.100"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textSize="@dimen/font_size_very_small"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtIPLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="1"
+                android:singleLine="true"
+                android:text="Pitside IP: "
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textSize="@dimen/font_size_very_small" />
+        </RelativeLayout>
+
+        <TextView
+            android:id="@+id/txtSSID"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.1"
+            android:ellipsize="end"
+            android:lines="1"
+            android:text="SSID: txtSSID"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textSize="@dimen/font_size_very_small" />
+
+        <TableRow
+            android:id="@+id/TableRow1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" >
+
+            <TextView
+                android:id="@+id/textView1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:text="Race Name"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textSize="@dimen/font_size_very_small" />
+
+            <EditText
+                android:id="@+id/edtRaceName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ems="10"
+                android:inputType="text"
+                android:lines="1"
+                android:text="edtRaceName"
+                android:textSize="@dimen/font_size_very_small" />
+
+        </TableRow>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="fill_parent"
+        android:layout_marginLeft="2dp"
+        android:layout_marginRight="2dp"
+        android:layout_marginTop="5dp"
+        android:orientation="vertical"
+        android:paddingTop="5dp" >
+
+        <TextView
+            android:id="@+id/tvTrackName"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Detected Track: Bogie"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textSize="@dimen/font_size_very_small" />
+
+        <TableRow
+            android:id="@+id/tableRow6"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginRight="5dp"
+            android:layout_weight="2.5" >
+
+            <ImageView
+                android:id="@+id/imTrack"
+                android:layout_width="0dp"
+                android:layout_height="fill_parent"
+                android:layout_marginLeft="5dp"
+                android:layout_weight="1"
+                android:adjustViewBounds="false"
+                android:contentDescription="Track Map"
+                android:cropToPadding="false"
+                android:scaleType="fitCenter"
+                android:src="@drawable/speedfreq" />
+
+            <Button
+                android:id="@+id/btnStartRace"
+                android:layout_width="0dp"
+                android:layout_height="fill_parent"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:background="@drawable/greenglossy_d"
+                android:minLines="2"
+                android:text="Start Race"
+                android:textColor="#ffffffff"
+                android:textSize="@dimen/font_size" />
+
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow1"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+
+            <Button
+                android:id="@+id/btnTracks"
+                style="@style/styleBlueButton"
+                android:layout_width="0dp"
+                android:layout_height="fill_parent"
+                android:layout_marginLeft="5dp"
+                android:layout_weight="1"
+                android:text="Tracks"
+                android:textSize="@dimen/font_size_smaller" />
+
+            <Button
+                android:id="@+id/btnRaces"
+                style="@style/styleBlueButton"
+                android:layout_width="0dp"
+                android:layout_height="fill_parent"
+                android:layout_marginRight="5dp"
+                android:layout_weight="1"
+                android:text="Races" />
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow2"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" >
+
+            <Button
+                android:id="@+id/btnDbBackups"
+                style="@style/styleBlueButton"
+                android:layout_width="0dp"
+                android:layout_height="fill_parent"
+                android:layout_marginLeft="5dp"
+                android:layout_weight="1"
+                android:lines="1"
+                android:text="Backups"
+                android:textSize="@dimen/font_size_smaller" />
+
+            <Button
+                android:id="@+id/btnOptions"
+                style="@style/styleBlueButton"
+                android:layout_width="0dp"
+                android:layout_height="fill_parent"
+                android:layout_marginRight="5dp"
+                android:layout_weight="1"
+                android:text="Options"
+                android:textSize="@dimen/font_size_smaller" />
+        </TableRow>
+    </LinearLayout>
+
+</LinearLayout>
