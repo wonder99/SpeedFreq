@@ -57,6 +57,7 @@ public class LapSender
 	private boolean fContinue;
 	private SendThd m_thd;
 	private boolean m_fDBDead = false;
+	private boolean m_bWifiScan;
 
 	public interface LapSenderListener
 	{
@@ -64,10 +65,11 @@ public class LapSender
 		public abstract void SetConnectionLevel(CONNLEVEL eLevel);
 	}
 	
-	public LapSender(Utility.MultiStateObject pStateMan,LapSenderListener listener, WifiManager pWifi, String strIP, String strSSID, boolean fRequireWifi)
+	public LapSender(Utility.MultiStateObject pStateMan,LapSenderListener listener, WifiManager pWifi, String strIP, String strSSID, boolean fRequireWifi, boolean bWifiScan)
 	{
 		lstLapsToSend = new Vector<LapAccumulator>();
 		fContinue = true;
+		m_bWifiScan = bWifiScan;
 		m_thd = new SendThd(pStateMan, listener, pWifi, strIP, strSSID, fRequireWifi);
 		m_thd.start();
 	}
@@ -466,8 +468,9 @@ public class LapSender
 					int cAttempts = 0;
 					while(fContinue)
 					{
-						pWifi.startScan();	// This helps newer phones reconnect more quickly
-						pWifi.reconnect();  // may not be needed
+						if( m_bWifiScan)  
+							pWifi.startScan();	// This helps some phones reconnect more quickly
+
 						strLocalSSID = GetSSID();
 						if(!strLocalSSID.equals(strPickedSSID)) break; // they must have changed their target SSID.  break out of this attempt to connect to the old one and look for the other one
 
