@@ -26,12 +26,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -393,11 +390,9 @@ implements
     }
 
     // Support logging to a file
-    static BufferedWriter bLogFile;
-    static long lLogStart=0;
+    static BufferedWriter bLogFile=null;
     private void openLogFile(String filename) throws IOException {
     		String savePath = Environment.getExternalStorageDirectory().getPath()+"/WifiLapperCrashes/";
-    		lLogStart = System.currentTimeMillis();
             bLogFile = new BufferedWriter(new FileWriter(savePath + "/" + filename));
             bLogFile.write("Start of Log\n");
     }
