@@ -24,19 +24,18 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.UUID;
-
 import com.artsoft.wifilapper.Utility.MultiStateObject.STATE;
-
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.os.Environment;
 import android.util.Log;
 
 public class OBDThread extends Thread implements Runnable 
@@ -726,9 +725,36 @@ public class OBDThread extends Thread implements Runnable
 			rgSupport[0] = true;
 			try
 			{
-				bs = bd.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
-				bs.connect();
 				
+				// Attempt 1: This first try is quite successful on most phones I tried
+				try
+				{
+					Method m = bd.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
+			        bs = (BluetoothSocket) m.invoke(bd, 1);
+					bs.connect();
+					fSuccess = true; // if we got this far without an exception, the device is good
+				}
+				catch(IOException e){Log.w("obd2", "Failed attempt #1");} 
+				catch (IllegalArgumentException e) { e.printStackTrace();} 
+				catch (NoSuchMethodException e) {e.printStackTrace();} 
+				catch (IllegalAccessException e) { e.printStackTrace();} 
+				catch (InvocationTargetException e) {	e.printStackTrace();}
+				
+				// Attempt 2: Another try--not sure this one is ever better than attempt #1
+				if (!fSuccess)
+				{
+					UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+					try {
+						bs.close();
+						Thread.sleep(250);
+						bs = bd.createRfcommSocketToServiceRecord(uuid);
+						bs.connect();
+						fSuccess = true; // if we got this far without an exception, the device is good
+					} 
+					catch (IOException e) {Log.w("obd2", "Failed attempt #2");} 
+					catch (InterruptedException e) {}
+				}
+
 				in = bs.getInputStream();
 				os = bs.getOutputStream();
 				
@@ -783,14 +809,15 @@ public class OBDThread extends Thread implements Runnable
 	    	    
 	    	    try
 	    	    {
-	    	    	FileOutputStream fos = new FileOutputStream(Environment.getExternalStorageDirectory() + "/wifilapper/obdcrash.txt");
+	    	    	String strCrashFile = new String(Prefs.GetCrashDir() + "obdcrash.txt");
+	    	    	FileOutputStream fos = new FileOutputStream(strCrashFile);
 	    	    	if(strResponse != null)
 	    	    	{
 	    	    		fos.write(("Responses: " + strAllResponse + "\n").getBytes());
 	    	    	}
 	    	    	fos.write(strWrite.getBytes());
 	    	    	fos.close();
-	    	    	try {errorOut.write(("Wrote OBD failure report to wifilapper/obdcrash.txt").getBytes());} catch (IOException e1) {}
+	    	    	try {errorOut.write(("Wrote OBD failure report to " + strCrashFile).getBytes());} catch (IOException e1) {}
 	    	    }
 	    	    catch(IOException e2)
 	    	    {
