@@ -186,8 +186,6 @@ public class RaceDatabase extends BetterOpenHelper
 	}
 
 	public static int downloadFile(String sUrl) {
-		//	public static class download extends AsyncTask<String, Void, Void> {
-		//		protected Void doInBackground(String... sUrl) {
 		InputStream input = null;
 		OutputStream output = null;
 		HttpURLConnection connection = null;
@@ -195,18 +193,9 @@ public class RaceDatabase extends BetterOpenHelper
 		//		File fTarget = new File(strDownloadFile);
 		File fTarget=null ;
 		String strImportedDB=null;
-		/*
-		ProgressDialog dialog = new ProgressDialog(	context );
-		dialog.setMessage("Connected to repository, downloading...");
-		dialog.setIndeterminate(true);
-		dialog.setCancelable(false);
-		dialog.show();
-		 */
 		try {
-//			fTarget = File.createTempFile( m_context.getFilesDir() + "/" + "tmpdnld", null);
 			File outputDir = m_context.getCacheDir(); // context being the Activity pointer
 			fTarget = File.createTempFile("tmpdnld", "", outputDir);
-//			fTarget = new File( m_context.getCacheDir() + "/" + "tmpdnld");
 			fTarget.deleteOnExit();
 			strDownloadFile = new String(fTarget.getAbsolutePath());// + "/" + fTarget.getName());
 
@@ -220,20 +209,14 @@ public class RaceDatabase extends BetterOpenHelper
 				return -1;//"Server returned HTTP " + connection.getResponseCode()+ " " + connection.getResponseMessage();
 			}
 
-			// this will be useful to display download percentage
-			// might be -1: server did not report the length
-			int fileLength = connection.getContentLength();
-
 			// download the file
 			input = connection.getInputStream();
 
 			output = new FileOutputStream(strDownloadFile);
 
 			byte data[] = new byte[4096];
-			long total = 0;
 			int count;
 			while ((count = input.read(data)) != -1) {
-				total += count;
 				output.write(data, 0, count);
 			}
 		} catch (Exception e) {

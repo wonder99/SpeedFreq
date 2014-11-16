@@ -68,7 +68,6 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	private static final int TRACK_START_NEW = -111;
 	private static final int TRACK_DOWNLOAD = -112;
 	private static final int TRACK_UPLOAD = -113;
-	private static final int MSG_EMAIL_COMPLETE = -114;
 	private ListView list;
 	String strUploadDB;
 

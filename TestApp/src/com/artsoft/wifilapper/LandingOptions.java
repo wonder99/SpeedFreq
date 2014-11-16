@@ -51,8 +51,8 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	
 	public final static String[] rgstrSpeedos = {SPEEDO_LAPTIMER};
 	
-	private static final int ACTIVITYRESULT_BLUETOOTH_GPS = 51;
-	private static final int ACTIVITYRESULT_BLUETOOTH_OBD2 = 52;
+//	private static final int ACTIVITYRESULT_BLUETOOTH_GPS = 51;
+//	private static final int ACTIVITYRESULT_BLUETOOTH_OBD2 = 52;
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -391,7 +391,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		String strBTGPS = settings.getString(Prefs.PREF_BTGPSNAME_STRING,Prefs.DEFAULT_GPS_STRING);
 		String strBTOBD2 = settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING);
 		int iCarNumber = settings.getInt(Prefs.PREF_CARNUMBER, Prefs.DEFAULT_CARNUMBER);
-		boolean fRequireWifi = settings.getBoolean(Prefs.PREF_REQUIRE_WIFI, Prefs.DEFAULT_REQUIRE_WIFI);
+//		boolean fRequireWifi = settings.getBoolean(Prefs.PREF_REQUIRE_WIFI, Prefs.DEFAULT_REQUIRE_WIFI);
 
 		txtIP.setText(strIP);
 		String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);

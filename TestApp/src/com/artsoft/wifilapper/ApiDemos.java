@@ -16,9 +16,6 @@
 
 package com.artsoft.wifilapper;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,7 +26,6 @@ import java.util.Map;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -46,7 +42,6 @@ import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
@@ -87,7 +82,7 @@ implements
 	// For aggressive wifi scanning
 	Thread m_wifiScanThd;
 	static WifiManager mainWifiObj;
-	private final boolean WIFILOGGING = false;
+//	private final boolean WIFILOGGING = false;
 	
 	public enum RESUME_MODE {NEW_RACE, REUSE_SPLITS, RESUME_RACE};
 	
@@ -196,9 +191,9 @@ implements
 	private static final int MSG_LOADING_PROGRESS = 52;
 	private static final int MSG_IOIO_BUTTON = 53;
 	
-	private PendingIntent m_restartIntent;
+//	private PendingIntent m_restartIntent;
 	
-	private static final int RESTART_NOTIFICATION_ID = 1;
+//	private static final int RESTART_NOTIFICATION_ID = 1;
 	
 	private static ApiDemos m_me;
 	
@@ -250,7 +245,7 @@ implements
 		{
 			m_me = this;
 		}
-    			
+/*    			
     	if( BuildConfig.DEBUG && WIFILOGGING ) {
     		try {
     			openLogFile("Wifi_log.txt");
@@ -258,6 +253,7 @@ implements
     			e1.printStackTrace();
     		}
     	}
+*/
     	m_tmAppStartTime = 0;
 		
     	getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -388,7 +384,7 @@ implements
     	
     	StartupTracking(fRequireWifi, fUseIOIO, rgSelectedAnalPins, rgSelectedPulsePins, iButtonPin, rgSelectedPIDs, strIP, strSSID, strBTGPS, strOBD2, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, m_fTestMode, idLapLoadMode);
     }
-
+/*
     // Support logging to a file
     static BufferedWriter bLogFile=null;
     private void openLogFile(String filename) throws IOException {
@@ -414,6 +410,7 @@ implements
 		}
     }
 
+
     volatile boolean bScanning = false;
 	boolean bWifiScanKill = false;
 
@@ -435,7 +432,7 @@ implements
 			}
 		}
 	}
-
+*/
     public static Intent BuildStartIntent(boolean fRequireWifi, boolean fUseIOIO, IOIOManager.PinParams rgAnalPins[], IOIOManager.PinParams rgPulsePins[], int iButtonPin, boolean fPointToPoint, int iStartMode, float flStartParam, int iStopMode, float flStopParam, List<Integer> lstSelectedPIDs, Context ctxApp, String strIP, String strSSID, LapAccumulator.LapAccumulatorParams lapParams, String strRaceName, String strPrivacy, boolean fAckSMS, boolean fUseAccel, boolean fUseAccelCorrection, int iFilterType, float flPitch, float flRoll, float[] flSensorOffset, boolean fTestMode, boolean bWifiScan, long idRace, long idModeSelected, String strBTGPS, String strBTOBD2, String strSpeedoStyle, String strUnitSystem)
     {
     	Intent myIntent = new Intent(ctxApp, ApiDemos.class);
@@ -605,14 +602,14 @@ implements
 			m_msgMan.Shutdown();
 			m_msgMan = null;
 		}
-		
+/*		
 		if( this.m_wifiScanThd != null )
 		{
 			ShutdownScan();
 			m_wifiScanThd = null;
 		}
-		
 		closeLogFile();
+*/	
 		
 		SensorManager sensorMan = (SensorManager)getSystemService(SENSOR_SERVICE);
 	    if(sensorMan != null)
@@ -2043,6 +2040,7 @@ implements
 	public void SetConnectionLevel(CONNLEVEL eLevel) 
 	{
 		this.m_fRecordReception = (eLevel == CONNLEVEL.CONNECTED) || (eLevel == CONNLEVEL.FULLYCONNECTED);
+/*
 		if( eLevel != CONNLEVEL.FULLYCONNECTED) 
 			bScanning = true;
 		else
@@ -2052,6 +2050,7 @@ implements
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+*/
 	}
 }
 

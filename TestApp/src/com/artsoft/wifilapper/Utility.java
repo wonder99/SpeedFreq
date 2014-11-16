@@ -17,13 +17,10 @@
 package com.artsoft.wifilapper;
 
 import java.text.NumberFormat;
-import java.util.Date;
+import java.util.Calendar;
 import java.util.List;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -36,7 +33,6 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.provider.MediaStore;
 import android.util.Log;
-import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.View.MeasureSpec;
 import android.view.ViewGroup;
@@ -45,19 +41,6 @@ import android.widget.ListView;
 
 public class Utility 
 {
-	public static void ShowAlert(Context ctx, String strText)
-	{
-		AlertDialog ad = new AlertDialog.Builder(new ContextThemeWrapper(ctx, android.R.style.Theme_Dialog)).create();  
-		ad.setCancelable(false); // This blocks the 'BACK' button  
-		ad.setMessage(strText);  
-		ad.setButton("OK", new DialogInterface.OnClickListener() {  
-		    @Override  
-		    public void onClick(DialogInterface dialog, int which) {  
-		        dialog.dismiss();                      
-		    }  
-		});  
-		ad.show();  
-	}
 	public static int ParseInt(String str, int iDefault)
 	{
 		int iRet = 0;
@@ -210,14 +193,16 @@ public class Utility
 	}
 	public static String GetDateStringFromUnixTime(long timeInMilliseconds)
 	{
-		Date d = new Date(timeInMilliseconds);
-		return (d.getMonth()+1) + "/" + d.getDate() + "/" + (d.getYear()+1900);
+		Calendar c = Calendar.getInstance();
+		c.setTimeInMillis(timeInMilliseconds);
+		return (c.get(Calendar.MONTH)+1 + "/" + c.get(Calendar.DATE) + "/" + c.get(Calendar.YEAR));
 	}
 	public static String GetReadableTime(long timeInMilliseconds)
 	{
-		Date d = new Date(timeInMilliseconds);
-		final int hours = d.getHours();
-		final int minutes = d.getMinutes();
+		Calendar c = Calendar.getInstance();
+		c.setTimeInMillis(timeInMilliseconds);
+		final int hours = c.get(Calendar.HOUR);
+		final int minutes = c.get(Calendar.MINUTE);
 		String strMinutes = minutes < 10 ? "0" + minutes : "" + minutes;
 		if(hours > 12)
 		{
@@ -376,17 +361,15 @@ public class Utility
 	}
 	public static String GetImagePathFromURI(Activity activity, Uri uri)
 	{
-        String[] projection = { MediaStore.Images.Media.DATA };
-        Cursor cursor = activity.managedQuery(uri, projection, null, null, null);
-        if(cursor!=null)
-        {
-            //HERE YOU WILL GET A NULLPOINTER IF CURSOR IS NULL
-            //THIS CAN BE, IF YOU USED OI FILE MANAGER FOR PICKING THE MEDIA
-            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-            cursor.moveToFirst();
-            return cursor.getString(column_index);
-        }
-        else return null;
+	    String res = null;
+	    String[] proj = { MediaStore.Images.Media.DATA };
+	    Cursor cursor = activity.getContentResolver().query(uri, proj, null, null, null);
+	    if(cursor.moveToFirst()){;
+	       int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+	       res = cursor.getString(column_index);
+	    }
+	    cursor.close();
+	    return res;
 	}
 	public interface MultiStateObject
 	{

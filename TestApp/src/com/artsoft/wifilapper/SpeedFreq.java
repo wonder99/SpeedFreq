@@ -73,7 +73,7 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 
 		if( BuildConfig.DEBUG ) {
 			// Set up crash file directory
-			String crashPath = Environment.getExternalStorageDirectory().getPath()+"/WifiLapperCrashes/";
+			String crashPath = Environment.getExternalStorageDirectory().getPath()+"/SpeedFreqCrashes/";
 			if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
 				Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler(crashPath));
 			};

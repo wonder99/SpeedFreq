@@ -96,7 +96,6 @@ public class BluetoothGPS
 		// whether we're in "no VTG mode".  Since we can't assume that all our users will figure out the right thing to do wrt qstarz setup,
 		// we should handle the case where it is missing
 		boolean fNoVTGMode = false; 
-		long tmLastVTGSeen = 0; // when we last saw a VTG.  Starts equal to the current time (since maybe one flew by just before the thread started)
 		
 		double dLastLat = 361;
 		double dLastLong = 361;
@@ -375,7 +374,6 @@ public class BluetoothGPS
 
 				String strLastLeftover = "";
 				int cbRead = 0;
-				String strValid = "";
 				String strToParse = "";
 				while(fDeviceGood && !m_shutdown)
 				{

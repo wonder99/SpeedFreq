@@ -131,7 +131,7 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 		private float laptime;
 		private long unixStartTimeSeconds;
 		private boolean fUsePointToPoint;
-		private int iFinishCount;
+//		private int iFinishCount;
 		public ListRaceData(String strRaceName, int cLaps, int id, float laptime, int iStartTime, boolean fUsePointToPoint, int iFinishCount)
 		{
 			this.strRaceName = strRaceName;
@@ -140,7 +140,7 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 			this.laptime = laptime;
 			this.unixStartTimeSeconds = iStartTime;
 			this.fUsePointToPoint = fUsePointToPoint;
-			this.iFinishCount = iFinishCount;
+//			this.iFinishCount = -1
 		}
 		public String toString()
 		{

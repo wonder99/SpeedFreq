@@ -20,13 +20,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import com.artsoft.wifilapper.Utility.MultiStateObject.StateData;
-
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.location.LocationManager;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.widget.ImageButton;
 import android.widget.ImageView.ScaleType;
@@ -135,11 +135,19 @@ public class StatusBarView extends LinearLayout implements OnClickListener
 		AddButton(IOIOManager.class, R.drawable.ioio_green, R.drawable.ioio_gray, R.drawable.ioio_yellow, R.drawable.ioio_red);
 	}
 	
+	@TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+	@SuppressWarnings("deprecation")
 	private void AddButton(Class<?> c, int imgOn, int imgOff, int imgTroubleGood, int imgTroubleBad)
 	{
 		ImageButton btn = new ImageButton(getContext());
 		btn.setImageDrawable(getResources().getDrawable(imgOff));
-		btn.setBackgroundDrawable(null);
+		
+		// Let's be correct
+		if( Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN )
+			btn.setBackgroundDrawable(null);
+		else
+			btn.setBackground(null);
+		
 		btn.setScaleType(ScaleType.CENTER_INSIDE);
 		btn.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT));
 		btn.setAdjustViewBounds(true);

@@ -953,7 +953,6 @@ public class LapAccumulator
 		
 		TimePoint2D ptLast = null;
 		float rgflPts[] = new float[4 * 2];
-		int ixPoint = 0;
 		
 		final float dDistanceSpan = (float)(rcInWorld.right - rcInWorld.left); // how "wide" the timespan to draw is
 		final float dSpeedSpan = rcInWorld.bottom - rcInWorld.top;
@@ -981,7 +980,6 @@ public class LapAccumulator
 					y1 += rcOnScreen.top;
 					y2 += rcOnScreen.top;
 
-					ixPoint++;
 					if( ix > 1) {
 						rgflPts[0] = rgflPts[4];
 						rgflPts[1] = rgflPts[5];
