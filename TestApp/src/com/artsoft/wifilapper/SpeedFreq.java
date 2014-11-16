@@ -40,7 +40,6 @@ import android.location.LocationManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.WindowManager;
@@ -73,7 +72,7 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 
 		if( BuildConfig.DEBUG ) {
 			// Set up crash file directory
-			String crashPath = Environment.getExternalStorageDirectory().getPath()+"/SpeedFreqCrashes/";
+			String crashPath = Prefs.GetCrashDir();
 			if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
 				Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler(crashPath));
 			};
@@ -433,7 +432,7 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 	    private void writeToFile(String stacktrace, String filename) {
 	        try {
 	            BufferedWriter bos = new BufferedWriter(new FileWriter(
-	                    localPath + "/" + filename));
+	                    localPath + filename));
 	            bos.write(stacktrace);
 	            bos.flush();
 	            bos.close();
