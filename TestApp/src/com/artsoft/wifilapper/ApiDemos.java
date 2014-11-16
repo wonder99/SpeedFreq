@@ -370,11 +370,11 @@ implements
 //	    setRequestedOrientation(getResources().getConfiguration().orientation);
 
 		// Set up aggressive wifi logging, if enabled
-    	mainWifiObj = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-		m_wifiScanThd = new myWifiScan();
-		if( m_bWifiScan )
-			m_wifiScanThd.start();
-		
+//    	mainWifiObj = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+//		m_wifiScanThd = new myWifiScan();
+//		if( m_bWifiScan )
+//			m_wifiScanThd.start();
+//		
     	try
     	{
 	    	ActivityInfo info = getPackageManager().getActivityInfo(getComponentName(), PackageManager.GET_META_DATA);
@@ -580,6 +580,7 @@ implements
     	return true;
     }
 
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
 	public static void SaveSharedPrefs(SharedPreferences prefs, String strIP, String strSSID, String strGPS, String strRaceName)
 	{
 		Editor edit = prefs.edit();
@@ -587,7 +588,10 @@ implements
 		if(strGPS != null) edit = edit.putString(Prefs.PREF_BTGPSNAME_STRING, strGPS);
 		if(strSSID != null) edit = edit.putString(Prefs.PREF_SSID_STRING, strSSID);
 		if(strRaceName != null) edit = edit.putString(Prefs.PREF_RACENAME_STRING,strRaceName);
-		edit.commit();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+			edit.apply();
+		else
+			edit.commit();
 	}
     private void ShutdownLappingMode()
     {
@@ -713,7 +717,7 @@ implements
 	    
 		WifiManager pWifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
 
-	    m_lapSender = new LapSender(this, this, pWifi, strIP, strSSID, fRequireWifi);
+	    m_lapSender = new LapSender(this, this, pWifi, strIP, strSSID, fRequireWifi, m_bWifiScan);
 	    m_msgMan = new MessageMan(this);
 	    
 	    if(m_lRaceId != -1 && m_lapParams.IsValid(m_fUseP2P))
@@ -818,7 +822,8 @@ implements
             .setMessage(R.string.really_quit)
             .setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() 
             {
-                @Override
+                @TargetApi(Build.VERSION_CODES.GINGERBREAD)
+				@Override
                 public void onClick(DialogInterface dialog, int which) 
                 {
                     // Stop the activity
@@ -828,7 +833,10 @@ implements
                     SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
             		Editor edit = settings.edit();
             		edit = edit.putBoolean(Prefs.PREF_RACE_IN_PROGRESS, false);
-            		edit.commit();
+            		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+            			edit.apply();
+            		else
+            			edit.commit();
                 }
 
             }).setNegativeButton(R.string.no, null).show();
@@ -1885,9 +1893,9 @@ implements
 						m_goalSpeed = m_goalSpeed + .05f*(15f-m_goalSpeed);
 
 					m_goalSpeed = 15f;
-					m_goalSpeed += Math.random()-.5f;
+					m_goalSpeed += 3*Math.random()-1.5f;
 					
-					double dAngle = 0*(Math.random()-0.5f)/75 + ( 2 * Math.PI ) * iTimeToSleep / (m_goalSpeed*1000);
+					double dAngle = 1*(Math.random()-0.5f)/75 + ( 2 * Math.PI ) * iTimeToSleep / (m_goalSpeed*1000);
 					double dX = Math.sin(Angle ) * 0.0003;
 					double dY = Math.cos(Angle ) * 0.0003;
 					Angle += dAngle;
