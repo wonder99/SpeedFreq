@@ -18,10 +18,12 @@ package com.artsoft.wifilapper;
 
 import java.text.NumberFormat;
 import java.util.List;
+
 import android.annotation.TargetApi;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.os.Build;
+import android.os.Environment;
 
 public class Prefs 
 {
@@ -244,7 +246,11 @@ public class Prefs
 		String strFormat = num.format(flConverted);
 		return strFormat + (fIncludeSuffix ? strSuffix : "");
 	}
-	
+	public static String GetCrashDir()
+	{
+		String crashPath = Environment.getExternalStorageDirectory().getPath()+"/SpeedFreqCrashes/";
+		return crashPath;
+	}
 	public static String GetSpeedUnits(UNIT_SYSTEM eSystem)
 	{
 		switch(eSystem)
@@ -271,7 +277,7 @@ public class Prefs
 		{
 			if(settings.getBoolean("pid" + x, false))
 			{
-				lstOutCodes.add(new Integer(x));
+				lstOutCodes.add(Integer.valueOf(x));
 			}
 		}
 	}
