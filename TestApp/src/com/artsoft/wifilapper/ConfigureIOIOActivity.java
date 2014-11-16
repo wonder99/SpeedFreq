@@ -18,13 +18,13 @@ package com.artsoft.wifilapper;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import com.artsoft.wifilapper.IOIOManager.PinParams;
-
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -100,7 +100,7 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 			
 			Spinner spnPin = (Spinner)findViewById(R.id.spnPin);
 			ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-		            this, R.array.ioiopins, android.R.layout.simple_spinner_item);
+		            this, R.array.ioiopins, R.layout.list_item);
 		    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		    spnPin.setAdapter(adapter);
 		    for(int x = 0; x < spnPin.getCount(); x++)
@@ -114,7 +114,7 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 		    }
 		}
 		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-	            this, R.array.ioiocustomnames, android.R.layout.simple_spinner_item);
+	            this, R.array.ioiocustomnames, R.layout.list_item);
 		TextView txtCurrentFilter2 = (TextView)findViewById(R.id.lblCurrentFilter2);
 		int arrayIndex = (m_iLastCustomType==0) ? 0 : m_iLastCustomType - LapAccumulator.DataChannel.CHANNEL_IOIOCUSTOM_START;
 		
@@ -300,6 +300,7 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 		txtCurrentFilter.setText("Filter: " + PinParams.BuildDesc(m_iLastFilterType, this.m_dLastParam1, this.m_dLastParam2, this.m_dLastParam3, true));
 	}
 	
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
 	@Override
 	public void onPause()
 	{
@@ -321,7 +322,10 @@ public class ConfigureIOIOActivity extends Activity implements OnCheckedChangeLi
 		{
 			edit = edit.putLong("selpin", Long.parseLong(objSelected.toString()));
 		}
-		edit.commit();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+			edit.apply();
+		else
+			edit.commit();
 	}
 
 	private SharedPreferences.Editor SaveIOIOPins(SharedPreferences.Editor edit)
