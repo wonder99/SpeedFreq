@@ -97,13 +97,6 @@
                 android:text="Auto Restart After Crash"
                 android:textSize="@dimen/font_size_very_small" />
 
-            <CheckBox
-                android:id="@+id/chkBtInsecure"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Insecure Bluetooth GPS"
-                android:textSize="@dimen/font_size_very_small" />
-
         </LinearLayout>
 
         <!-- bluetooth gps spinner -->

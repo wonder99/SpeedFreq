@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="left"
         android:contentDescription="Track Map"
-        android:src="@drawable/icon" />
+         />
 
     <TextView
         xmlns:android="http://schemas.android.com/apk/res/android"

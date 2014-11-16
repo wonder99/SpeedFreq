@@ -2,6 +2,6 @@
     <resources>
 		<!-- Petr's tablet, Nexus 7, 10 10.1" -->
         <dimen name="font_size">95sp</dimen>
-        <dimen name="font_size_smaller">55sp</dimen>
+        <dimen name="font_size_smaller">60sp</dimen>
         <dimen name="font_size_very_small">25sp</dimen>
     </resources>

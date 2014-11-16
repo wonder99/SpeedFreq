@@ -9,14 +9,16 @@
         android:id="@+id/chkOBD2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Use Bluetooth OBD2 Reader" />
+        android:text="Use Bluetooth OBD2 Reader"
+        android:textSize="@dimen/font_size_very_small" />
 
     <TextView
         android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Select OBD2 Device"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textSize="@dimen/font_size_very_small" />
 
     <Spinner
         android:id="@+id/spnOBD2"
@@ -29,7 +31,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
-        android:text="Scan device for supported parameters" />
+        android:text="Scan device for supported parameters"
+        android:textSize="@dimen/font_size_very_small" />
 
     <ListView
         android:id="@+id/lstPIDs"

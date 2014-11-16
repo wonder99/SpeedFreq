@@ -8,7 +8,8 @@
         android:id="@+id/chkGPS"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Use Bluetooth GPS" />
+        android:text="Use Bluetooth GPS"
+        android:textSize="@dimen/font_size_very_small" />
 
     <LinearLayout
         android:id="@+id/linearLayout1"
@@ -16,13 +17,21 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" >
 
+        <CheckBox
+            android:id="@+id/chkBtInsecure"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Insecure Bluetooth connection"
+            android:textSize="@dimen/font_size_very_small" />
+
         <TextView
             android:id="@+id/textView1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:text="Select GPS Device"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textSize="@dimen/font_size_very_small" />
 
         <Spinner
             android:id="@+id/spnGPS"

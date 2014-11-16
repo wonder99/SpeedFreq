@@ -21,7 +21,6 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentLeft="true"
                 android:layout_centerVertical="true"
-                android:layout_weight="1"
                 android:lines="1"
                 android:singleLine="true"
                 android:text="Pitside IP: "
@@ -35,14 +34,12 @@
                 android:layout_alignParentRight="true"
                 android:layout_alignParentTop="false"
                 android:layout_centerVertical="true"
-                android:layout_weight="1"
                 android:lines="1"
                 android:paddingLeft="30dp"
                 android:paddingRight="30dp"
                 android:text="Auto Find IP"
                 android:textSize="@dimen/font_size_very_small" />
 
-            
             <TextView
                 android:id="@+id/txtIP"
                 android:layout_width="wrap_content"
@@ -51,14 +48,12 @@
                 android:layout_alignBottom="@+id/txtIPLabel"
                 android:layout_centerVertical="true"
                 android:layout_toRightOf="@+id/txtIPLabel"
-                android:layout_weight="1"
                 android:lines="1"
                 android:singleLine="true"
                 android:text="192.168.1.100"
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:textSize="@dimen/font_size_very_small"
                 android:textStyle="bold" />
-
         </RelativeLayout>
 
         <TableRow
@@ -100,7 +95,8 @@
         </TableRow>
     </LinearLayout>
 
-    <LinearLayout
+    <TableRow
+        android:id="@+id/TableRow1"
         android:layout_width="match_parent"
         android:layout_height="fill_parent"
         android:orientation="horizontal" >
@@ -139,7 +135,7 @@
             android:layout_marginRight="4dp"
             android:layout_marginTop="2dp"
             android:layout_weight="1"
-            android:background="@drawable/longred2"
+            android:background="@drawable/greenglossy_d"
             android:text="Start Race"
             android:textColor="#fff"
             android:textSize="@dimen/font_size" />
@@ -189,8 +185,7 @@
                 android:layout_weight="1"
                 android:text="Options"
                 android:textSize="@dimen/font_size_smaller" />
-
         </LinearLayout>
-    </LinearLayout>
+    </TableRow>
 
 </LinearLayout>

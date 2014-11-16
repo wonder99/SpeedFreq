@@ -100,13 +100,6 @@
                     android:text="Aggressive Wifi Scan"
                     android:textSize="@dimen/font_size_very_small" />
 
-                <CheckBox
-                    android:id="@+id/chkBtInsecure"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Insecure BT GPS"
-                    android:textSize="@dimen/font_size_very_small" />
-
             </TableRow>
         </TableLayout>
 

@@ -11,7 +11,8 @@
         android:layout_height="wrap_content"
         android:layout_marginLeft="10dp"
         android:checked="true"
-        android:text="Use Accelerometer" />
+        android:text="Use Accelerometer"
+        android:textSize="@dimen/font_size_very_small" />
 
     <TextView
         android:id="@+id/lblInstructions"
@@ -22,7 +23,8 @@
         android:layout_marginRight="10dp"
         android:layout_marginTop="5dp"
         android:text="@string/strReadyToCal"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textSize="@dimen/font_size_very_small" />
 
     <Button
         android:id="@+id/btnCalibrateSensor"
@@ -31,7 +33,8 @@
         android:layout_gravity="center_vertical|center_horizontal"
         android:layout_marginBottom="10dp"
         android:layout_marginTop="0dp"
-        android:text="Calibrate Sensor" />
+        android:text="Calibrate Sensor"
+        android:textSize="@dimen/font_size_very_small" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -47,7 +50,8 @@
             android:layout_weight="2"
             android:gravity="center_vertical"
             android:text="Filter Type"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textSize="@dimen/font_size_very_small" />
 
         <Spinner
             android:id="@+id/spnFilter"
@@ -55,6 +59,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:entries="@array/accel_filters" />
+
     </LinearLayout>
 
     <CheckBox
@@ -64,7 +69,8 @@
         android:layout_marginLeft="10dp"
         android:layout_marginTop="20dp"
         android:checked="true"
-        android:text="Enable Angle Correction" />
+        android:text="Enable Angle Correction"
+        android:textSize="@dimen/font_size_very_small" />
 
     <RadioGroup
         android:id="@+id/rgCorrectionType"
@@ -83,7 +89,8 @@
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
             android:checked="true"
-            android:text="Manual" />
+            android:text="Manual"
+            android:textSize="@dimen/font_size_very_small" />
 
         <RadioButton
             android:id="@+id/radio1"
@@ -93,7 +100,9 @@
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
             android:layout_weight="0"
-            android:text="Automatic (10s)" />
+            android:text="Automatic (10s)"
+            android:textSize="@dimen/font_size_very_small" />
+
     </RadioGroup>
 
     <LinearLayout
@@ -108,7 +117,8 @@
             android:layout_weight="5"
             android:gravity="left|center_vertical|clip_vertical|clip_horizontal"
             android:text="Pitch: 0"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textSize="@dimen/font_size_very_small" />
 
         <SeekBar
             android:id="@+id/skPitch"
@@ -134,7 +144,8 @@
             android:layout_weight="5"
             android:gravity="left|center_vertical|clip_vertical|clip_horizontal"
             android:text="Roll: 0"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textSize="@dimen/font_size_very_small" />
 
         <SeekBar
             android:id="@+id/skRoll"
@@ -154,6 +165,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical|center_horizontal"
         android:layout_margin="20dp"
-        android:text="Angle Correction Help" />
+        android:text="Angle Correction Help"
+        android:textSize="@dimen/font_size_very_small" />
 
 </LinearLayout>

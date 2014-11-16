@@ -99,7 +99,6 @@
         android:layout_height="fill_parent"
         android:layout_marginLeft="2dp"
         android:layout_marginRight="2dp"
-        android:layout_marginTop="5dp"
         android:orientation="vertical"
         android:paddingTop="5dp" >
 
@@ -121,7 +120,6 @@
                 android:id="@+id/imTrack"
                 android:layout_width="0dp"
                 android:layout_height="fill_parent"
-                android:layout_marginLeft="5dp"
                 android:layout_weight="1"
                 android:adjustViewBounds="false"
                 android:contentDescription="Track Map"
@@ -134,12 +132,12 @@
                 android:layout_width="0dp"
                 android:layout_height="fill_parent"
                 android:layout_gravity="center_vertical"
-                android:layout_marginRight="0dp"
+                android:layout_marginLeft="0dp"
                 android:layout_weight="1"
-                android:background="@drawable/longred2"
+                android:background="@drawable/greenglossy_d"
                 android:minLines="2"
                 android:text="Start Race"
-                android:textColor="#fff"
+                android:textColor="#ffffffff"
                 android:textSize="@dimen/font_size" />
 
         </TableRow>
