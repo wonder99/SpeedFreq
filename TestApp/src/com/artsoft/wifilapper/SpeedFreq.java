@@ -26,9 +26,8 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-
 import com.artsoft.wifilapper.RaceDatabase.RaceData;
-
+import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
@@ -39,6 +38,7 @@ import android.content.SharedPreferences.Editor;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.TypedValue;
@@ -237,7 +237,6 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 			ivTrack.setScaleType(ScaleType.CENTER_INSIDE);
 		}
 		ivTrack.setOnClickListener(this);
-		tvTrackName.setOnClickListener(this);
 
 		// disable network features if not enabled
 		WifiManager pWifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
@@ -249,7 +248,8 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 		}
     }
 
-    public void StartRace() 
+    @TargetApi(Build.VERSION_CODES.GINGERBREAD)
+	public void StartRace() 
     {
     	EditText edtRaceName = (EditText)findViewById(R.id.edtRaceName);
     	String strRaceName = edtRaceName.getText().toString();
@@ -328,7 +328,10 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
     			// clear out the in-progress flag if not using it
     			edit = edit.putBoolean(Prefs.PREF_RACE_IN_PROGRESS, false);
     		}
-			edit.commit();
+    		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+    			edit.apply();
+    		else
+    			edit.commit();
     		startActivity(i);
     	}
 	}
