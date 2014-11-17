@@ -56,6 +56,7 @@ import android.widget.TextView.OnEditorActionListener;
 public class LandingDBManage extends Activity implements OnClickListener, OnEditorActionListener, OnKeyListener, OnItemClickListener, OnDismissListener, android.content.DialogInterface.OnClickListener
 {
 	private String m_strTargetFilename;
+	private int iDBSplitPoint;
 	
 	@Override
 	public void onCreate(Bundle bun)
@@ -89,10 +90,14 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 		}
 		public String toString()
 		{
-			String strName = m_file.getName();
-			int ixWFLP = strName.lastIndexOf(".wflp");
-			
-			return strName.substring(0,ixWFLP);
+			if( m_file != null ) {
+				String strName = m_file.getName();
+				int ixWFLP = strName.lastIndexOf(".wflp");
+
+				return strName.substring(0,ixWFLP);
+			}
+			else
+				return new String("- Below are From WifiLapper -");
 		}
 		public File GetFile()
 		{
@@ -118,10 +123,13 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 			
 			// search for all the files in our parent path
 			File fDir = new File(MakeParentPath());
-			if(fDir.exists())
+			File fWFLPDir = new File(MakeParentPath().replace("speedfreq","wifilapper"));
+			ArrayAdapter<DBPathEntry> adapter = new ArrayAdapter<DBPathEntry>(this, R.layout.list_item_on_black);
+			iDBSplitPoint = 9999;  // initialize to a flag
+
+			if(fDir.exists() || fWFLPDir.exists())
 			{
 				File children[] = fDir.listFiles();
-				ArrayAdapter<DBPathEntry> adapter = new ArrayAdapter<DBPathEntry>(this, android.R.layout.simple_gallery_item);
 				for(int x = 0;x < children.length; x++)
 				{
 					String strName = children[x].getName();
@@ -132,7 +140,23 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 						adapter.add(new DBPathEntry(children[x]));
 					}
 				}
-				
+				children = fWFLPDir.listFiles();
+				if( children.length > 0 ) {
+					for(int x = 0;x < children.length; x++)
+					{
+						String strName = children[x].getName();
+						int ixWFLP = strName.lastIndexOf(".wflp");
+						
+						if(ixWFLP >= 0)
+						{
+							if( iDBSplitPoint == 9999 ) {
+								iDBSplitPoint = adapter.getCount();
+								adapter.add(new DBPathEntry(null));
+							}
+							adapter.add(new DBPathEntry(children[x]));
+						}
+					}
+				}				
 				list.setAdapter(adapter);
 				list.setOnItemClickListener(this);
 				registerForContextMenu(list);
@@ -171,7 +195,7 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 	    	strPath = Environment.getExternalStorageDirectory().toString();
 	    
 	    // Create the directory if it doesn't exist
-	    strPath = strPath + "/wifilapper";
+	    strPath = strPath + "/speedfreq";
 	    File fileTest = new File(strPath);
 	    if ( !fileTest.isDirectory() )
 	    	fileTest.mkdir();
@@ -308,11 +332,14 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 
 	public void onCreateContextMenu (ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo)
 	{
-		if(v == findViewById(android.R.id.list))
+		if(v == findViewById(android.R.id.list) )
 		{
-			// ok, they've contextmenu'd on the race selection list.  We want to show the "delete/rename" menu
-	    	MenuInflater inflater = getMenuInflater();
-	    	inflater.inflate(R.menu.deleterename, menu);
+			AdapterContextMenuInfo info = (AdapterContextMenuInfo)menuInfo;
+			if( info.position < iDBSplitPoint ) {
+				// ok, they've contextmenu'd on the race selection list.  We want to show the "delete/rename" menu
+				MenuInflater inflater = getMenuInflater();
+				inflater.inflate(R.menu.deleterename, menu);
+			}
 		}
 	}
 	@Override
@@ -367,13 +394,14 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 	{
 		if(list.getId() == android.R.id.list)
 		{
+			if( position == iDBSplitPoint )
+				return;
 			synchronized(RaceDatabase.class)
 			{
-				// they've selected something from our list
 				DBPathEntry db = (DBPathEntry)list.getItemAtPosition(position);
-				// the filename they want is GetParentPath + cs + ".wflp"
-				String strFilename = MakeParentPath() + db.toString() + ".wflp";
-				File fPicked = new File(strFilename);
+				
+				File fPicked = db.GetFile();
+				String strFilename = fPicked.getName();
 				if(fPicked.exists())
 				{
 					AlertDialog ad = new AlertDialog.Builder(new ContextThemeWrapper(this, android.R.style.Theme_Dialog)).create();
