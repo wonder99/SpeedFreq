@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mcmahon.speedfreq"
     android:versionCode="1"
-    android:versionName="Beta: Nov 15, 2014" xmlns:tools="http://schemas.android.com/tools">
+    android:versionName="Beta: Nov 16, 2014" xmlns:tools="http://schemas.android.com/tools">
 
     <supports-screens android:smallScreens="true" />
     <supports-screens android:normalScreens="true" />
@@ -12,10 +12,10 @@
         android:anyDensity="true"
         android:resizeable="true" />
 
+	<!-- Android 2.2 to 4.4.4 -->
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="20" 
-        />
+        android:targetSdkVersion="20" />
     
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -121,7 +121,10 @@
             android:launchMode="singleTask"
             android:screenOrientation="sensor"
             android:theme="@android:style/Theme.NoTitleBar" >
+            <meta-data
+                android:name="appmode"
+                android:value="FullVersion" />
         </activity>
-    </application>
+</application>
 
 </manifest>
