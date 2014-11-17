@@ -58,26 +58,30 @@ public abstract class BetterOpenHelper
 			File fImportDB = new File(strImportPath);
 			if( fImportDB.canRead() ) {
 				Toast.makeText(context, "Importing wifilapper database from "+strImportPath, Toast.LENGTH_LONG).show();
-				InputStream in;
-				OutputStream out;
+				FileInputStream in=null;
+				FileOutputStream out=null;
 				try {
 					in = new FileInputStream(strImportPath);
 					out = new FileOutputStream(strPath);
-
-					// Copy the bits from instream to outstream
-					byte[] buf = new byte[1024];
-					int len;
-					while ((len = in.read(buf)) > 0) {
-						out.write(buf, 0, len);
-					}
-					in.close();
-					out.close();
-				} catch (FileNotFoundException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
 				}
-				m_db = SQLiteDatabase.openDatabase(strPath, factory, SQLiteDatabase.OPEN_READWRITE);
+				catch (FileNotFoundException e) {
+					// OK, just creating it
+				}
+				if( in != null && out != null ) {
+					try {
+						// Copy the bits from instream to outstream
+						byte[] buf = new byte[1024];
+						int len;
+						while ((len = in.read(buf)) > 0) {
+							out.write(buf, 0, len);
+						}
+						in.close();
+						out.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					m_db = SQLiteDatabase.openDatabase(strPath, factory, SQLiteDatabase.OPEN_READWRITE);
+				}
 			}
 		}
 		if( m_db == null ) // still don't have one
