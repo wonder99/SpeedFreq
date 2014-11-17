@@ -35,8 +35,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -57,7 +55,6 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 	private TextView m_txtIP;
 	ArrayList<RaceData> rdTracks;
 	private int iSelectedTrack;	
-    LocationManager locMan;
 	private DialogInterface m_dlgAlert;
 	private Intent m_startIntent = null;
 	ImageView ivTrack;
@@ -129,19 +126,6 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 		getWindow().setSoftInputMode(
 			      WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 		
-		locMan = (LocationManager)getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
-
-	    if(locMan != null && locMan.isProviderEnabled(LocationManager.GPS_PROVIDER))
-	    {
-	    	try
-	    	{
-	    		locMan.requestLocationUpdates(LocationManager.GPS_PROVIDER, 100, 0.0f, (LocationListener)this);
-	    	}
-	    	catch(Exception e)
-	    	{
-	    		System.out.println("Failure: " + e.toString());
-	    	}
-	    }
 		rdTracks = RaceDatabase.GetTrackData(RaceDatabase.Get());
     	SetupSettingsView();
 
@@ -165,7 +149,6 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 				null, // no SSID changes here 
 				null, // no GPS changes here
 				edtRaceName.getText().toString());
-		locMan = null;
 	}
 	
     private void SetupSettingsView()
@@ -204,13 +187,6 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 
     	Button btnOptions = (Button)findViewById(R.id.btnOptions);
     	btnOptions.setOnClickListener(this);
-//    	Location loc =new Location(LocationManager.GPS_PROVIDER);
-//    	loc.setLatitude(.1);
-//    	loc.setLongitude(.1);
-//    	onLocationChanged(loc);
-//    	RaceDatabase.GetBitmapFromDatabase(RaceDatabase.Get(), "test");
-
-//		RaceData rd = RaceDatabase.GetClosestTrack(rdTracks,-75,45);
 
 		iSelectedTrack = settings.getInt(Prefs.PREF_TRACK_ID, Prefs.DEFAULT_TRACK_ID_INT);
 		if( rdTracks != null && iSelectedTrack >= 0 ) 
@@ -235,6 +211,9 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 			ivTrack.setScaleType(ScaleType.CENTER_INSIDE);
 		}
 		ivTrack.setOnClickListener(this);
+		
+		// For testing the crash-reporting feature
+		// tvTrackName.setOnClickListener(this);
 
 		// disable network features if not enabled
 		WifiManager pWifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
@@ -360,6 +339,11 @@ public class SpeedFreq extends LandingRaceBase implements OnClickListener, Dialo
 		else if(v.getId() == R.id.btnAutoIP)
 		{
 			ShowAutoIPActivity();
+		}
+		else if(v.getId() == R.id.tvTrackName)
+		{
+			// for testing crash reporting
+			throw new AssertionError("Test Crash!");
 		}
 	}
 
