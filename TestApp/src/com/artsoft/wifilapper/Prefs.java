@@ -16,6 +16,7 @@
 
 package com.artsoft.wifilapper;
 
+import java.io.File;
 import java.text.NumberFormat;
 import java.util.List;
 
@@ -248,7 +249,10 @@ public class Prefs
 	}
 	public static String GetCrashDir()
 	{
-		String crashPath = Environment.getExternalStorageDirectory().getPath()+"/SpeedFreqCrashes/";
+		String crashPath = Environment.getExternalStorageDirectory().getPath()+"/speedfreq/crashlogs/";
+		File fCrash = new File(crashPath);
+		if( !fCrash.exists() )
+			fCrash.mkdirs();
 		return crashPath;
 	}
 	public static String GetSpeedUnits(UNIT_SYSTEM eSystem)
