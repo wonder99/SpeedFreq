@@ -424,10 +424,13 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 
     	sfs = new StatFs(android.os.Environment.getDataDirectory().getPath());
     	if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
-    		fMBAvailable = Math.round(sfs.getBlockSizeLong() * sfs.getAvailableBlocksLong() / 1024l / 1024l);
-    	else // OK to use deprecated API under this conditional
-    		fMBAvailable = Math.round(sfs.getBlockSize() * sfs.getAvailableBlocks() / 1024f / 1024f);
+    		fMBAvailable = Math.round(sfs.getBlockSizeLong()  / 1024f * sfs.getAvailableBlocksLong() / 1024f);
+    	else {
+    		// OK to use deprecated API under this conditional
+    		fMBAvailable = Math.round(sfs.getAvailableBlocks() / 1024f * sfs.getBlockSize() / 1024f);
+    	}
     	
+
     	String strAvail;
     	if( fMBAvailable > 1024f ) 
     		strAvail = String.valueOf(Math.round(fMBAvailable/102.4f)/10f) + " GB free)";
@@ -447,9 +450,9 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		{
 			sfs = new StatFs(RaceDatabase.GetExternalDir(this));
 	    	if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
-	    		fMBAvailable = (int)Math.round(sfs.getBlockSizeLong() * sfs.getAvailableBlocksLong() / 1024l / 1024l);
+	    		fMBAvailable = (int)Math.round(sfs.getBlockSizeLong() / 1024f * sfs.getAvailableBlocksLong() / 1024f);
 	    	else
-	    		fMBAvailable = Math.round(sfs.getBlockSize() * sfs.getAvailableBlocks() / 1024f / 1024f);
+	    		fMBAvailable = Math.round(sfs.getBlockSize() /1024f * sfs.getAvailableBlocks() / 1024f);
 			chkExternal.setEnabled(true);
 
 	    	if( fMBAvailable > 1024f ) 
