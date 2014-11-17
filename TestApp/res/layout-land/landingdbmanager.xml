@@ -18,7 +18,15 @@
         android:text="Race Databases"
         android:textSize="25sp" />
          
-    	<TextView android:text="Choose a database to import.  Your existing DB will be replaced, so it's recommend you save it first on the right" android:id="@+id/TextView02" android:layout_width="fill_parent" android:layout_height="wrap_content"></TextView>
+    	<TextView
+    	    android:id="@+id/TextView02"
+    	    android:layout_width="fill_parent"
+    	    android:layout_height="wrap_content"
+    	    android:layout_marginBottom="20dp"
+    	    android:text="Choose a database to import.  Your existing DB will be replaced, so it&apos;s recommend you save it first on the right"
+    	    android:textSize="@dimen/font_size_very_small" >
+
+</TextView>
     	<ListView
 	        android:id="@android:id/list"
 	        android:layout_width="fill_parent"
@@ -33,10 +41,39 @@
     android:layout_height="fill_parent"
     android:orientation="vertical" 
     android:layout_weight="1">
-    	<TextView android:text="Save filename" android:id="@+id/TextView22" android:layout_width="fill_parent" android:layout_height="wrap_content"></TextView>
-		<EditText android:text="laps" android:id="@+id/edtFilename" android:layout_width="fill_parent" android:layout_height="wrap_content" android:inputType="text"></EditText>
-		<TextView android:text="" android:id="@+id/txtSavePath" android:layout_width="fill_parent" android:layout_height="wrap_content"></TextView>
-		<Button android:text="Save" android:id="@+id/btnSaveDB" android:layout_width="fill_parent" android:layout_height="wrap_content"></Button>
+
+    	<TextView
+    	    android:id="@+id/TextView22"
+    	    android:layout_width="fill_parent"
+    	    android:layout_height="wrap_content"
+    	    android:text="Save filename"
+    	    android:textSize="@dimen/font_size_very_small" >
+</TextView>
+
+		<EditText
+		    android:id="@+id/edtFilename"
+		    android:layout_width="fill_parent"
+		    android:layout_height="wrap_content"
+		    android:inputType="text"
+		    android:text="laps"
+		    android:textSize="@dimen/font_size_very_small" >
+</EditText>
+
+		<TextView
+		    android:id="@+id/txtSavePath"
+		    android:layout_width="fill_parent"
+		    android:layout_height="wrap_content"
+		    android:text=""
+		    android:textSize="@dimen/font_size_very_small" >
+</TextView>
+
+		<Button
+		    android:id="@+id/btnSaveDB"
+		    android:layout_width="fill_parent"
+		    android:layout_height="wrap_content"
+		    android:text="Save"
+		    android:textSize="@dimen/font_size_very_small" >
+</Button>
     </LinearLayout>
 </LinearLayout>
     

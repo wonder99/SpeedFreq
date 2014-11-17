@@ -20,7 +20,8 @@
             android:id="@+id/TextView22"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="Save filename" />
+            android:text="Save filename"
+            android:textSize="@dimen/font_size_very_small" />
 
         <EditText
             android:id="@+id/edtFilename"
@@ -35,20 +36,23 @@
         <TextView
             android:id="@+id/txtSavePath"
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/font_size_very_small" />
 
         <Button
             android:id="@+id/btnSaveDB"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="Save" />
+            android:text="Save"
+            android:textSize="@dimen/font_size_very_small" />
 
         <TextView
             android:id="@+id/TextView02"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Choose a database to import.  Your existing DB will be replaced, so it&apos;s recommend you save it first on the right" />
+            android:layout_marginBottom="20dp"
+            android:text="Choose a database to import.  Your existing DB will be replaced, so it&apos;s recommend you save it first above"
+            android:textSize="@dimen/font_size_very_small" />
 
         <ListView
             android:id="@android:id/list"
