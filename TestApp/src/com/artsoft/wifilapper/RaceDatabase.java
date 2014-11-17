@@ -34,9 +34,8 @@ import java.util.List;
 import java.util.Vector;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
 import com.artsoft.wifilapper.LapAccumulator.LapAccumulatorParams;
-
+import android.annotation.TargetApi;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -52,6 +51,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.location.Location;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
@@ -133,9 +133,9 @@ public class RaceDatabase extends BetterOpenHelper
 	public static boolean CreateExternal(Context ctx)
 	{
 	    // Create the directory if it doesn't exist
-	    String strPath = GetExternalDir(ctx) + "/SpeedFreq";
+	    String strPath = GetExternalDir(ctx) + "/speedfreq";
 	    File fileTest = new File(strPath);
-	    if ( !fileTest.isDirectory() )
+	    if ( !fileTest.exists() )
 	    	fileTest.mkdir();
 	    
 		return CreateOnPath(ctx, strPath + "/" + DATABASE_NAME_INTERNAL);
