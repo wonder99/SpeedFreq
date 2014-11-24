@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.mcmahon.speedfreq"
-    android:versionCode="1"
-    android:versionName="Beta: Nov 17, 2014" xmlns:tools="http://schemas.android.com/tools"
-    android:installLocation="auto">
+    android:installLocation="auto"
+    android:versionCode="2"
+    android:versionName="Beta 2: Nov 23, 2014" >
     
     <supports-screens android:smallScreens="true" />
     <supports-screens android:normalScreens="true" />
