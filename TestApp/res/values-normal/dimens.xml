@@ -1,8 +1,8 @@
 
     <resources>
-<!--         Optimus 2X S2X, S3-->
+<!--         LG Optimus 2X, Galaxy S2X-->
         <dimen name="font_size">50sp</dimen>
-                <dimen name="font_size_smaller">30sp</dimen>
+                <dimen name="font_size_smaller">32sp</dimen>
         <dimen name="font_size_very_small">17sp</dimen>
         
     </resources>

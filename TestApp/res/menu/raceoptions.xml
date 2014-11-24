@@ -5,5 +5,8 @@
     <item android:enabled="true" android:title="New race with these splits" android:visible="true" android:id="@+id/mnuReuseSplits"></item>
     <item android:enabled="true" android:title="Retransmit data to Pitside" android:visible="true" android:id="@+id/mnuRetransmit"></item>
     <item android:enabled="true" android:title="Delete" android:visible="true" android:id="@+id/mnuDelete"></item>
-    <item android:enabled="true" android:title="Rename" android:visible="true" android:id="@+id/mnuRename"></item>  
+    <item android:enabled="true" android:title="Rename" android:visible="true" android:id="@+id/mnuRename"></item>
+    <item android:enabled="true" android:title="Delete all test data" android:visible="true" android:id="@+id/mnuDeleteTestData"></item>
+    <item android:enabled="true" android:title="Delete all races" android:visible="true" android:id="@+id/mnuDeleteAllRaces"></item>
+
 </menu>

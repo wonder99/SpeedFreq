@@ -14,13 +14,16 @@
             android:id="@+id/chkIOIO"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:text="Use IOIO Board" />
+            android:text="Use IOIO Board"
+            android:textSize="@dimen/font_size_very_small" />
 
         <CheckBox
             android:id="@+id/chkClicker"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:text="Use pin 17 digital input as clicker" />
+            android:text="Use pin 17 digital input as clicker"
+            android:textSize="@dimen/font_size_very_small" />
+
     </LinearLayout>
 
     <LinearLayout
@@ -43,14 +46,17 @@
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
                     android:checked="true"
-                    android:text="Analog Pin" />
+                    android:text="Analog Pin"
+                    android:textSize="@dimen/font_size_very_small" />
 
                 <RadioButton
                     android:id="@+id/rbPulse"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Pulse Pin" />
+                    android:text="Pulse Pin"
+                    android:textSize="@dimen/font_size_very_small" />
+
             </RadioGroup>
 
 
@@ -70,7 +76,9 @@
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:text="Sample Rate"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
+                    android:textAppearance="?android:attr/textAppearanceMedium"
+                    android:textSize="@dimen/font_size_very_small" />
+
             </TableRow>
 
             <TableRow
@@ -101,7 +109,8 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center|right"
                     android:text="Pin"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
+                    android:textAppearance="?android:attr/textAppearanceMedium"
+                    android:textSize="@dimen/font_size_very_small" />
 
                 <Spinner
                     android:id="@+id/spnPin"
@@ -124,7 +133,8 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_vertical"
                         android:text="No filter used"
-                        android:textAppearance="?android:attr/textAppearanceMedium" />
+                        android:textAppearance="?android:attr/textAppearanceMedium"
+                        android:textSize="@dimen/font_size_very_small" />
 
                     <TextView
                         android:id="@+id/lblCurrentFilter2"
@@ -136,22 +146,27 @@
             <TableRow
                 android:id="@+id/tableRow4"
                 android:layout_width="fill_parent"
-                android:layout_height="0dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1" >
 
                 <Button
                     android:id="@+id/btnCustom"
-                    android:layout_width="fill_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Customize Pin Output" />
+                    android:text="Customize Pin Output"
+                    android:textSize="@dimen/font_size_very_small" />
 
                 <Button
                     android:id="@+id/btnAdd"
-                    android:layout_width="fill_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
                     android:layout_weight="1"
-                    android:text="Add Pin" />
+                    android:text="Add Pin"
+                    android:textSize="@dimen/font_size_very_small" />
+
             </TableRow>
         </TableLayout>
 

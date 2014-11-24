@@ -10,6 +10,13 @@
         android:layout_height="wrap_content"
         android:text="Use Bluetooth GPS" />
 
+    <CheckBox
+        android:id="@+id/chkBtInsecure"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Insecure Bluetooth connection"
+        android:textSize="@dimen/font_size_very_small" />
+
     <LinearLayout
         android:id="@+id/linearLayout1"
         android:layout_width="match_parent"

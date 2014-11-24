@@ -1,3 +1,4 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:enabled="true" android:title="Delete all test data" android:visible="true" android:id="@+id/mnuDeleteTestData"></item>
+    <item android:enabled="true" android:title="Delete all races" android:visible="true" android:id="@+id/mnuDeleteAllRaces"></item>
 </menu>

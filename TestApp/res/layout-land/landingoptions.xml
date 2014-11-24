@@ -8,6 +8,14 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" >
 
+        <TextView
+            android:id="@+id/tvOptionsTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="Options"
+            android:textSize="@dimen/font_size_smaller" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content" >
@@ -295,7 +303,6 @@
                 android:id="@+id/tableRow24"
                 android:layout_width="wrap_content"
                 android:layout_height="0dp"
-                android:layout_gravity="center_vertical"
                 android:layout_weight="1" >
 
                 <TextView
@@ -305,43 +312,42 @@
                     android:layout_gravity="center_vertical"
                     android:layout_weight="1"
                     android:text="Preferred Units"
-                    android:textSize="@dimen/font_size_very_small" >
-
-                </TextView>
+                    android:textSize="@dimen/font_size_very_small" />
 
                 <Spinner
                     android:id="@+id/spnUnits"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1" >
-                </Spinner>
+                    android:layout_weight="1" />
+            </TableRow>
+
+            <TableRow
+                android:id="@+id/TableRow01"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1" >
+
+                <TextView
+                    android:id="@+id/tvDBLoc"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1"
+                    android:text="DB Location"
+                    android:textSize="@dimen/font_size_very_small" />
+
+                <Button
+                    android:id="@+id/btnChangeDB"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1"
+                    android:text="Change DB Location"
+                    android:textSize="@dimen/font_size_very_small" />
             </TableRow>
         </TableLayout>
 
         <!-- SD card stuff -->
-
-        <RadioGroup
-            android:id="@+id/grpDBLocation"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal" >
-
-            <RadioButton
-                android:id="@+id/chkDBInternal"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="DB on internal memory"
-                android:textSize="@dimen/font_size_very_small" />
-
-            <RadioButton
-                android:id="@+id/chkDBExternal"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="DB on SD card"
-                android:textSize="@dimen/font_size_very_small" />
-
-        </RadioGroup>
     </LinearLayout>
 
 </ScrollView>
