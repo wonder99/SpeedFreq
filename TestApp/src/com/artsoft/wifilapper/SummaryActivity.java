@@ -216,7 +216,7 @@ public class SummaryActivity extends Activity implements OnClickListener
 		if(bmpImage == null)
 		{
 			// if they didn't supply an image, use the WifiLapper logo
-			bmpImage = BitmapFactory.decodeResource(res, R.drawable.speedfreq);
+			bmpImage = BitmapFactory.decodeResource(res, R.drawable.app_icon);
 			fIsLogo = true;
 		}
 		if(bmpImage != null)

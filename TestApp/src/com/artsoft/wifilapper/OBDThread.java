@@ -17,6 +17,7 @@
 package com.artsoft.wifilapper;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +33,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.UUID;
+
 import com.artsoft.wifilapper.Utility.MultiStateObject.STATE;
+
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -300,6 +303,11 @@ public class OBDThread extends Thread implements Runnable
 			this.ixCode = ixCode;
 			this.strDesc = strDesc;
 		}
+		public PIDParameter(int ixCode)
+		{
+			this.ixCode = ixCode;
+			this.strDesc = rgPIDStrings[ixCode];
+		}
 		@Override
 		public String toString()
 		{
@@ -537,13 +545,41 @@ public class OBDThread extends Thread implements Runnable
 			OutputStream os = null;
 			BluetoothSocket bs = null;
 			String strResponse = "";
-			boolean rgSupport[] = new boolean[256];
-			rgSupport[0] = true;
+//			boolean rgSupport[] = new boolean[256];
+//			rgSupport[0] = true;
 			try
 			{
-				bs = bd.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
-				bs.connect();
+				// Attempt 1: This first try is quite successful on most phones I tried
+				boolean fSuccess = false;
+				try
+				{
+					Method m = bd.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
+			        bs = (BluetoothSocket) m.invoke(bd, 1);
+					bs.connect();
+					fSuccess = true; // if we got this far without an exception, the device is good
+				}
+				catch(IOException e){Log.d("obd2", "Failed attempt #1");} 
+				catch (IllegalArgumentException e) { e.printStackTrace();} 
+				catch (NoSuchMethodException e) {e.printStackTrace();} 
+				catch (IllegalAccessException e) { e.printStackTrace();} 
+				catch (InvocationTargetException e) {	e.printStackTrace();}
 				
+				// Attempt 2: Another try--not sure this one is ever better than attempt #1
+				if (!fSuccess)
+				{
+					UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+					try {
+						bs.close();
+						Thread.sleep(250);
+						bs = bd.createRfcommSocketToServiceRecord(uuid);
+						bs.connect();
+						fSuccess = true; // if we got this far without an exception, the device is good
+					} 
+					catch (IOException e) {Log.d("obd2", "Failed attempt #2");} 
+					catch (InterruptedException e) {}
+				}
+
+
 				in = bs.getInputStream();
 				os = bs.getOutputStream();
 				
@@ -614,6 +650,7 @@ public class OBDThread extends Thread implements Runnable
 					if(tmTimeSinceFirst > 0)
 					{
 						float flRate = (1000.0f*this.cResponses) / (float)tmTimeSinceFirst;
+						flRate = Math.round(flRate*10f/rgSelectedPIDs.length)/10f;
 						strRate = " (" + flRate + "hz)";
 					}
 					pStateMan.SetState(OBDThread.class, STATE.ON, "Reading OBD2 device successfully" + strRate);
@@ -635,7 +672,7 @@ public class OBDThread extends Thread implements Runnable
 				try 
 				{
 					pStateMan.SetState(OBDThread.class, STATE.TROUBLE_BAD, "Failed somehow.  Retrying connection...");
-					Thread.sleep(5000);
+					Thread.sleep(1000);
 				} catch (InterruptedException e) 
 				{
 				}
@@ -685,175 +722,203 @@ public class OBDThread extends Thread implements Runnable
 			
 		}
 	}
+	private static final boolean bDebugWithoutCar = false;
 	private static List<PIDParameter> GetSupportedPIDS(String strBTName, OutputStream errorOut)
 	{
 		boolean fSuccess = true;
 		List<PIDParameter> lstRet = null;
 
-		BluetoothSocket bs = null;
-		InputStream in = null;
-		OutputStream os = null;
-		
-		BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
-		
-		Set<BluetoothDevice> lstDevices = ba.getBondedDevices();
-		Iterator<BluetoothDevice> i = lstDevices.iterator();
-		BluetoothDevice bd = null;
-		while(i.hasNext())
-		{
-			bd = i.next();
-			if(strBTName.equalsIgnoreCase(bd.getName()))
-			{
-				break;
-			}
-			else
-			{
-				bd = null;
-			}
-		}
-		if(bd == null)
-		{
-			try {errorOut.write(("Couldn't find device " + strBTName).getBytes());} catch (IOException e1) {}
-			fSuccess = false;
-		}
-		
-		if(fSuccess)
-		{
-			String strResponse = "";
-			String strAllResponse = "";
+		if( bDebugWithoutCar ) { 
 			boolean rgSupport[] = new boolean[257];
-			rgSupport[0] = true;
-			try
+			lstRet = new ArrayList<PIDParameter>();
+			for(int x = 0;x < rgSupport.length; x++)
 			{
-				
-				// Attempt 1: This first try is quite successful on most phones I tried
+				if((x % 0x20 != 0) && x<10 && x < rgPIDStrings.length)
+				{
+					lstRet.add(new PIDParameter(x, rgPIDStrings[x]));
+				}
+			}
+			return lstRet;
+		}
+		else {
+
+
+
+			BluetoothSocket bs = null;
+			InputStream in = null;
+			OutputStream os = null;
+
+			BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
+
+			Set<BluetoothDevice> lstDevices = ba.getBondedDevices();
+			Iterator<BluetoothDevice> i = lstDevices.iterator();
+			BluetoothDevice bd = null;
+			while(i.hasNext())
+			{
+				bd = i.next();
+				if(strBTName.equalsIgnoreCase(bd.getName()))
+				{
+					break;
+				}
+				else
+				{
+					bd = null;
+				}
+			}
+			if(bd == null)
+			{
+				try {errorOut.write(("Couldn't find device " + strBTName).getBytes());} catch (IOException e1) {}
+				fSuccess = false;
+			}
+
+			if(fSuccess)
+			{
+				String strResponse = "";
+				String strAllResponse = "";
+				boolean rgSupport[] = new boolean[257];
+				rgSupport[0] = true;
 				try
 				{
-					Method m = bd.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
-			        bs = (BluetoothSocket) m.invoke(bd, 1);
-					bs.connect();
-					fSuccess = true; // if we got this far without an exception, the device is good
-				}
-				catch(IOException e){Log.w("obd2", "Failed attempt #1");} 
-				catch (IllegalArgumentException e) { e.printStackTrace();} 
-				catch (NoSuchMethodException e) {e.printStackTrace();} 
-				catch (IllegalAccessException e) { e.printStackTrace();} 
-				catch (InvocationTargetException e) {	e.printStackTrace();}
-				
-				// Attempt 2: Another try--not sure this one is ever better than attempt #1
-				if (!fSuccess)
-				{
-					UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-					try {
-						bs.close();
-						Thread.sleep(250);
-						bs = bd.createRfcommSocketToServiceRecord(uuid);
+					fSuccess = false; // reset the flag
+					// Attempt 1: This first try is quite successful on most phones I tried
+					try
+					{
+						Method m = bd.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
+						bs = (BluetoothSocket) m.invoke(bd, 1);
 						bs.connect();
 						fSuccess = true; // if we got this far without an exception, the device is good
-					} 
-					catch (IOException e) {Log.w("obd2", "Failed attempt #2");} 
-					catch (InterruptedException e) {}
-				}
+					}
+					catch(IOException e){Log.d("obd2", "Failed attempt #1");} 
+					catch (IllegalArgumentException e) { e.printStackTrace();} 
+					catch (NoSuchMethodException e) {e.printStackTrace();} 
+					catch (IllegalAccessException e) { e.printStackTrace();} 
+					catch (InvocationTargetException e) {	e.printStackTrace();}
 
-				in = bs.getInputStream();
-				os = bs.getOutputStream();
-				
-				final String strATZ = "atz\r\n";
-				os.write(strATZ.getBytes());
-				strResponse = GetResponse(in,5000);
-				if(strResponse == null)
-				{
-					try {errorOut.write("initial setup failed".getBytes());} catch (IOException e1) {}
-					fSuccess = false;
-				}
-				if(fSuccess)
-				{
-					Log.w("obd",strResponse);
-					
-					final String strATSetup = "at sp 0\r\n";
-					os.write(strATSetup.getBytes());
-		
-					strResponse = GetResponse(in,5000);
-					if(strResponse == null) fSuccess = false;
+					// Attempt 2: Another try--not sure this one is ever better than attempt #1
+					if (!fSuccess)
+					{
+						UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+						try {
+							bs.close();
+							Thread.sleep(250);
+							bs = bd.createRfcommSocketToServiceRecord(uuid);
+							bs.connect();
+							fSuccess = true; // if we got this far without an exception, the device is good
+						} 
+						catch (IOException e) {Log.d("obd2", "Failed attempt #2");} 
+						catch (InterruptedException e) {}
+					}
+
+					if( fSuccess ) {
+						in = bs.getInputStream();
+						os = bs.getOutputStream();
+
+						final String strATZ = "atz\r\n";
+						os.write(strATZ.getBytes());
+						strResponse = GetResponse(in,5000);
+						if(strResponse == null)
+						{
+							try {errorOut.write("initial setup failed".getBytes());} catch (IOException e1) {}
+							fSuccess = false;
+						}
+					}
 					if(fSuccess)
 					{
-						for(int ix = 0; ix < 0xff; ix += 0x20)
+						Log.d("obd",strResponse);
+
+						final String strATSetup = "at sp 0\r\n";
+						os.write(strATSetup.getBytes());
+
+						strResponse = GetResponse(in,5000);
+						if(strResponse == null) fSuccess = false;
+						if(fSuccess)
 						{
-							if(rgSupport[ix])
+							for(int ix = 0; ix < 0xff; ix += 0x20)
 							{
-								final String strSupport = "01 " + (ix == 0 ? "00" : Integer.toHexString(ix)) + (char)0xd;
-								os.write(strSupport.getBytes());
-								strResponse = GetResponse(in, 30000);
-								if(strResponse != null)
+								if(rgSupport[ix])
 								{
-									strAllResponse += "ix = " + ix +  ":\n" + strResponse;
-									PopulateSupport(ix, strResponse, rgSupport);
-								}
-								else
-								{
-									try {errorOut.write("No response received ".getBytes());} catch (IOException e1) {}
-									fSuccess = false;
-									break;
+									final String strSupport = "01 " + (ix == 0 ? "00" : Integer.toHexString(ix)) + (char)0xd;
+									os.write(strSupport.getBytes());
+									strResponse = GetResponse(in, 30000);
+									if(strResponse != null)
+									{
+										strAllResponse += "ix = " + ix +  ":\n" + strResponse;
+										PopulateSupport(ix, strResponse, rgSupport);
+									}
+									else
+									{
+										try {errorOut.write("No response received ".getBytes());} catch (IOException e1) {}
+										fSuccess = false;
+										break;
+									}
 								}
 							}
 						}
 					}
 				}
-			}
-			catch(Exception e)
-			{
-				final Writer result = new StringWriter();
-	    	    final PrintWriter printWriter = new PrintWriter(result);
-	    	    e.printStackTrace(printWriter);
-	    	    String strWrite = result.toString();
-	    	    
-	    	    try
-	    	    {
-	    	    	String strCrashFile = new String(Prefs.GetCrashDir() + "obdcrash.txt");
-	    	    	FileOutputStream fos = new FileOutputStream(strCrashFile);
-	    	    	if(strResponse != null)
-	    	    	{
-	    	    		fos.write(("Responses: " + strAllResponse + "\n").getBytes());
-	    	    	}
-	    	    	fos.write(strWrite.getBytes());
-	    	    	fos.close();
-	    	    	try {errorOut.write(("Wrote OBD failure report to " + strCrashFile).getBytes());} catch (IOException e1) {}
-	    	    }
-	    	    catch(IOException e2)
-	    	    {
-					try {errorOut.write(("For more OBD failure details, put in an SD card and mount it").getBytes());} catch (IOException e1) {}
-	    	    }
-	    	    
-				fSuccess = false;
-			}
-			
-			if(fSuccess)
-			{
-				lstRet = new ArrayList<PIDParameter>();
-				for(int x = 0;x < rgSupport.length; x++)
+				catch(IOException e) { fSuccess = false;}
+				catch(Exception e)
 				{
-					if(rgSupport[x] && x < rgPIDStrings.length)
+					final Writer result = new StringWriter();
+					final PrintWriter printWriter = new PrintWriter(result);
+					e.printStackTrace(printWriter);
+					String strWrite = result.toString();
+
+					try
 					{
-						lstRet.add(new PIDParameter(x, rgPIDStrings[x]));
+						String crashPath = Prefs.GetCrashDir();
+						File fCrash = new File(crashPath);
+						if( !fCrash.isDirectory() )
+							fCrash.mkdirs();
+
+						if( fCrash.canWrite() ) {
+							String strCrashFile = new String(crashPath + "obdcrash.txt");
+							FileOutputStream fos = new FileOutputStream(strCrashFile);
+							if(strResponse != null)
+							{
+								fos.write(("Responses: " + strAllResponse + "\n").getBytes());
+							}
+							fos.write(strWrite.getBytes());
+							fos.close();
+							try {errorOut.write(("Wrote OBD failure report to " + strCrashFile).getBytes());} catch (IOException e1) {}
+						}
+					}
+					catch(IOException e2)
+					{
+						try {errorOut.write(("For more OBD failure details, put in an SD card and mount it").getBytes());} catch (IOException e1) {}
+					}
+
+					fSuccess = false;
+				}
+
+				if(fSuccess)
+				{
+					lstRet = new ArrayList<PIDParameter>();
+					for(int x = 0;x < rgSupport.length; x++)
+					{
+						if( (x % 0x20 != 0) && rgSupport[x] && x < rgPIDStrings.length)
+						{
+							lstRet.add(new PIDParameter(x, rgPIDStrings[x]));
+						}
 					}
 				}
 			}
+
+			if(in != null)
+			{
+				try {in.close();} catch(IOException e) {}
+			}
+			if(os != null)
+			{
+				try {os.close();} catch(IOException e) {}
+			}
+			if(bs != null)
+			{
+				try {bs.close();} catch(IOException e) {}
+			}
+
+			return lstRet;
+
 		}
-		
-		if(in != null)
-		{
-			try {in.close();} catch(IOException e) {}
-		}
-		if(os != null)
-		{
-			try {os.close();} catch(IOException e) {}
-		}
-		if(bs != null)
-		{
-			try {bs.close();} catch(IOException e) {}
-		}
-		
-		return lstRet;
 	}
-	
 }

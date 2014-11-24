@@ -16,11 +16,19 @@
 
 package com.artsoft.wifilapper;
 
+import java.io.File;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -31,16 +39,24 @@ import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.StatFs;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
+import android.view.Surface;
 import android.view.View;
 import android.view.View.MeasureSpec;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 
 public class Utility 
 {
+	static final int MSG_PICKED_DB = 120;
 	public static int ParseInt(String str, int iDefault)
 	{
 		int iRet = 0;
@@ -55,13 +71,61 @@ public class Utility
 		return iRet;
 	}
 
+	// Prevent screen rotation.  Handles all known phone types, and their idiosyncrasies.
+	// Not yet tested on API8, which doesn't support a couple of the methods we want to use
+	public static void lockOrientation(Activity act) {
+		int rotation = act.getWindowManager().getDefaultDisplay().getRotation();
+		Utility.lockOrientation(act, rotation, Surface.ROTATION_270);
+		// Ensure that the rotation hasn't changed
+		if (act.getWindowManager().getDefaultDisplay().getRotation() != rotation) {
+			Utility.lockOrientation(act, rotation, Surface.ROTATION_90);
+		}
+	}
+	
+	private static void lockOrientation(Activity act, int originalRotation, int naturalOppositeRotation) {
+	    int orientation = act.getResources().getConfiguration().orientation;
+	    if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+	        // Are we reverse?
+	        if (originalRotation == Surface.ROTATION_0 || originalRotation == naturalOppositeRotation) {
+	            act.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+	        } else {
+	            setReversePortrait(act);
+	        }
+	    } else {
+	        // Are we reverse?
+	        if (originalRotation == Surface.ROTATION_0 || originalRotation == naturalOppositeRotation) {
+	            act.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+	        } else {
+	            setReverseLandscape(act);
+	        }
+	    }
+	}
+
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+	private static void setReversePortrait(Activity act) {
+	    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+	        act.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT);
+	    } else {
+	        act.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+	    }
+	}
+
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+	private static void setReverseLandscape(Activity act) {
+	    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+	        act.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
+	    } else {
+	        act.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+	    }
+	}
+
 	// true -> a change was made
 	// false -> no changes were made
 	public static boolean ConnectToSSID(String strSSID, WifiManager pWifi)
 	{
 		// Note: since the SSID spinner is disabled if wifi is disabled, we know there will be non-null values for pInfo, lstNetworks.
 		WifiInfo pInfo = pWifi.getConnectionInfo();
-		if(pInfo != null)	
+		if(pInfo != null && pWifi.isWifiEnabled())	
 		{
 			// Disconnect if on the wrong network
 			if( pInfo != null && pInfo.getSSID()!= null && !pInfo.getSSID().replace("\"", "").equalsIgnoreCase(strSSID) )
@@ -392,4 +456,96 @@ public class Utility
 		public abstract void SetState(Class<?> c, STATE eState, String strData);
 		public abstract StateData GetState(Class<?> c);
 	}
+
+	public static String[] FindAllStorage(Context cxt)
+	{
+		List<String> strBuf = new ArrayList<String>();
+		final String LOGTAG = "Storage";
+
+		strBuf.add(cxt.getFilesDir().toString());
+		final String state = Environment.getExternalStorageState();
+		if ( Environment.MEDIA_MOUNTED.equals(state) ) {  // we can read the External Storage...           
+		    //Retrieve the primary External Storage:
+		    final File primaryExternalStorage = Environment.getExternalStorageDirectory();
+
+		    //Retrieve the External Storages root directory:
+		    final String externalStorageRootDir;
+		    if ( (externalStorageRootDir = primaryExternalStorage.getParent()) == null ) {  // no parent...
+		    	Log.d(LOGTAG, "External Storage: " + primaryExternalStorage + "\n");
+		    	strBuf.add(externalStorageRootDir);
+		    }
+		    else {
+		    	final File externalStorageRoot = new File( externalStorageRootDir );
+		    	final File[] files = externalStorageRoot.listFiles();
+//		    	final String[] fileNames = new String[files.length];
+		    	StringBuffer fileNames;
+		    	int i=0;
+		    	for ( final File file : files ) {
+		    		if ( file.isDirectory() && file.canWrite() && (file.listFiles().length > 0) ) {  // it is a real directory (not a USB drive)...
+		    			Log.d(LOGTAG, "External Storage: " + file.getAbsolutePath() + "\n");
+		    			strBuf.add(file.getAbsolutePath());
+		    		}
+		    	}
+		    }
+		}
+		String[] ret = new String[strBuf.size()];
+		ret = strBuf.toArray(ret);
+		return ret;
+	}
+	
+	@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
+	public static void PickDBLocation(Context cxt, Handler handler, boolean bCancellable, boolean bWelcome)
+	{
+		final String[] fnames = FindAllStorage(cxt);
+		String[] strPicker = new String[fnames.length];
+		final float[] fSizes = new float[fnames.length];
+		final Handler m_handler;
+		m_handler = handler;
+		
+		final String strInternal = fnames[0];
+		fnames[0] = new String("Internal");
+
+		StatFs sfs;
+		for( int i=0; i<fSizes.length;i++) {
+			if( i == 0)
+				sfs = new StatFs(strInternal);
+			else
+				sfs = new StatFs(fnames[i]);
+			if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
+				fSizes[i] = Math.round(sfs.getBlockSizeLong()  / 1024f * sfs.getAvailableBlocksLong() / 1024f);
+			else {
+				// OK to use deprecated API under this conditional
+				fSizes[i] = Math.round(sfs.getAvailableBlocks() / 1024f * sfs.getBlockSize() / 1024f);
+			}
+			if( fSizes[i] > 1024f ) 
+				strPicker[i] = new String(fnames[i] + " (" + String.valueOf(Math.round(fSizes[i]/102.4f)/10f) + "GB free)");
+			else
+				strPicker[i] = new String(fnames[i] + " (" + String.valueOf(Math.round(fSizes[i]*10)/10f) + "MB free)");
+		}
+		ListView modeList = new ListView(cxt);
+		ArrayAdapter<String> modeAdapter = new ArrayAdapter<String>(cxt, R.layout.mysimplelistitem, R.id.tvListItem, strPicker);
+		modeList.setAdapter(modeAdapter);
+
+		AlertDialog.Builder ad = new AlertDialog.Builder(cxt)
+		.setIcon(R.drawable.app_icon)
+		.setCancelable(bCancellable)
+		.setAdapter(modeAdapter, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int which) {
+				if( which > 0)
+					RaceDatabase.SetLocation(fnames[which] + "/speedfreq/sfraces");
+				else
+					RaceDatabase.SetLocation(strInternal + "/sfraces");
+
+				m_handler.sendEmptyMessage(MSG_PICKED_DB);
+			}
+		});
+		if( bWelcome )
+			ad.setTitle("Welcome to Speedfreq!  Choose a save location:");
+		else
+			ad.setTitle("Choose a save location:");
+
+		ad.show();
+	}
+
+
 }

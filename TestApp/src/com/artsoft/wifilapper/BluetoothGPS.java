@@ -157,7 +157,7 @@ public class BluetoothGPS
 			final String strMatch = new String("$GPRMC");
 			String strLastLeftover = strNMEA.substring(strNMEA.length()-Math.min(strNMEA.length(),strMatch.length()));
 			int ixCur = strNMEA.indexOf(strMatch);
-			Log.w("bt2","Len="+String.valueOf(strNMEA.length()) + "," + strNMEA);
+			Log.d("bt2","Len="+String.valueOf(strNMEA.length()) + "," + strNMEA);
 			while(ixCur != -1)
 			{
 				int ixNext = strNMEA.indexOf("$", ixCur+1);
@@ -309,7 +309,8 @@ public class BluetoothGPS
 			boolean fDeviceGood = false;
 			while(!m_shutdown)
 			{
-				UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+				// I've incremented the UUID by one here, so as not to conflict with the OBDII
+				UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FC");
 							
 				in = null;
 				out = null;
@@ -324,7 +325,7 @@ public class BluetoothGPS
 					bs.connect();
 					fDeviceGood = true; // if we got this far without an exception, the device is good
 				}
-				catch(IOException e){Log.w("bt", "Failed hidden secure attempt");} 
+				catch(IOException e){Log.d("bt", "Failed hidden secure attempt");} 
 				catch (IllegalArgumentException e) { e.printStackTrace();} 
 				catch (NoSuchMethodException e) {e.printStackTrace();} 
 				catch (IllegalAccessException e) { e.printStackTrace();} 
@@ -340,7 +341,7 @@ public class BluetoothGPS
 						bs.connect();
 						fDeviceGood = true; // if we got this far without an exception, the device is good
 					} 
-					catch (IOException e) {Log.w("bt", "Failed secure attempt");} 
+					catch (IOException e) {Log.d("bt", "Failed secure attempt");} 
 					catch (InterruptedException e) {}
 				}
 
@@ -355,7 +356,7 @@ public class BluetoothGPS
 						bs.connect();
 						fDeviceGood = true; // if we got this far without an exception, the device is good
 					}
-				catch (IOException e){Log.w("bt", "Failed insecure attempt");} 
+				catch (IOException e){Log.d("bt", "Failed insecure attempt");} 
 				catch (InterruptedException e) {} 
 				}
 
@@ -364,9 +365,9 @@ public class BluetoothGPS
 					try {
 						in = bs.getInputStream();
 						out = bs.getOutputStream();
-					} catch (IOException e) {Log.w("bt", "Failed creating input/output streams");}
+					} catch (IOException e) {Log.d("bt", "Failed creating input/output streams");}
 
-					Log.w("bt", "Success");
+					Log.d("bt", "Success");
 				}
 				else
 					m_handler.sendEmptyMessage(MSG_NOGPSDEVICE);

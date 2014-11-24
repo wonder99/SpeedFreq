@@ -198,44 +198,7 @@ implements
 	
 	private static ApiDemos m_me;
 	
-	private void lockOrientation(int originalRotation, int naturalOppositeRotation) {
-	    int orientation = getResources().getConfiguration().orientation;
-	    if (orientation == Configuration.ORIENTATION_PORTRAIT) {
-	        // Are we reverse?
-	        if (originalRotation == Surface.ROTATION_0 || originalRotation == naturalOppositeRotation) {
-	            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-	        } else {
-	            setReversePortrait();
-	        }
-	    } else {
-	        // Are we reverse?
-	        if (originalRotation == Surface.ROTATION_0 || originalRotation == naturalOppositeRotation) {
-	            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-	        } else {
-	            setReverseLandscape();
-	        }
-	    }
-	}
 
-
-
-	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
-	private void setReversePortrait() {
-	    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
-	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT);
-	    } else {
-	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-	    }
-	}
-
-	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
-	private void setReverseLandscape() {
-	    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
-	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
-	    } else {
-	        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-	    }
-	}
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
@@ -316,18 +279,7 @@ implements
 
     	// if I'm stuck API8, there's no way to lock reverse landscape. Though this looks like
     	// a good reference: http://stackoverflow.com/questions/6599770/screen-orientation-lock
-//		int orientation = getResources().getConfiguration().orientation;
-//		if (orientation == Configuration.ORIENTATION_PORTRAIT) 
-//			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-//		else
-//			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-
-		int rotation = getWindowManager().getDefaultDisplay().getRotation();
-		lockOrientation(rotation, Surface.ROTATION_270);
-		// Ensure that the rotation hasn't changed
-		if (getWindowManager().getDefaultDisplay().getRotation() != rotation) {
-		    lockOrientation(rotation, Surface.ROTATION_90);
-		}
+    	Utility.lockOrientation(this);
     	
     	String strUnitSystem = i.getStringExtra(Prefs.IT_UNITS_STRING);
     	int rgSelectedPIDs[] = i.getIntArrayExtra(Prefs.IT_SELECTEDPIDS_ARRAY);
@@ -351,24 +303,6 @@ implements
     		m_lRaceId = -1;
     	}
     	
-		// Lock the screen orientation, so it doesn't change during a race
-//    	Display display = getWindowManager().getDefaultDisplay();
-//    	
-//    	if ( display.getRotation() == Surface.ROTATION_0 ) {
-//		    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-//		    bPortraitDisplay = true;
-//		} else {
-//			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-//			bPortraitDisplay = false;
-//		}
-//	    setRequestedOrientation(getResources().getConfiguration().orientation);
-
-		// Set up aggressive wifi logging, if enabled
-//    	mainWifiObj = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-//		m_wifiScanThd = new myWifiScan();
-//		if( m_bWifiScan )
-//			m_wifiScanThd.start();
-//		
     	bTrialMode = true;
     	try
     	{
@@ -590,6 +524,8 @@ implements
 	}
     private void ShutdownLappingMode()
     {
+    	TrackLastLap(m_myLaps, true, true); // try to save a temp s/f setting
+    	
     	if(m_lapSender != null)
 		{
 			m_lapSender.Shutdown();
@@ -648,7 +584,7 @@ implements
 		{
 			locMan.removeUpdates(this);
 		}
-
+		
 		finish();
     }
     
@@ -1335,6 +1271,18 @@ implements
     	}
     	else if(m_eState == State.MOVING_TO_STARTLINE)
     	{
+
+    		// check distance to start line.  If too far, ask to set a new start line
+			float rg[] = new float[2];
+			Location.distanceBetween(m_lapParams.lnStart.GetP1().y, m_lapParams.lnStart.GetP1().x, m_ptCurrent.y, m_ptCurrent.x, rg);
+			if( !m_fTestMode && rg[0] > 1000 ) 
+			{
+				// more than 1km, wipe out the startline info
+				SetupSplitDeciders();
+
+				Toast.makeText(this, "Too far from start line, please set a new one", Toast.LENGTH_LONG).show();
+				SetState(State.WAITINGFORSTART);
+			}
     		if(m_myLaps == null)
     		{
     			m_myLaps = new LapAccumulator(m_lapParams, m_ptCurrent, iUnixTime, -1, (int)location.getTime(), location.getSpeed());
@@ -1876,13 +1824,13 @@ implements
 					lPositionTime += iTimeToSleep;
 
 					long curTime = lPositionTime - lStartTime;
-					if ( curTime % (60*60*1000) > (1.2*60*1000)) //( (lPositionTime - lStartTime) > 60*1000) && (lPositionTime - lStartTime) < 5*60*1000) 
-						m_goalSpeed = m_goalSpeed + .005f*(10000f-m_goalSpeed);
-					else
-						m_goalSpeed = m_goalSpeed + .05f*(15f-m_goalSpeed);
-
-					m_goalSpeed = 15f;
-					m_goalSpeed += 3*Math.random()-1.5f;
+//					if ( curTime % (60*60*1000) > (1.2*60*1000)) //( (lPositionTime - lStartTime) > 60*1000) && (lPositionTime - lStartTime) < 5*60*1000) 
+//						m_goalSpeed = m_goalSpeed + .005f*(10000f-m_goalSpeed);
+//					else
+//						m_goalSpeed = m_goalSpeed + .05f*(15f-m_goalSpeed);
+//
+//					m_goalSpeed = 15f;
+					m_goalSpeed = 15f*0.1f + 0.9f*(m_goalSpeed*(1f-0.5f*((float)Math.random()-.5f)));//+(float)Math.random()-0.5f));
 					
 					double dAngle = 1*(Math.random()-0.5f)/75 + ( 2 * Math.PI ) * iTimeToSleep / (m_goalSpeed*1000);
 					double dX = Math.sin(Angle ) * 0.0003;
@@ -2228,7 +2176,15 @@ class DeciderWaitingView extends View
 	
 	private Matrix myMatrix;
 	private Rect rcOnScreen;
-	
+
+	final String str1 = "You must be moving to";
+	final String str2 = "set start/finish line";
+	int mid;
+	Rect rcUpper;
+	Rect rcLower;
+	float fSize;
+	boolean bInitialized;
+
 	LapAccumulator lap;
 	
 	public DeciderWaitingView(Context context)
@@ -2278,7 +2234,24 @@ class DeciderWaitingView extends View
 		myMatrix.reset();
 		canvas.setMatrix(myMatrix);
 		canvas.clipRect(getLeft(),getTop(),getRight(),getBottom(),Op.REPLACE);
-		
+
+		if( !bInitialized ) {
+			mid = getTop() + getHeight()/2;
+			rcOnScreen.set(getLeft(),getTop(),getRight(),mid);
+
+			rcUpper = Utility.GetNeededFontSize(str1, paintSmallText, rcOnScreen);
+			rcUpper = Utility.Justify(rcUpper, rcOnScreen, Utility.BOXJUSTIFY.CENTER_BOTTOM);
+			fSize = paintSmallText.getTextSize();
+
+			rcOnScreen.set(getLeft(),mid,getRight(),getBottom());
+			rcLower = Utility.GetNeededFontSize(str2, paintSmallText, rcOnScreen);
+			rcLower = Utility.Justify(rcLower, rcOnScreen, Utility.BOXJUSTIFY.CENTER_TOP);
+
+			if( fSize > paintSmallText.getTextSize() )
+				fSize = paintSmallText.getTextSize();
+			bInitialized = true;
+		}
+
 		lap = myApp.GetCurrentLap();
 		if(lap != null)
 		{
@@ -2302,13 +2275,9 @@ class DeciderWaitingView extends View
 			}
 			else
 			{
-				final String str1 = "You must be moving to set";
-				final String str2 = "start/finish and split points";
-				final int mid = getTop() + getHeight()/2;
-				rcOnScreen.set(getLeft(),getTop(),getRight(),mid);
-				Utility.DrawFontInBox(canvas, str1, paintSmallText, rcOnScreen);
-				rcOnScreen.set(getLeft(),mid,getRight(),getBottom());
-				Utility.DrawFontInBox(canvas, str2, paintSmallText, rcOnScreen);
+				Utility.DrawFontInBoxFinal(canvas, str1, fSize, paintSmallText, rcUpper, Utility.TEXTJUSTIFY.CENTER);
+				Utility.DrawFontInBoxFinal(canvas, str2, fSize, paintSmallText, rcLower, Utility.TEXTJUSTIFY.CENTER);
+				
 			}
 		}
 		//canvas.drawText("Wifi: " + pStateMan.GetState(), 50.0f, 110.0f, paintText);
@@ -2536,13 +2505,11 @@ class MapPaintView extends View
 			num.setMaximumFractionDigits(1);
 			num.setMinimumFractionDigits(1);
 			
-			// according to a phone call at 1:51pm on Sunday Jan 29, if you're ahead, it should be minus
-			// it took us "flThisTime" seconds to get to the current distance
-			// on the best lap, it took us "flLastTime"
 			float flToPrint = (float)(flThisTime - flBestTime);
 			
 			Rect rcDelta = new Rect(rcOnScreen);
-			final float flDelta = flToPrint/1f;
+			final float fDeltaScreenSpan = 5.0f;	// this many seconds of +/- will fill the screen with color
+			final float flDelta = flToPrint/fDeltaScreenSpan;
 			if( flToPrint > 0 ) {
 				pRect.setColor(Color.RED);
 				rcDelta.right = Math.min((int) (rcDelta.width() *flDelta), rcDelta.right);

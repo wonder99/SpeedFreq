@@ -657,7 +657,7 @@ public class LapSender
 				catch(IOException e)
 				{
 					// not in range anymore.  That's fine, we'll get it later
-					System.out.println(e.toString());
+//					System.out.println(e.toString());
 				} catch (InterruptedException e) 
 				{
 					e.printStackTrace();

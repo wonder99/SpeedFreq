@@ -21,10 +21,18 @@ import java.util.List;
 
 import android.annotation.TargetApi;
 import android.bluetooth.BluetoothAdapter;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Handler.Callback;
+import android.os.Message;
 import android.os.StatFs;
 import android.util.Log;
 import android.view.View;
@@ -41,7 +49,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class LandingOptions extends LandingRaceBase implements OnCheckedChangeListener, OnClickListener
+public class LandingOptions extends LandingRaceBase implements Callback, OnClickListener
 {
 	public final static String SPEEDO_SPEEDDISTANCE = "Speed/Distance Graph";
 	public final static String SPEEDO_LIVEPLUSMINUS = "Live +/-";
@@ -50,6 +58,9 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	public final static String SPEEDO_LAPTIMER = "Lap Timer";
 	
 	public final static String[] rgstrSpeedos = {SPEEDO_LAPTIMER};
+
+	private BroadcastListener m_listener; // For wifi state changes
+	private Handler m_handler;
 	
 //	private static final int ACTIVITYRESULT_BLUETOOTH_GPS = 51;
 //	private static final int ACTIVITYRESULT_BLUETOOTH_OBD2 = 52;
@@ -58,8 +69,8 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
+		getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		m_handler = new Handler(this);
 		setContentView(R.layout.landingoptions);
 	}
 	
@@ -67,8 +78,14 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	public void onResume()
 	{
 		super.onResume();
-		
+
 		UpdateUI();
+
+		// Set up listener to watch Wifi state, enable/disable views
+		m_listener = new BroadcastListener();
+		IntentFilter wifiFilter = new IntentFilter();
+		wifiFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+		this.registerReceiver(m_listener, wifiFilter);
 	}
 	public static boolean isSdPresent() 
 	{		 
@@ -78,10 +95,11 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	public void onPause()
 	{
 		super.onPause();
-		
+		this.unregisterReceiver(m_listener);
+
 		// save settings
 		// load UI elements
-		EditText txtIP = (EditText)findViewById(R.id.txtIP);
+		TextView txtIP = (EditText)findViewById(R.id.txtIP);
 		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
 
     	final boolean fSSIDGood = (spnSSID.isEnabled() && spnSSID.getSelectedItem() != null);
@@ -91,7 +109,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		CheckBox chkRestart = (CheckBox)findViewById(R.id.chkAutoRestart);
 		Spinner spnSpeedo = (Spinner)findViewById(R.id.spnDisplayMode);
 		Spinner spnUnits = (Spinner)findViewById(R.id.spnUnits);
-		RadioButton chkInternal = (RadioButton)findViewById(R.id.chkDBInternal);
+//		RadioButton chkInternal = (RadioButton)findViewById(R.id.chkDBInternal);
 		EditText edtCarNumber = (EditText)findViewById(R.id.edtCarNumber);
 //		CheckBox chkCellular = (CheckBox)findViewById(R.id.chkCellular);
 		
@@ -101,7 +119,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		boolean bWifiScan = chkScan.isChecked();
 		boolean bAutoRestart = chkRestart.isChecked();
 		Prefs.UNIT_SYSTEM eUnits = Prefs.UNIT_SYSTEM.valueOf(spnUnits.getSelectedItem().toString());
-		boolean fInternal = chkInternal.isChecked();
+//		boolean fInternal = chkInternal.isChecked();
 		boolean fRequireWifi = true;//!chkCellular.isChecked();
 		
 		int iCarNumber = -1;
@@ -129,7 +147,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		  .putBoolean(Prefs.PREF_AUTO_RESTART_BOOL, bAutoRestart)
 		  .putString(Prefs.PREF_SPEEDOSTYLE_STRING, strSpeedoStyle)
 		  .putString(Prefs.PREF_UNITS_STRING, eUnits.toString())
-		  .putBoolean(Prefs.PREF_DBLOCATION_BOOL, fInternal)
+//		  .putBoolean(Prefs.PREF_DBLOCATION_BOOL, fInternal)
 		  .putInt(Prefs.PREF_CARNUMBER, iCarNumber)
 		  .putBoolean(Prefs.PREF_REQUIRE_WIFI, fRequireWifi)
 		  .commit();
@@ -169,25 +187,26 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
         spn.invalidate();
     }
 
-	@Override
-	public void onCheckedChanged(CompoundButton arg0, boolean arg1) 
-	{
-		if(arg0.getId() == R.id.chkDBInternal && arg1)
-		{
-			RaceDatabase.CreateInternal(getApplicationContext(),getFilesDir().toString());
-			SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
-			settings.edit().putBoolean(Prefs.PREF_DBLOCATION_BOOL, true).commit();
-			Toast.makeText(getApplicationContext(), "Using internal database", Toast.LENGTH_SHORT).show();
-
-		}
-		else if(arg0.getId() == R.id.chkDBExternal && arg1)
-		{
-			RaceDatabase.CreateExternal(getApplicationContext());
-			SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
-			settings.edit().putBoolean(Prefs.PREF_DBLOCATION_BOOL, false).commit();
-			Toast.makeText(getApplicationContext(), "Using database location " + RaceDatabase.Get().getPath(), Toast.LENGTH_SHORT).show();
-		}
-	}
+//	@Override
+//	public void onCheckedChanged(CompoundButton arg0, boolean arg1) 
+//	{
+//		Utility.PickDBLocation(this,m_handler);
+//		if(arg0.getId() == R.id.chkDBInternal && arg1)
+//		{
+//			RaceDatabase.CreateInternal(getApplicationContext(),getFilesDir().toString());
+//			SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+//			settings.edit().putBoolean(Prefs.PREF_DBLOCATION_BOOL, true).commit();
+//			Toast.makeText(getApplicationContext(), "Using internal database", Toast.LENGTH_SHORT).show();
+//
+//		}
+//		else if(arg0.getId() == R.id.chkDBExternal && arg1)
+//		{
+//			RaceDatabase.CreateExternal(getApplicationContext());
+//			SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+//			settings.edit().putBoolean(Prefs.PREF_DBLOCATION_BOOL, false).commit();
+//			Toast.makeText(getApplicationContext(), "Using database location " + RaceDatabase.Get().getPath(), Toast.LENGTH_SHORT).show();
+//		}
+//	}
 	
 	
 	
@@ -219,7 +238,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	{
 		if(!fBTWorking)
 		{
-			return "GPS: Internal (bluetooth disabled)";
+			return "GPS: Internal";
 		}
 		else
 		{
@@ -237,7 +256,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 	{
 		if(!fBTWorking)
 		{
-			return "OBD2: Internal (bluetooth disabled)";
+			return "OBD2: Off";
 		}
 		else
 		{
@@ -246,7 +265,7 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 				List<Integer> lst = new ArrayList<Integer>();
 				
 				Prefs.LoadOBD2PIDs(settings, lst);
-				return "OBD2: Using '" + strUnit + "' over bluetooth (" + lst.size() + " PIDs selected)";
+				return "OBD2: Using '" + strUnit + "' (" + lst.size() + " PIDs)";
 			}
 			else
 			{
@@ -358,13 +377,18 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		Button btnIP = (Button)findViewById(R.id.btnAutoIP2);
 		btnIP.setOnClickListener(this);
 		
+		Button btnChangeDB = (Button)findViewById(R.id.btnChangeDB);
+		btnChangeDB.setOnClickListener(this);
+		
+		TextView tvDBLoc = (TextView)findViewById(R.id.tvDBLoc);
+		
 		CheckBox chkTestMode = (CheckBox)findViewById(R.id.chkTestMode);
 		CheckBox chkScan = (CheckBox)findViewById(R.id.chkScan);
 		CheckBox chkRestart = (CheckBox)findViewById(R.id.chkAutoRestart);
 		Spinner spnSpeedo = (Spinner)findViewById(R.id.spnDisplayMode);
 		Spinner spnUnits = (Spinner)findViewById(R.id.spnUnits);
-		RadioButton chkInternal = (RadioButton)findViewById(R.id.chkDBInternal);
-		RadioButton chkExternal = (RadioButton)findViewById(R.id.chkDBExternal);
+//		RadioButton chkInternal = (RadioButton)findViewById(R.id.chkDBInternal);
+//		RadioButton chkExternal = (RadioButton)findViewById(R.id.chkDBExternal);
 		Button btnGPS = (Button)findViewById(R.id.btnConfigureGPS);
 		Button btnOBD2 = (Button)findViewById(R.id.btnConfigureOBD2);
 		Button btnIOIO = (Button)findViewById(R.id.btnConfigureIOIO);
@@ -387,25 +411,27 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		boolean bWifiScan = settings.getBoolean(Prefs.PREF_WIFI_SCAN_BOOL, Prefs.DEFAULT_WIFI_SCAN_BOOL);
 		boolean bAutoRestart = settings.getBoolean(Prefs.PREF_AUTO_RESTART_BOOL, false);
 		Prefs.UNIT_SYSTEM eUnits = Prefs.UNIT_SYSTEM.valueOf(settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString()));
-		boolean fInternalDB = settings.getBoolean(Prefs.PREF_DBLOCATION_BOOL, Prefs.DEFAULT_DBLOCATION_BOOL);
 		String strBTGPS = settings.getString(Prefs.PREF_BTGPSNAME_STRING,Prefs.DEFAULT_GPS_STRING);
 		String strBTOBD2 = settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING);
 		int iCarNumber = settings.getInt(Prefs.PREF_CARNUMBER, Prefs.DEFAULT_CARNUMBER);
-//		boolean fRequireWifi = settings.getBoolean(Prefs.PREF_REQUIRE_WIFI, Prefs.DEFAULT_REQUIRE_WIFI);
+		String strDBLoc = settings.getString(Prefs.PREF_DBLOCATION_STRING, "error");
+		if( strDBLoc.startsWith("/data"))
+			strDBLoc = new String("Internal");
+		tvDBLoc.setText("DB Location: "+strDBLoc);
 
 		txtIP.setText(strIP);
 		String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);
 		SetupSSIDSpinner(spnSSID, strSSID);
 		
 		BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
-		final boolean fBTWorking = ba != null && ba.isEnabled();
-		
+		boolean fOBD2 = settings.getBoolean(Prefs.PREF_BTOBD2ENABLED_BOOL, false);
 		final boolean fIOIO = settings.getBoolean(Prefs.PREF_USEIOIO_BOOLEAN, false);
 		
-		chkGPS.setText(MakeGPSText(fBTWorking, strBTGPS));
+		final boolean fBTGPSEn = settings.getBoolean(Prefs.PREF_BTGPSENABLED_BOOL, false);
+		chkGPS.setText(MakeGPSText(fBTGPSEn, strBTGPS));
 		chkGPS.setClickable(false);
 		
-		chkOBD2.setText(MakeOBD2Text(settings, fBTWorking, strBTOBD2));
+		chkOBD2.setText(MakeOBD2Text(settings, fOBD2, strBTOBD2));
 		chkOBD2.setClickable(false);
 		
 		chkIOIO.setText(MakeIOIOText(settings,fIOIO));
@@ -419,52 +445,52 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		edtCarNumber.setText("" + iCarNumber);
 		
 		chkAccel.setText(MakeAccelText(settings));
-		StatFs sfs = null;
-    	float fMBAvailable=0;
-
-    	sfs = new StatFs(android.os.Environment.getDataDirectory().getPath());
-    	if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
-    		fMBAvailable = Math.round(sfs.getBlockSizeLong()  / 1024f * sfs.getAvailableBlocksLong() / 1024f);
-    	else {
-    		// OK to use deprecated API under this conditional
-    		fMBAvailable = Math.round(sfs.getAvailableBlocks() / 1024f * sfs.getBlockSize() / 1024f);
-    	}
-    	
-
-    	String strAvail;
-    	if( fMBAvailable > 1024f ) 
-    		strAvail = String.valueOf(Math.round(fMBAvailable/102.4f)/10f) + " GB free)";
-    	else
-    		strAvail = String.valueOf(Math.round(fMBAvailable*10)/10f) + " MB free)";
-    	chkInternal.setText("Internal DB (" + strAvail);
-		
-		if(!isSdPresent())
-		{
-
-			fInternalDB = true;
-			chkExternal.setEnabled(false);
-			chkInternal.setChecked(true);
-			
-		}
-		else
-		{
-			sfs = new StatFs(RaceDatabase.GetExternalDir(this));
-	    	if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
-	    		fMBAvailable = (int)Math.round(sfs.getBlockSizeLong() / 1024f * sfs.getAvailableBlocksLong() / 1024f);
-	    	else
-	    		fMBAvailable = Math.round(sfs.getBlockSize() /1024f * sfs.getAvailableBlocks() / 1024f);
-			chkExternal.setEnabled(true);
-
-	    	if( fMBAvailable > 1024f ) 
-	    		strAvail = String.valueOf(Math.round(fMBAvailable/102.4f)/10f) + " GB free)";
-	    	else
-	    		strAvail = String.valueOf(Math.round(fMBAvailable*10)/10f) + " MB free)";
-			chkExternal.setText("External DB (" + strAvail);
-		}		
-		
-		if(fInternalDB) chkInternal.setChecked(true);
-		else chkExternal.setChecked(true);
-		
+//		StatFs sfs = null;
+//    	float fMBAvailable=0;
+//
+//    	sfs = new StatFs(android.os.Environment.getDataDirectory().getPath());
+//    	if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
+//    		fMBAvailable = Math.round(sfs.getBlockSizeLong()  / 1024f * sfs.getAvailableBlocksLong() / 1024f);
+//    	else {
+//    		// OK to use deprecated API under this conditional
+//    		fMBAvailable = Math.round(sfs.getAvailableBlocks() / 1024f * sfs.getBlockSize() / 1024f);
+//    	}
+//    	
+//
+//    	String strAvail;
+//    	if( fMBAvailable > 1024f ) 
+//    		strAvail = String.valueOf(Math.round(fMBAvailable/102.4f)/10f) + " GB free)";
+//    	else
+//    		strAvail = String.valueOf(Math.round(fMBAvailable*10)/10f) + " MB free)";
+//    	chkInternal.setText("Internal DB (" + strAvail);
+//		
+//		if(!isSdPresent())
+//		{
+//
+//			fInternalDB = true;
+//			chkExternal.setEnabled(false);
+//			chkInternal.setChecked(true);
+//			
+//		}
+//		else
+//		{
+//			sfs = new StatFs(RaceDatabase.GetExternalDir(getApplicationContext()));
+//	    	if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2)
+//	    		fMBAvailable = (int)Math.round(sfs.getBlockSizeLong() / 1024f * sfs.getAvailableBlocksLong() / 1024f);
+//	    	else
+//	    		fMBAvailable = Math.round(sfs.getBlockSize() /1024f * sfs.getAvailableBlocks() / 1024f);
+//			chkExternal.setEnabled(true);
+//
+//	    	if( fMBAvailable > 1024f ) 
+//	    		strAvail = String.valueOf(Math.round(fMBAvailable/102.4f)/10f) + " GB free)";
+//	    	else
+//	    		strAvail = String.valueOf(Math.round(fMBAvailable*10)/10f) + " MB free)";
+//			chkExternal.setText("External DB (" + strAvail);
+//		}		
+//		
+//		if(fInternalDB) chkInternal.setChecked(true);
+//		else chkExternal.setChecked(true);
+//		
 
 		
 		SetupSpeedoSpinner(spnSpeedo, strSpeedoStyle);
@@ -483,8 +509,8 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 ////    		chkCellular.setEnabled(false);
 //		}
 		
-		chkInternal.setOnCheckedChangeListener(this);
-		chkExternal.setOnCheckedChangeListener(this);
+//		chkInternal.setOnCheckedChangeListener(this);
+//		chkExternal.setOnCheckedChangeListener(this);
 		btnGPS.setOnClickListener(this);
 		btnOBD2.setOnClickListener(this);
 		btnIOIO.setOnClickListener(this);
@@ -522,6 +548,10 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 		{
 			Intent i = new Intent(this.getApplicationContext(), ConfigureAccelerometerActivity.class);
 			startActivity(i);
+		}
+		else if(v.getId() == R.id.btnChangeDB)
+		{
+			Utility.PickDBLocation(this, m_handler, true, false);
 		}
 		/*if(v.getId() == R.id.btnScanPIDs)
 		{
@@ -583,5 +613,57 @@ public class LandingOptions extends LandingRaceBase implements OnCheckedChangeLi
 				null);
 	}
 
+	// Live enabling/disabling of views, based on Wifi state
+    private class BroadcastListener extends BroadcastReceiver
+    {
+		Button btnAutoIP = (Button)findViewById(R.id.btnAutoIP2);
+		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
+		WifiManager pWifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
+		boolean bWifiOn;
+
+
+		
+		@Override
+		public void onReceive(Context ctx, Intent intent)
+		{
+    		if(intent.getAction().equals(WifiManager.WIFI_STATE_CHANGED_ACTION))
+    		{
+    			// disable network features if not enabled
+    			bWifiOn = pWifi.isWifiEnabled();
+    			btnAutoIP.setEnabled(bWifiOn);
+//				spnSSID.setEnabled(bWifiOn);
+    			if( bWifiOn ) {
+    				SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+    				String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);
+    				SetupSSIDSpinner(spnSSID, strSSID);
+    			}
+    		}
+		}
+    }
+    
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+	@Override
+	public boolean handleMessage(Message msg) {
+		if( msg.what == Utility.MSG_PICKED_DB) {
+			// location has been set already
+			RaceDatabase.CreateOnPath(getApplicationContext());
+
+			SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
+			Editor edit = settings.edit();
+			edit.putString(Prefs.PREF_DBLOCATION_STRING, RaceDatabase.getPath());
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+				edit.apply();
+			else
+				edit.commit();
+
+			UpdateUI();
+//			Toast.makeText(this, "Created DB at " + RaceDatabase.getPath(), Toast.LENGTH_LONG).show();
+			return true;
+		}
+		else
+			return false;
+	}
+
+	
 
 }

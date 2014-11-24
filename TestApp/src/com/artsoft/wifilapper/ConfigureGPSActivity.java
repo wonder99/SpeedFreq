@@ -16,7 +16,14 @@
 
 package com.artsoft.wifilapper;
 
+
+import android.annotation.TargetApi;
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
@@ -27,7 +34,10 @@ import android.widget.Spinner;
 
 public class ConfigureGPSActivity extends Activity implements OnCheckedChangeListener
 {
-
+	private BroadcastListener m_listener;
+	Spinner spn;
+	String strDefault;
+	
 	@Override
 	public void onCreate(Bundle extras)
 	{
@@ -39,61 +49,89 @@ public class ConfigureGPSActivity extends Activity implements OnCheckedChangeLis
 	public void onResume()
 	{
 		super.onResume();
-		
+
+		m_listener = new BroadcastListener();
+		IntentFilter btFilter = new IntentFilter();
+		btFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+		this.registerReceiver(m_listener, btFilter);
+
 		SharedPreferences settings = this.getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
 		
-		Spinner spn = (Spinner)findViewById(R.id.spnGPS);
+		spn = (Spinner)findViewById(R.id.spnGPS);
 		CheckBox chk = (CheckBox)findViewById(R.id.chkGPS);
 		CheckBox chkBtInsecure = (CheckBox)findViewById(R.id.chkBtInsecure);
-
-		String strDefault = settings.getString(Prefs.PREF_BTGPSNAME_STRING, "");
-		boolean bBtInsecure = settings.getBoolean(Prefs.PREF_BTINSECURE_BOOL, false);
 		
-		boolean fGPS = strDefault != null && strDefault.length() > 0;
-		
-		LandingRaceBase.SetupBTSpinner(this, spn, strDefault);
+		boolean fGPS = settings.getBoolean(Prefs.PREF_BTGPSENABLED_BOOL, false);
 		chk.setChecked(fGPS);
 		chk.setOnCheckedChangeListener(this);
-		spn.setEnabled(fGPS);
-		chkBtInsecure.setChecked(bBtInsecure);
+		
+		strDefault = settings.getString(Prefs.PREF_BTGPSNAME_STRING, "");
+		LandingRaceBase.SetupBTSpinner(this, spn, strDefault);
+//		spn.setEnabled(fGPS);
 
+		boolean bBtInsecure = settings.getBoolean(Prefs.PREF_BTINSECURE_BOOL, false);
+		chkBtInsecure.setChecked(bBtInsecure);
+		
 		// Disable the checkbox if android version is too old to use it
 		if( Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD_MR1 )
 			chkBtInsecure.setEnabled(false);
 
 	}
 	
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
 	@Override
 	public void onPause()
 	{
 		super.onPause();
+
+		this.unregisterReceiver(m_listener);
+
 
 		SharedPreferences settings = this.getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
 		Spinner spn = (Spinner)findViewById(R.id.spnGPS);
 		CheckBox chk = (CheckBox)findViewById(R.id.chkGPS);
 		CheckBox chkBtInsecure = (CheckBox)findViewById(R.id.chkBtInsecure);
 		boolean bBtInsecure = chkBtInsecure.isChecked();
-
+		boolean bBTGPSEn = chk.isChecked();
 		String strValue = "";
 		Object selected = spn.getSelectedItem();
 		if(selected != null)
 		{
 			strValue = selected.toString();
 		}
-		
-		settings.edit().putString(Prefs.PREF_BTGPSNAME_STRING, chk.isChecked() ? strValue : "")
-		  .putBoolean(Prefs.PREF_BTINSECURE_BOOL, bBtInsecure)
-		  .commit();
 
+		SharedPreferences.Editor edit = settings.edit();
+
+		edit.putString(Prefs.PREF_BTGPSNAME_STRING, strValue);
+		edit.putBoolean(Prefs.PREF_BTINSECURE_BOOL, bBtInsecure);
+		edit.putBoolean(Prefs.PREF_BTGPSENABLED_BOOL, bBTGPSEn);
+		  
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+			edit.apply();
+		else
+			edit.commit();
 	}
 
 	@Override
 	public void onCheckedChanged(CompoundButton arg0, boolean arg1) 
 	{
-		if(arg0.getId() == R.id.chkGPS)
-		{
-			Spinner spn = (Spinner)findViewById(R.id.spnGPS);
-			spn.setEnabled(arg1);
-		}
 	}
+	
+    private class BroadcastListener extends BroadcastReceiver
+    {
+    	@Override
+		public void onReceive(Context ctx, Intent intent)
+		{
+    		if(intent.getAction().equals(BluetoothAdapter.ACTION_STATE_CHANGED) )
+    		{
+    			BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
+				strDefault = spn.getSelectedItem().toString();
+				if( true ||ba.isEnabled()) {
+					LandingRaceBase.SetupBTSpinner(ctx, spn, strDefault);
+					
+				}
+    		}
+		}
+    }
+
 }

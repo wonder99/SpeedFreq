@@ -29,6 +29,7 @@ import android.content.DialogInterface.OnDismissListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -99,30 +100,7 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 		ListView list = (ListView)findViewById(android.R.id.list);
 		
 		FillRaceData(list);
-		SetupSettingsView();
 	}
-	private void SetupSettingsView()
-    {
-//		Button btnIP = (Button)findViewById(R.id.btnAutoIP);
-//		btnIP.setOnClickListener(this);
-//		
-//		EditText txtIP = (EditText)findViewById(R.id.txtIP);
-//		Spinner spnSSID = (Spinner)findViewById(R.id.spnSSID);
-//    	
-//		SharedPreferences settings = getSharedPreferences(Prefs.SHAREDPREF_NAME, 0);
-//		String strIP = settings.getString(Prefs.PREF_IP_STRING,Prefs.DEFAULT_IP_STRING);
-//		String strSSID = settings.getString(Prefs.PREF_SSID_STRING, Prefs.DEFAULT_SSID_STRING);
-//		
-//    	SetupSSIDSpinner(spnSSID, strSSID);
-//		txtIP.setText(strIP);
-//		
-//
-//		boolean fRequireWifi = settings.getBoolean(Prefs.PREF_REQUIRE_WIFI, Prefs.DEFAULT_REQUIRE_WIFI);
-//		View vRowSSID = findViewById(R.id.rowSSID);
-//		vRowSSID.setVisibility(fRequireWifi ? View.VISIBLE : View.GONE);
-		
-    }
-	
 	private static class ListRaceData
 	{
 		private String strRaceName;
@@ -165,7 +143,13 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
     {
     	if(menu.getItemId() == R.id.mnuDeleteTestData)
     	{
-    		RaceDatabase.DeleteTestData(RaceDatabase.Get());
+    		RaceDatabase.DeleteAllRaces(RaceDatabase.Get(),true);
+    		DoUIInit();
+    		return true;
+    	}
+    	if(menu.getItemId() == R.id.mnuDeleteAllRaces)
+    	{
+    		RaceDatabase.DeleteAllRaces(RaceDatabase.Get(),false);
     		DoUIInit();
     		return true;
     	}
@@ -347,6 +331,18 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 			rd.setOnDismissListener(this);
 			rd.show();
 		}
+		else if(item.getItemId() == R.id.mnuDeleteTestData)
+    	{
+    		RaceDatabase.DeleteAllRaces(RaceDatabase.Get(),true);
+    		DoUIInit();
+    		return true;
+    	}
+		else if(item.getItemId() == R.id.mnuDeleteAllRaces)
+    	{
+    		RaceDatabase.DeleteAllRaces(RaceDatabase.Get(),false);
+    		DoUIInit();
+    		return true;
+    	}
 		return false;
 	}
 	
@@ -366,8 +362,13 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
 
     		String strSpeedoStyle = settings.getString(Prefs.PREF_SPEEDOSTYLE_STRING, Prefs.DEFAULT_SPEEDOSTYLE_STRING);
     		Prefs.UNIT_SYSTEM eUnitSystem = Prefs.UNIT_SYSTEM.valueOf(settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString()));
-			String strBTGPS = settings.getString(Prefs.PREF_BTGPSNAME_STRING, Prefs.DEFAULT_GPS_STRING);
-    		String strOBD2 = settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING);
+
+    		Boolean strBTGPSEn = settings.getBoolean(Prefs.PREF_BTGPSENABLED_BOOL, false);
+    		String strBTGPS = strBTGPSEn ? settings.getString(Prefs.PREF_BTGPSNAME_STRING, Prefs.DEFAULT_GPS_STRING) : "";
+
+    		Boolean strBTOBD2En = settings.getBoolean(Prefs.PREF_BTOBD2ENABLED_BOOL, false);
+    		String strBTOBD2 = strBTOBD2En ? settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING) : "";
+
     		boolean fUseIOIO = settings.getBoolean(Prefs.PREF_USEIOIO_BOOLEAN, Prefs.DEFAULT_USEIOIO_BOOLEAN);
     		boolean fUseAccel = settings.getBoolean(Prefs.PREF_USEACCEL_BOOLEAN, Prefs.DEFAULT_USEACCEL);
     		boolean fUseAccelCorrection = settings.getBoolean(Prefs.PREF_ACCEL_CORRECTION, Prefs.DEFAULT_ACCEL_CORRECTION);
@@ -400,7 +401,11 @@ public class LandingLoadRace extends LandingRaceBase implements OnDismissListene
     		IOIOManager.PinParams rgPulsePins[] = Prefs.LoadIOIOPulsePins(settings);
     		
 			ApiDemos.SaveSharedPrefs(settings, strIP, strSSID, null, null);
-			Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins, rgPulsePins, iButtonPin, fUseP2P, iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,strSSID, r.lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, flSensorOffset, r.fTestMode, bWifiScan, listData.id, idModeSelected, strBTGPS, strOBD2, strSpeedoStyle, eUnitSystem.toString());
+			Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins, rgPulsePins, iButtonPin, fUseP2P, 
+					iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,
+					strSSID, r.lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, 
+					flPitch, flRoll, flSensorOffset, r.fTestMode, bWifiScan, listData.id, idModeSelected, strBTGPS, 
+					strBTOBD2, strSpeedoStyle, eUnitSystem.toString());
 			startActivity(i);
 		}
 		else

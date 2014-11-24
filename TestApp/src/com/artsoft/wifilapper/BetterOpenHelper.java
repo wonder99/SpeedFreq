@@ -53,36 +53,11 @@ public abstract class BetterOpenHelper
 		if(m_db == null)
 		{
 			// DB must not exist, so let's see if we can migrate
-			String strImportPath = RaceDatabase.GetExternalDir(context);
-			strImportPath = strImportPath + "/wifilapper/races";
-			File fImportDB = new File(strImportPath);
-			if( fImportDB.canRead() ) {
-				Toast.makeText(context, "Importing wifilapper database from "+strImportPath, Toast.LENGTH_LONG).show();
-				FileInputStream in=null;
-				FileOutputStream out=null;
-				try {
-					in = new FileInputStream(strImportPath);
-					out = new FileOutputStream(strPath);
-				}
-				catch (FileNotFoundException e) {
-					// OK, just creating it
-				}
-				if( in != null && out != null ) {
-					try {
-						// Copy the bits from instream to outstream
-						byte[] buf = new byte[1024];
-						int len;
-						while ((len = in.read(buf)) > 0) {
-							out.write(buf, 0, len);
-						}
-						in.close();
-						out.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-					m_db = SQLiteDatabase.openDatabase(strPath, factory, SQLiteDatabase.OPEN_READWRITE);
-				}
-			}
+			File fParent = new File(fDB.getParent());
+			if( !(fParent.exists()) )
+				fParent.mkdirs();
+
+			m_db = SQLiteDatabase.openOrCreateDatabase(strPath, factory);
 		}
 		if( m_db == null ) // still don't have one
 		{				// OK, let's create a fresh DB
@@ -106,7 +81,13 @@ public abstract class BetterOpenHelper
 
 	public synchronized SQLiteDatabase getWritableDatabase()
 	{
-		return m_db;
+		SQLiteDatabase ret;
+		if( m_db == null )
+			ret = null;
+		else
+			ret = m_db;
+				
+		return ret;
 	}
 	public abstract void onCreate(SQLiteDatabase db);
 	public abstract void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion);

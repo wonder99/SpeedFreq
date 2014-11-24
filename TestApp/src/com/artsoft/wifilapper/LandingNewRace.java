@@ -125,8 +125,13 @@ public class LandingNewRace extends LandingRaceBase implements OnClickListener, 
     		boolean fTestMode = settings.getBoolean(Prefs.PREF_TESTMODE_BOOL, Prefs.DEFAULT_TESTMODE_BOOL);
     		boolean bWifiScan = settings.getBoolean(Prefs.PREF_WIFI_SCAN_BOOL, Prefs.DEFAULT_WIFI_SCAN_BOOL);
     		String strUnitSystem = settings.getString(Prefs.PREF_UNITS_STRING, Prefs.DEFAULT_UNITS_STRING.toString());
-			String strBTGPS = settings.getString(Prefs.PREF_BTGPSNAME_STRING, Prefs.DEFAULT_GPS_STRING);
-			String strBTOBD2 = settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING);
+
+    		Boolean strBTGPSEn = settings.getBoolean(Prefs.PREF_BTGPSENABLED_BOOL, false);
+    		String strBTGPS = strBTGPSEn ? settings.getString(Prefs.PREF_BTGPSNAME_STRING, Prefs.DEFAULT_GPS_STRING) : "";
+
+    		Boolean strBTOBD2En = settings.getBoolean(Prefs.PREF_BTOBD2ENABLED_BOOL, false);
+    		String strBTOBD2 = strBTOBD2En ? settings.getString(Prefs.PREF_BTOBD2NAME_STRING, Prefs.DEFAULT_OBD2_STRING) : "";
+
     		boolean fUseIOIO = settings.getBoolean(Prefs.PREF_USEIOIO_BOOLEAN, Prefs.DEFAULT_USEIOIO_BOOLEAN);
     		boolean fUseAccel = settings.getBoolean(Prefs.PREF_USEACCEL_BOOLEAN, Prefs.DEFAULT_USEACCEL);
     		boolean fUseAccelCorrection = settings.getBoolean(Prefs.PREF_ACCEL_CORRECTION, Prefs.DEFAULT_ACCEL_CORRECTION);
@@ -165,7 +170,11 @@ public class LandingNewRace extends LandingRaceBase implements OnClickListener, 
     		lapParams.iSecondaryCarNumber = (int)(Math.random() * 100000.0); 
     		lapParams.iFinishCount = iFinishCount;
 
-    		Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins,rgPulsePins, iButtonPin, fUseP2P, iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,strSSID, lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, flPitch, flRoll, flSensorOffset, fTestMode, bWifiScan, -1, -1, strBTGPS, strBTOBD2, strSpeedoStyle, eUnitSystem.toString());
+    		Intent i = ApiDemos.BuildStartIntent(fRequireWifi, fUseIOIO, rgAnalPins,rgPulsePins, iButtonPin, fUseP2P, 
+    				iStartMode, flStartParam, iStopMode, flStopParam, lstSelectedPIDs, getApplicationContext(), strIP,
+    				strSSID, lapParams, strRaceName, strPrivacy, fAckSMS, fUseAccel, fUseAccelCorrection, iFilterType, 
+    				flPitch, flRoll, flSensorOffset, fTestMode, bWifiScan, -1, -1, strBTGPS, strBTOBD2, strSpeedoStyle, 
+    				eUnitSystem.toString());
     		if(fTestMode)
     		{
     			// they're about to start a run in test mode.  Test mode sucks for real users, so warn them

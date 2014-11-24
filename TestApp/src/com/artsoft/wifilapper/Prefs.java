@@ -48,10 +48,13 @@ public class Prefs
 	public static String PREF_IP_STRING = "IP"; // stores the target IP of their pitside laptop
 	public static String PREF_SSID_STRING = "SSID"; // stores the ssid of the wifi network they use
 	public static String PREF_BTGPSNAME_STRING = "btgps"; // stores the bluetooth name of their preferred btgps unit
+	public static String PREF_BTGPSENABLED_BOOL = "btgps_en"; // stores the bluetooth name of their preferred btgps unit
 	public static String PREF_BTOBD2NAME_STRING = "btobd2"; // stores the bluetooth name of their preferred btgps unit
+	public static String PREF_BTOBD2ENABLED_BOOL = "btobd2_en"; 
 	public static String PREF_RACENAME_STRING = "racename";
 	public static String PREF_UNITS_STRING = "displayunits";
 	public static String PREF_DBLOCATION_BOOL = "dbInternal";
+	public static String PREF_DBLOCATION_STRING = "dbLocation";
 	public static String PREF_USEIOIO_BOOLEAN = "useioio";
 	public static String PREF_USEACCEL_BOOLEAN = "useaccel";
 	public static String PREF_ACCEL_FILTER = "accel_filter";
@@ -249,10 +252,9 @@ public class Prefs
 	}
 	public static String GetCrashDir()
 	{
-		String crashPath = Environment.getExternalStorageDirectory().getPath()+"/speedfreq/crashlogs/";
-		File fCrash = new File(crashPath);
-		if( !fCrash.exists() )
-			fCrash.mkdirs();
+		String crashPath = RaceDatabase.getPath();
+		crashPath = crashPath.replace(RaceDatabase.DATABASE_NAME_INTERNAL, "crashlogs/");
+
 		return crashPath;
 	}
 	public static String GetSpeedUnits(UNIT_SYSTEM eSystem)

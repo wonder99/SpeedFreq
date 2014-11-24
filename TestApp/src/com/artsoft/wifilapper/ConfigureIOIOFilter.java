@@ -48,6 +48,7 @@ public class ConfigureIOIOFilter extends Activity implements OnCheckedChangeList
 	{
 		super.onCreate(extras);
 		setContentView(R.layout.configureioiofilter);
+		Utility.lockOrientation(this);
 	}
 	
 	@Override

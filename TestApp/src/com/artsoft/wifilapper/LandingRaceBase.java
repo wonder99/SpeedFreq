@@ -55,7 +55,7 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		lastSSID = null;
 	}
 	
@@ -175,46 +175,43 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
 			List<WifiConfiguration> lstNetworks = pWifi.getConfiguredNetworks();
 
 			if( lstNetworks != null )  // will be null if wifi is off
-    		{    		
-    			// Sort the list alphabetically, ignoring case
-    			Collections.sort(lstNetworks, new Comparator<WifiConfiguration>(){
-    				public int compare(WifiConfiguration emp1, WifiConfiguration emp2) {
-    					return emp1.SSID.compareToIgnoreCase(emp2.SSID);
-    				} }
-    					);
-    			
-    			for(int x = 0;x < lstNetworks.size(); x++)
-    			{
-    				String strSSID = lstNetworks.get(x).SSID;
-    				strSSID = strSSID.replace("\"", "");
-    				lstSSIDs.add(strSSID);
-    				if(strSSID.equalsIgnoreCase(strDefault))
-    				{
-    					ixDefault = x;
-    				}
-    			}
-    		}
-    		else	// wifi is off, so just put the default SSID in the box, which will be disabled 
-    		{
-    			lstSSIDs.add(strDefault);
-    			ixDefault = 0;
-    		}
-    		ArrayAdapter<String> adapter = new ArrayAdapter<String> (this, R.layout.list_item, lstSSIDs);
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            spn.setAdapter(adapter);
-	        if(ixDefault >= 0) 
-        	{
-	        	spn.setSelection(ixDefault,true);
-        	}
+			{    		
+				// Sort the list alphabetically, ignoring case
+				Collections.sort(lstNetworks, new Comparator<WifiConfiguration>(){
+					public int compare(WifiConfiguration emp1, WifiConfiguration emp2) {
+						return emp1.SSID.compareToIgnoreCase(emp2.SSID);
+					} }
+						);
 
-	        if( !pWifi.isWifiEnabled() )
-	        	spn.setEnabled(false);
-	        else
-	        	spn.setOnItemSelectedListener(this);
+				for(int x = 0;x < lstNetworks.size(); x++)
+				{
+					String strSSID = lstNetworks.get(x).SSID;
+					strSSID = strSSID.replace("\"", "");
+					lstSSIDs.add(strSSID);
+					if(strSSID.equalsIgnoreCase(strDefault))
+					{
+						ixDefault = x;
+					}
+				}
+			}
+			else	// wifi is off, so just put the default SSID in the box, which will be disabled 
+			{
+				lstSSIDs.add(strDefault);
+				ixDefault = 0;
+			}
+			ArrayAdapter<String> adapter = new ArrayAdapter<String> (this, R.layout.list_item, lstSSIDs);
+			adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+			spn.setAdapter(adapter);
+			if(ixDefault >= 0) 
+			{
+				spn.setSelection(ixDefault,true);
+			}
+			spn.setOnItemSelectedListener(this);
+	        	
     	}
         catch(Exception e)
         {
-        	spn.setEnabled(false);
+//        	spn.setEnabled(false);
         }
     }
     
@@ -240,7 +237,7 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
     			// they've selected a valid SSID.  Let's try to connect to it
     			if(Utility.ConnectToSSID(strSSID, pWifi))
     			{
-    				Toast.makeText(this, "Attempting to connect to '" + strSSID + "'", Toast.LENGTH_SHORT).show();
+//    				Toast.makeText(this, "Attempting to connect to '" + strSSID + "'", Toast.LENGTH_SHORT).show();
     			}
     		}
     	}
@@ -259,7 +256,7 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
 	    	BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
 	    	if(ba != null && ba.isEnabled())
 	    	{
-		    	Set<BluetoothDevice> setDevices = ba.getBondedDevices();
+		    	Set<BluetoothDevice> setDevices = ba.getBondedDevices(); 
 		    	Iterator<BluetoothDevice> i = setDevices.iterator();
 		    	
 		    	List<BTListItem> lstDevices = new ArrayList<BTListItem>();
@@ -283,12 +280,19 @@ public abstract class LandingRaceBase extends Activity implements OnItemSelected
 		        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		        spn.setAdapter(adapter);
 		        if(ixDefault >= 0) spn.setSelection(ixDefault);
+		        spn.setEnabled(true);
 		        spn.invalidate();
 		        return true;
 	    	}
 	    	else
 	    	{
+		        ArrayAdapter<String> adapter = new ArrayAdapter<String>(ctx, R.layout.list_item);
+		        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		        adapter.add(strDefault);
+		        spn.setAdapter(adapter);
+		        spn.setSelection(0);
 	    		spn.setEnabled(false);
+		        spn.invalidate();
 	    		return false;
 	    	}
     	}

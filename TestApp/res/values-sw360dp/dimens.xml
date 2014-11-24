@@ -1,0 +1,7 @@
+
+    <resources>
+		<!-- S3, and I think Nexus 4 -->
+        <dimen name="font_size">62sp</dimen>
+        <dimen name="font_size_smaller">40sp</dimen>
+        <dimen name="font_size_very_small">22sp</dimen>
+    </resources>

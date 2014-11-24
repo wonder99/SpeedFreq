@@ -62,7 +62,7 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 	public void onCreate(Bundle bun)
 	{
 		super.onCreate(bun);
-		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
 	}
 	
@@ -130,18 +130,20 @@ public class LandingDBManage extends Activity implements OnClickListener, OnEdit
 			if(fDir.exists() || fWFLPDir.exists())
 			{
 				File children[] = fDir.listFiles();
-				for(int x = 0;x < children.length; x++)
-				{
-					String strName = children[x].getName();
-					int ixWFLP = strName.lastIndexOf(".wflp");
-					
-					if(ixWFLP >= 0)
+				if( children != null ) {
+					for(int x = 0;x < children.length; x++)
 					{
-						adapter.add(new DBPathEntry(children[x]));
+						String strName = children[x].getName();
+						int ixWFLP = strName.lastIndexOf(".wflp");
+
+						if(ixWFLP >= 0)
+						{
+							adapter.add(new DBPathEntry(children[x]));
+						}
 					}
 				}
 				children = fWFLPDir.listFiles();
-				if( children.length > 0 ) {
+				if( children != null && children.length > 0 ) {
 					for(int x = 0;x < children.length; x++)
 					{
 						String strName = children[x].getName();

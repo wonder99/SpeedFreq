@@ -30,14 +30,24 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
+
 import com.artsoft.wifilapper.LapAccumulator.LapAccumulatorParams;
+import com.artsoft.wifilapper.OBDThread.PIDParameter;
+
 import android.annotation.TargetApi;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
@@ -50,6 +60,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.location.Location;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
@@ -58,6 +69,17 @@ import android.os.Message;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.ListView;
 import android.widget.Toast;
 
 public class RaceDatabase extends BetterOpenHelper
@@ -81,7 +103,7 @@ public class RaceDatabase extends BetterOpenHelper
 	// 20->21: adding "point-to-point" member in races table
 	// 23->24: adding tracks table
 	private static final int m_iVersion = 24;
-	private static final String DATABASE_NAME_INTERNAL = "sfraces";
+	public static final String DATABASE_NAME_INTERNAL = "sfraces";
 	private static       String strDBFileName;
 	public static final String KEY_RACENAME = "name";
 	public static final String KEY_LAPCOUNT = "lapcount";
@@ -91,6 +113,9 @@ public class RaceDatabase extends BetterOpenHelper
 	public static final String KEY_P2P = "p2p";
 	public static final String KEY_FINISHCOUNT = "finishcount";
 	private static final int MSG_DOWNLOAD_COMPLETE = 252;
+	private static final int MSG_UPLOAD_COMPLETE = 254;
+	
+	private String ret;
 	
 	public static int getVersion()
 	{
@@ -104,8 +129,35 @@ public class RaceDatabase extends BetterOpenHelper
 	{
 		return CreateOnPath(ctx, strBasePath + "/" + DATABASE_NAME_INTERNAL);
 	}
+	
 	public static String GetExternalDir(Context ctx)
 	{
+	
+		final String state = Environment.getExternalStorageState();
+		final String TAG = "Storage";
+		if ( Environment.MEDIA_MOUNTED.equals(state) ) {  // we can read the External Storage...           
+		    //Retrieve the primary External Storage:
+		    final File primaryExternalStorage = Environment.getExternalStorageDirectory();
+
+		    //Retrieve the External Storages root directory:
+		    final String externalStorageRootDir;
+		    if ( (externalStorageRootDir = primaryExternalStorage.getParent()) == null ) {  // no parent...
+		        Log.d(TAG, "External Storage: " + primaryExternalStorage + "\n");
+		    }
+		    else {
+		        final File externalStorageRoot = new File( externalStorageRootDir );
+		        final File[] files = externalStorageRoot.listFiles();
+
+		        for ( final File file : files ) {
+		        	
+		            if ( file.isDirectory() && file.canRead() && (file.listFiles().length > 0) ) {  // it is a real directory (not a USB drive)...
+		                Log.d(TAG, "External Storage: " + file.getAbsolutePath() + "\n");
+		            }
+		        }
+		    }
+		}
+		
+		
 		// First, see if removable storage can be used
 		String strPath = null;
 	    String strStorage = System.getenv("SECONDARY_STORAGE");
@@ -130,6 +182,10 @@ public class RaceDatabase extends BetterOpenHelper
 	    return strPath;
 	}
 
+	public static void SetLocation(String loc)
+	{
+		strDBFileName = loc;
+	}
 	public static boolean CreateExternal(Context ctx)
 	{
 	    // Create the directory if it doesn't exist
@@ -141,6 +197,20 @@ public class RaceDatabase extends BetterOpenHelper
 		return CreateOnPath(ctx, strPath + "/" + DATABASE_NAME_INTERNAL);
 	}
 	
+	public static boolean CreateOnPath(Context ctx)
+	{
+		RaceDatabase race = new RaceDatabase(ctx, strDBFileName, null, m_iVersion);
+		if(race.m_db != null)
+		{
+			if(g_raceDB != null && g_raceDB.m_db != null)
+			{
+				g_raceDB.m_db.close();
+			}
+			g_raceDB = race;
+		}
+		return race.m_db != null;
+	}
+
 	public static boolean CreateOnPath(Context ctx, String strPath)
 	{
 		strDBFileName = strPath;
@@ -157,33 +227,305 @@ public class RaceDatabase extends BetterOpenHelper
 	}
 	public synchronized static SQLiteDatabase Get()
 	{
-		if( g_raceDB != null )
-			return g_raceDB.getWritableDatabase();
-		else 
-			return null;
-	}
-	public static class download extends AsyncTask<Handler, Void, Integer> {
-		Handler m_handler=null;
-		protected Integer doInBackground(Handler...h) {
-			m_handler = h[0];
+		SQLiteDatabase ret;
 
-			int result=downloadFile("https://www.dropbox.com/s/x37l9skm9ecf8ma/speedfreq.tracks?dl=1");
+		if( g_raceDB != null )
+			ret= g_raceDB.getWritableDatabase();
+		else 
+			ret=null;
+		
+		if( ret == null )
+			return ret;
+		else
+			return ret;
+	}
+	public static class upload extends AsyncTask<Integer, Void, Integer>{
+		int m_trackID;
+		Handler m_handler;
+		Context m_context;
+
+		public upload (Handler h, Context cxt ) {
+			super();
+			m_handler=h;
+			m_context = cxt;
+		}
+		@Override
+		protected Integer doInBackground(Integer... iTrack) {
+			m_trackID = iTrack[0];
+			sendByEmail(false, m_trackID,m_context);
+			int result = 0;
 			return result;
+		}
+
+		protected void onPostExecute(Integer result) {
+			m_handler.sendEmptyMessage(MSG_UPLOAD_COMPLETE);
 
 		}
-		
-	    protected void onPostExecute(Integer result) {
-	    	Message msg = new Message();
-	    	msg.what = MSG_DOWNLOAD_COMPLETE;
-	    	if( result == 0 )
-	    	{
-	    		msg.arg1 = 0;
-	    	}
-	    	else
-	    		msg.arg1 = result;
-    		m_handler.sendMessage(msg);
-	    }
 	}
+	@TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
+	public synchronized static boolean sendByEmail(boolean bZipIt, int iTrackID, Context cxt)
+	{
+		String strUploadDB = Environment.getExternalStorageDirectory().toString() + "/speedfreq/upload.tracks";
+
+		File FileToSend;
+
+		// Create a new DB, and copy the tracks table over to it
+		final File delFile = new File(strUploadDB);
+		File fParent = new File(delFile.getParent());
+
+		if( !fParent.exists() )
+			fParent.mkdirs();
+		else if( delFile.exists() )
+			delFile.delete();
+
+		SQLiteDatabase m_dbTrack;
+		m_dbTrack = SQLiteDatabase.openDatabase(strUploadDB, null, SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.CREATE_IF_NECESSARY);
+		m_dbTrack.execSQL("drop table if exists tracks");
+		m_dbTrack.execSQL("attach DATABASE '" + RaceDatabase.getPath() + "' as FULL_DB " );
+		m_dbTrack.execSQL("create table tracks as select * from FULL_DB.tracks");
+
+		// Are we in single-track or all-tracks mode?
+		if( iTrackID != -1 )
+		{
+			// Drop all but selected track
+			m_dbTrack.execSQL("delete from tracks where _id != " + String.valueOf(iTrackID));
+		}
+		m_dbTrack.close();
+		
+		FileToSend = null;
+
+		if( false && bZipIt )	// this does take a little longer
+		{
+			// Zip up the file, for emailing
+			byte[] buffer = new byte[1024];
+			try{
+				FileOutputStream fos = new FileOutputStream(strUploadDB + ".zip");
+				ZipOutputStream zos = new ZipOutputStream(fos);
+				ZipEntry ze= new ZipEntry("track_db");
+				zos.putNextEntry(ze);
+				FileInputStream zipin = new FileInputStream(strUploadDB);
+
+				int ziplen;
+				while ((ziplen = zipin.read(buffer)) > 0) {
+					zos.write(buffer, 0, ziplen);
+				}
+
+				zipin.close();
+				zos.closeEntry();
+				
+				//remember close it
+				zos.close();
+				FileToSend = new File(strUploadDB + ".zip");
+			}
+			catch(IOException ex)
+			{
+				if( BuildConfig.DEBUG )
+					ex.printStackTrace();
+				FileToSend = new File(strUploadDB); // fall back to unzipped
+			}
+		}
+		else
+		{
+			FileToSend = new File(strUploadDB);				
+		}
+
+		if( FileToSend != null && FileToSend.isFile() && FileToSend.canRead() )
+		{
+			Uri uri = Uri.fromFile(FileToSend);
+			
+			// Prepare the Email Activity
+			Intent shareIntent = new Intent();
+			shareIntent.putExtra(Intent.EXTRA_EMAIL, new String[] {"speedfreqapp@gmail.com"});
+			shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Track Database");
+			shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+			shareIntent.setAction(Intent.ACTION_SEND);
+			shareIntent.setType("application/zip");	// This is OK even if we don't zip it
+			
+			// http://stackoverflow.com/questions/21179469/gmail-android-app-crashes-when-sending-an-intent-with-send-to
+//			Intent shareIntent = new Intent();
+//			shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+//			shareIntent.setType("message/rfc822");
+//			shareIntent.putExtra(Intent.EXTRA_EMAIL, new String[] { "speedfreqapp@gmail.com" });                
+//			shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject");
+//			ArrayList<CharSequence> bdy = new ArrayList<CharSequence>();
+//			bdy.add("dd");
+//			shareIntent.putExtra(Intent.EXTRA_TEXT, bdy);
+//			final ArrayList<Uri> uris = new ArrayList<Uri>();
+//			uris.add(uri); /* doesn't affect crash rate */
+//			shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+			
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+			    shareIntent.setType(null); // If we're using a selector, then clear the type to null. I don't know why this is needed, but it doesn't work without it.
+			    final Intent restrictIntent = new Intent(Intent.ACTION_SENDTO);
+			    Uri data = Uri.parse("mailto:?");
+			    restrictIntent.setData(data);
+			    shareIntent.setSelector(restrictIntent);
+			}
+			
+			cxt.startActivity(Intent.createChooser(shareIntent, "Email Tracks.."));
+
+			return true;
+		}
+		else 
+			return false;
+	}
+
+	public static class download extends AsyncTask<Void, Void, Integer>{
+		Handler m_handler;
+		static Context m_context;
+		public download (Handler h, Context cxt ) {
+			super();
+			m_handler=h;
+			m_context=cxt;
+		}
+		@Override
+		protected Integer doInBackground(Void... v) {
+			int result=downloadFile("https://www.dropbox.com/s/x37l9skm9ecf8ma/speedfreq.tracks?dl=1");
+			return result;
+		}
+
+		protected void onPostExecute(Integer result) {
+			final Message msg = new Message();
+			msg.what = MSG_DOWNLOAD_COMPLETE;
+			if( result == 0 )
+			{
+				final List<TrackParameterItem> strTracks = new ArrayList<TrackParameterItem>();
+				Cursor cur = Get().rawQuery("select _id, name from trackdnld",null);
+				if(cur != null)
+				{
+					while( cur.moveToNext() )  
+						strTracks.add(new TrackParameterItem(cur.getInt(0),cur.getString(1)));
+				}
+				final ListView modeList = new ListView(m_context);
+				final TrackParameterAdapter modeAdapter = new TrackParameterAdapter(m_context, R.id.tvCheckItem, strTracks);
+				modeList.setAdapter(modeAdapter);
+
+				AlertDialog.Builder ad = new AlertDialog.Builder(m_context)
+				.setIcon(R.drawable.app_icon)
+				.setTitle("Select the tracks to import")
+				.setCancelable(true)
+				.setNegativeButton("Cancel", new AlertDialog.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						msg.arg1 = 0;
+						m_handler.sendMessage(msg);	    			
+					}
+				})
+				.setPositiveButton("Import", new AlertDialog.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						List<TrackParameterItem> trkToImport = new ArrayList<TrackParameterItem>();
+						Iterator<TrackParameterItem> iterator = strTracks.iterator();
+						while(iterator.hasNext()) {
+							TrackParameterItem blah = iterator.next();
+							if( blah.IsChecked() )
+								trkToImport.add(new TrackParameterItem(blah.id,blah.strDesc));
+						}
+						iterator = trkToImport.iterator();
+						Get().execSQL("create temporary table if not exists track2get (	" + 
+								"_id integer, " +
+								"\"name\" string )");
+						while(iterator.hasNext()) {
+							TrackParameterItem blah = iterator.next();
+							ContentValues content = new ContentValues();
+							content.put("\"_id\"", blah.id);
+							content.put("\"name\"",blah.strDesc);
+							long id = Get().insertOrThrow("track2get", null, content);
+						}
+
+						Get().execSQL("insert into tracks select null,name, date, testmode, x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6, " +
+								"vx1,vy1,vx2,vy2,vx3,vy3, p2p, finishcount, image from trackdnld where _id in (select _id from track2get)");
+						Get().execSQL("delete from tracks where _id not in (select min(_id) from tracks group by name)");
+						Get().execSQL("drop table trackdnld");
+						Get().execSQL("drop table if exists track2get");
+						msg.arg1 = 0;
+						m_handler.sendMessage(msg);
+					}
+
+				})
+				.setAdapter(modeAdapter, null)
+				;
+				ad.show();
+			}
+			else {
+				msg.arg1 = result;
+				m_handler.sendMessage(msg);
+			}
+		}
+
+		private static class TrackParameterItem
+		{
+			boolean bChecked=false;
+			int id;
+			String strDesc;
+
+			public TrackParameterItem(int id, String strDesc) 
+			{
+				this.strDesc = strDesc;
+				this.id = id;
+				bChecked = false;
+			}
+			public String GetString()
+			{
+				return strDesc;
+			}
+			public void SetChecked(boolean f)
+			{
+				bChecked = f;
+			}
+			public boolean IsChecked()
+			{
+				return bChecked;
+			}
+		}
+
+		private static class TrackParameterAdapter extends ArrayAdapter<TrackParameterItem> implements OnCheckedChangeListener
+		{
+			private List<TrackParameterItem> items;
+
+			public TrackParameterAdapter(Context context, int textViewResourceId, List<TrackParameterItem> objects) 
+			{
+				super(context, textViewResourceId, objects);
+				this.items = objects;
+			}
+
+			@Override
+			public View getView(int position, View convertView, ViewGroup parent) 
+			{
+				View v = convertView;
+				if (v == null) 
+				{
+					LayoutInflater vi = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+					v = vi.inflate(R.layout.mychecklistitem, null);
+				}
+				TrackParameterItem myobject = items.get(position);
+
+				if (myobject!=null)
+				{
+					//checkbox
+					CheckBox cbEnabled = (CheckBox) v.findViewById(R.id.tvCheckItem);
+					if(cbEnabled != null)
+					{
+						cbEnabled.setText(myobject.strDesc);
+						cbEnabled.setTag(Integer.valueOf(position));
+						cbEnabled.setOnCheckedChangeListener(null);
+						cbEnabled.setChecked(myobject.bChecked);
+						cbEnabled.setOnCheckedChangeListener(this);
+					}
+				}
+
+				return v;
+			}
+
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView,boolean isChecked) 
+			{
+				int iPos = ((Integer)buttonView.getTag()).intValue();
+				items.get(iPos).SetChecked(isChecked);
+			}
+		}
+
+			}
 
 	public static int downloadFile(String sUrl) {
 		InputStream input = null;
@@ -277,12 +619,45 @@ public class RaceDatabase extends BetterOpenHelper
 			strImportedDB = strDownloadFile;
 
 		Get().execSQL("attach DATABASE '" + strImportedDB + "' as DNLD_TRACK_DB " );
-		Get().execSQL("insert into tracks select null,name, date, testmode, x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6, " +
+		Get().execSQL("drop table if exists trackdnld");
+		Get().execSQL("create temporary table if not exists trackdnld (	" + 
+		"_id integer primary key asc autoincrement, " +
+		"\"name\" string, " +
+		"\"date\" string, " +
+		"\"testmode\" integer, " +
+		"x1 real, " +
+		"y1 real, " +
+		"x2 real, " +
+		"y2 real, " +
+		"x3 real, " +
+		"y3 real, " +
+		"x4 real, " +
+		"y4 real, " +
+		"x5 real, " +
+		"y5 real, " +
+		"x6 real, " +
+		"y6 real, " +
+		"vx1 real," +
+		"vy1 real," +
+		"vx2 real," +
+		"vy2 real," +
+		"vx3 real," +
+		"vy3 real," +
+		"p2p integer not null default 0," +
+		"finishcount integer not null default 1," +
+		"image BLOB)");
+		Get().execSQL("insert into trackdnld select null,name, date, testmode, x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6, " +
 				"vx1,vy1,vx2,vy2,vx3,vy3, p2p, finishcount, image from DNLD_TRACK_DB.tracks");
 		Get().execSQL("detach DATABASE DNLD_TRACK_DB");
 
-		// Now keep the lowest ID-numbered track of a given name.  Downloaded tracks have higher numbers, so precedence given to user-generated of same name
-		Get().execSQL("delete from tracks where _id not in (select min(_id) from tracks group by name)");
+
+		//		Get().execSQL("attach DATABASE '" + strImportedDB + "' as DNLD_TRACK_DB " );
+//		Get().execSQL("insert into tracks select null,name, date, testmode, x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6, " +
+//				"vx1,vy1,vx2,vy2,vx3,vy3, p2p, finishcount, image from DNLD_TRACK_DB.tracks");
+//		Get().execSQL("detach DATABASE DNLD_TRACK_DB");
+//
+//		// Now keep the lowest ID-numbered track of a given name.  Downloaded tracks have higher numbers, so precedence given to user-generated of same name
+//		Get().execSQL("delete from tracks where _id not in (select min(_id) from tracks group by name)");
 		
 		if( fTarget != null )
 		fTarget.delete();
@@ -377,7 +752,7 @@ public class RaceDatabase extends BetterOpenHelper
 					}
 					// We now have the points of the lap
 					Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-					if(bmp != null)
+					if(bmp != null && lap != null )
 					{
 						Canvas canvas = new Canvas(bmp);
 						//lap.DoDeferredLoad(null, 0, false);
@@ -569,7 +944,7 @@ public class RaceDatabase extends BetterOpenHelper
 	public synchronized static RaceData GetRaceData(SQLiteDatabase db, long id, int iCarNumber)
 	{
 		Cursor cur = db.rawQuery("select x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,vx1,vy1,vx2,vy2,vx3,vy3,name,testmode,finishcount from races where _id = " + id, null);
-		if(cur != null)
+		if(cur != null )
 		{
 			cur.moveToFirst();
 			RaceData ret = new RaceData();
@@ -630,7 +1005,7 @@ public class RaceDatabase extends BetterOpenHelper
 		db.execSQL(	"drop table if exists tracks;");
 		db.execSQL(CREATE_TRACK_SQL);
 	}
-	public synchronized static void DeleteTestData(SQLiteDatabase db)
+	public synchronized static void DeleteAllRaces(SQLiteDatabase db, boolean bJustTestModes)
 	{
 		if(db == null) return;
 
@@ -641,7 +1016,12 @@ public class RaceDatabase extends BetterOpenHelper
 		db.execSQL(	"delete from tempraceid;");
 		db.execSQL(	"delete from templapid;");
 		db.execSQL(	"delete from tempdataid;");
-		db.execSQL(	"insert into tempraceid select _id from races where testmode=1;"); // finds all the races we want to delete
+
+		if( bJustTestModes )
+			db.execSQL(	"insert into tempraceid select _id from races where testmode=1;"); // finds all the races we want to delete
+		else
+			db.execSQL(	"insert into tempraceid select _id from races;"); // finds all the races we want to delete
+
 		db.execSQL(	"insert into templapid select _id from laps where raceid in (select raceid from tempraceid);"); // finds all the laps that depend on those races
 		db.execSQL(	"insert into tempdataid select _id from channels where lapid in (select lapid from templapid);"); // finds all the channels that depend on those laps
 		
@@ -651,6 +1031,11 @@ public class RaceDatabase extends BetterOpenHelper
 		db.execSQL("delete from extras where lapid in (select lapid from templapid);"); // deletes all the channels that depend on the doomed laps
 		db.execSQL("delete from laps where raceid in (select raceid from tempraceid);"); // deletes all the laps that depend on the doomed races
 		db.execSQL("delete from races where _id in (select raceid from tempraceid);"); // deletes all the doomed races
+		
+		db.execSQL("drop table if exists tempraceid"); 
+		db.execSQL("drop table if exists templapid");
+		db.execSQL("drop table if exists tempdataid"); 
+
 		db.execSQL("commit transaction;");
 		
 		DoOrphanCheck(db);
@@ -927,6 +1312,10 @@ public class RaceDatabase extends BetterOpenHelper
 	
 	public synchronized static Cursor GetTrackList(SQLiteDatabase db)
 	{
+		
+		if( BuildConfig.DEBUG && db == null)
+			throw new AssertionError("db is null, when it shouldn't be!");
+		
 		try
 		{
 			Cursor cur = db.rawQuery("select _id,name from tracks", null);

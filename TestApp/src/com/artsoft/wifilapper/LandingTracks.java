@@ -16,16 +16,27 @@
 
 package com.artsoft.wifilapper;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+
+
+
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
@@ -39,6 +50,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -63,11 +75,16 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 {
 	private RaceImageFactory m_imgFactory=null;
 	private Handler m_handler;
+	private Context m_context;
 	private static final int MSG_NEW_IMAGE = 151;
 	private static final int MSG_DOWNLOAD_COMPLETE = 252;
+	private static final int MSG_UPLOAD_COMPLETE = 254;
+	private static final int MSG_EMAIL_COMPLETE = 253;
+
 	private static final int TRACK_START_NEW = -111;
 	private static final int TRACK_DOWNLOAD = -112;
 	private static final int TRACK_UPLOAD = -113;
+	private static final int TRACK_UPLOAD_ALL = -1;
 	private ListView list;
 	String strUploadDB;
 
@@ -75,16 +92,19 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	
 	private ProgressDialog barProgressDialog;
 	RaceDatabase.download myDnld=null;
+	RaceDatabase.upload myUpld=null;
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
 		m_handler = new Handler(this);
-//		strUploadDB = getCacheDir().toString() + "/upload.tracks";
-		strUploadDB = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString() + "/upload.tracks";
+		m_context = this;
+//		strUploadDB = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString() + "/upload.tracks";
+		strUploadDB = Environment.getExternalStorageDirectory().toString() + "/speedfreq/upload.tracks";
 
-		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		
+		getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		setContentView(R.layout.landingtracks);
 	}
 	@Override
@@ -93,15 +113,17 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 		super.onResume();
 		DoUIInit();
 	}
-
 	// Don't bother with onPause, since we only want to kill the image thread and store the 
 	// track preference when we actually exit this activity
+	// killing the imagefactory in onpause doesn't help either
 	public void onDestroy()
 	{
 		super.onDestroy();
-		m_imgFactory.Shutdown();
-		m_imgFactory = null;
-
+		if( m_imgFactory != null) {
+			m_imgFactory.Shutdown();
+			m_imgFactory = null;
+		}
+		// Doesn't seem involved in the crash
 		if( FileToSend != null) {
 			File JournalFile = new File(FileToSend.getPath()+"-journal");
 			if( FileToSend.exists() ) 
@@ -128,8 +150,8 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	private void DoUIInit()
 	{
 		// Hide keyboard by default
-		getWindow().setSoftInputMode(
-			      WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+//		getWindow().setSoftInputMode(
+//			      WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 
 		list = (ListView)findViewById(android.R.id.list);
 
@@ -213,7 +235,11 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	}
     private void FillTrackData(ListView list) 
 	{	
-		Cursor cursor = RaceDatabase.GetTrackList(RaceDatabase.Get());
+    	SQLiteDatabase db = RaceDatabase.Get();
+//    	if( db == null )
+//    		return;
+//    	
+		Cursor cursor = RaceDatabase.GetTrackList(db);
 
 		if(cursor == null)
 		{
@@ -281,111 +307,33 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 		}
 		else if(item.getItemId() == R.id.mnuEmail)
 		{
-			return sendByEmail(false,lrd.id);
+    		uploadTracks(lrd.id);
+    		return true;
+//			return sendByEmail(false,lrd.id);
 		}
 		
 		return false;
 	}
 
-	public boolean sendByEmail(boolean bZipIt, int iTrackID)
-	{
-		// Create a new DB, and copy the tracks table over to it
-		final File delFile = new File(strUploadDB);
-		if( delFile.exists() )
-			delFile.delete();
-			
-		SQLiteDatabase m_dbTrack;
-		m_dbTrack = SQLiteDatabase.openDatabase(strUploadDB, null, SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.CREATE_IF_NECESSARY);
-		m_dbTrack.execSQL("drop table if exists tracks");
-		m_dbTrack.execSQL("attach DATABASE '" + RaceDatabase.getPath() + "' as FULL_DB " );
-		m_dbTrack.execSQL("create table tracks as select * from FULL_DB.tracks");
 
-/* OK method, but might as well use the existing primary keys
-		m_dbTrack.execSQL("attach DATABASE '" + RaceDatabase.getPath() + "' as FULL_DB " );
-		m_dbTrack.execSQL("create table tracks as select null,name, date, testmode, x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6, " +
-					"vx1,vy1,vx2,vy2,vx3,vy3, p2p, finishcount, image from FULL_DB.tracks");
-		m_dbTrack.execSQL("detach DATABASE FULL_DB");
-*/
-		
-		// Are we in single-track or all-tracks mode?
-		if( iTrackID != -1 )
-		{
-			// Drop all but selected track
-			m_dbTrack.execSQL("delete from tracks where _id != " + String.valueOf(iTrackID));
-		}
-		m_dbTrack.close();
-		
-		FileToSend = null;
-
-		if( false && bZipIt )	// this does take a little longer
-		{
-			// Zip up the file, for emailing
-			byte[] buffer = new byte[1024];
-			try{
-				FileOutputStream fos = new FileOutputStream(strUploadDB + ".zip");
-				ZipOutputStream zos = new ZipOutputStream(fos);
-				ZipEntry ze= new ZipEntry("track_db");
-				zos.putNextEntry(ze);
-				FileInputStream zipin = new FileInputStream(strUploadDB);
-
-				int ziplen;
-				while ((ziplen = zipin.read(buffer)) > 0) {
-					zos.write(buffer, 0, ziplen);
-				}
-
-				zipin.close();
-				zos.closeEntry();
-				
-				//remember close it
-				zos.close();
-				FileToSend = new File(strUploadDB + ".zip");
-			}
-			catch(IOException ex)
-			{
-				if( BuildConfig.DEBUG )
-					ex.printStackTrace();
-				FileToSend = new File(strUploadDB); // fall back to unzipped
-			}
-		}
-		else
-		{
-			FileToSend = new File(strUploadDB);				
-		}
-
-		if( FileToSend != null && FileToSend.isFile() && FileToSend.canRead() )
-		{
-			Uri uri = Uri.fromFile(FileToSend);
-			
-			// Prepare the Email Activity
-			Intent shareIntent = new Intent();
-			shareIntent.putExtra(Intent.EXTRA_EMAIL, new String[] {"speedfreqapp@gmail.com"});
-			shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Track Database");
-			shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
-			shareIntent.setAction(Intent.ACTION_SEND);
-			shareIntent.setType("application/zip");	// This is OK even if we don't zip it
-	
-			startActivity(Intent.createChooser(shareIntent, "Email Tracks.."));
-//			startActivityForResult(Intent.createChooser(shareIntent, "Email Tracks.."),MSG_EMAIL_COMPLETE);
-			return true;
-		}
-		else 
-			return false;
-	}
-/*
   	@Override
  
 	public void onActivityResult(int reqCode, int resCode, Intent data)
 	{
 		if(reqCode == MSG_EMAIL_COMPLETE)
 		{
-			File JournalFile = new File(FileToSend.getPath()+"-journal");
-			FileToSend.delete();
-			if( JournalFile.exists())
-				JournalFile.delete();
+			// Clean up the temp file used for uploading
+//			if( FileToSend != null ) {
+//				File JournalFile = new File(FileToSend.getPath()+"-journal");
+//				if( JournalFile.exists() )
+//					JournalFile.delete();
+//				if( FileToSend.exists() )
+//					FileToSend.delete();
+//			}
 		}
 	}
 	
-	*/
+
 	@Override
 	public void onDismiss(DialogInterface arg0) 
 	{
@@ -427,7 +375,8 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 			downloadTracks();
 			break;
 		case TRACK_UPLOAD:
-			sendByEmail(true,-1);
+    		uploadTracks(TRACK_UPLOAD_ALL);
+//			sendByEmail(false,this);
 			break;
 		default:
 			// Get pointer to selected Track Data
@@ -461,16 +410,33 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
     	}
     	if(menu.getItemId() == R.id.mnuEmail)
     	{
-    		return sendByEmail(true,-1);
+    		uploadTracks(TRACK_UPLOAD_ALL);
+    		return true;
     	}
     	
     	if(menu.getItemId() == R.id.mnuGetFile)
     	{
     		downloadTracks();
+    		return true;
     	}
 
     	return super.onOptionsItemSelected(menu);
     }
+    private void uploadTracks(int iTrackCode) 
+    {
+    	barProgressDialog = new ProgressDialog(this);
+
+    	barProgressDialog.setMessage("Lauching Mail App...");
+
+    	barProgressDialog.setIndeterminate(true);
+    	barProgressDialog.setCancelable(true);
+    	barProgressDialog.setOnCancelListener(this);
+    	barProgressDialog.show();
+
+		myUpld = new RaceDatabase.upload(m_handler,this);
+		myUpld.execute(iTrackCode);
+    }
+
     private void downloadTracks() 
     {
     	barProgressDialog = new ProgressDialog(this);
@@ -478,11 +444,11 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
     	barProgressDialog.setMessage("Downloading Tracks...");
     	barProgressDialog.setIndeterminate(true);
     	barProgressDialog.setCancelable(true);
-    	barProgressDialog.show();
     	barProgressDialog.setOnCancelListener(this);
+    	barProgressDialog.show();
 
-		myDnld = new RaceDatabase.download();
-    	myDnld.execute(m_handler);
+		myDnld = new RaceDatabase.download(m_handler,this);
+    	myDnld.execute();
     }
 	@Override
 	public boolean handleMessage(Message msg) {
@@ -492,6 +458,17 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 			list.invalidateViews();
 
 			return true;
+		}
+		if(msg.what == MSG_UPLOAD_COMPLETE)
+		{
+			myUpld.cancel(true);
+			myUpld = null;
+			if( barProgressDialog != null)
+				barProgressDialog.dismiss();
+			
+			// Sadly, I need to exit the activity when we upload.  Something about launching Gmail 
+			// on my phone will often cause this activity to crash.  Best to pre-emptively exit
+			finish();
 		}
 		if(msg.what == MSG_DOWNLOAD_COMPLETE)
 		{
@@ -526,7 +503,12 @@ public class LandingTracks extends ListActivity implements OnCancelListener, OnD
 	}
 	@Override
 	public void onCancel(DialogInterface dialog) {
-		// TODO Auto-generated method stub
-		myDnld.cancel(true);
+		if( myDnld != null )
+			myDnld.cancel(true);
+		if( myUpld != null )
+			myUpld.cancel(true);
 	}
+	
+
+
 }
